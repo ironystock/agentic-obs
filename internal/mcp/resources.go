@@ -315,6 +315,11 @@ func (s *Server) handleScreenshotURLResourceRead(ctx context.Context, request *m
 		return nil, fmt.Errorf("failed to get latest screenshot: %w", err)
 	}
 
+	// Defensive nil check - resource should only be registered when httpServer is enabled
+	if s.httpServer == nil {
+		return nil, fmt.Errorf("HTTP server not available for screenshot URLs")
+	}
+
 	// Build JSON response with URL and metadata
 	urlData := map[string]interface{}{
 		"url":         s.httpServer.GetScreenshotURL(sourceName),
