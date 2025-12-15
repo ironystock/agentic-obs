@@ -73,9 +73,45 @@ Update these after each phase:
 
 ---
 
-## Consistency Checks
+## Automated Verification
 
-Run these grep commands to verify consistency:
+### Quick Check (Recommended)
+
+Run the automated verification script:
+
+```bash
+./scripts/verify-docs.sh
+```
+
+This script checks:
+- Stale phase references
+- Incorrect tool/resource/prompt counts
+- Unresolved TODO items
+- "Coming Soon" for completed features
+- Required files exist
+
+### Pre-commit Hook
+
+Install the pre-commit hook to automatically check documentation on commit:
+
+```bash
+cp scripts/pre-commit-docs .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+### CI Integration
+
+Documentation checks run automatically on:
+- Pull requests that modify `.md` files
+- Pushes to `main` that modify `.md` files
+
+See `.github/workflows/docs-check.yml` for the workflow.
+
+---
+
+## Manual Consistency Checks
+
+If you need to run checks manually:
 
 ```bash
 # Check for stale phase references (update "Phase 4" to current)
