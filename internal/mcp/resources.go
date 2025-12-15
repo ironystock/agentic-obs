@@ -176,7 +176,7 @@ func (s *Server) handleScreenshotResourceRead(ctx context.Context, request *mcps
 	// Decode base64 image data to binary
 	imageData, err := base64.StdEncoding.DecodeString(screenshot.ImageData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode screenshot image data: %w", err)
+		return nil, fmt.Errorf("failed to decode screenshot image data (base64 length: %d): %w", len(screenshot.ImageData), err)
 	}
 
 	result := &mcpsdk.ReadResourceResult{

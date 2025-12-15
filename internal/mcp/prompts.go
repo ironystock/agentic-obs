@@ -261,8 +261,10 @@ func (s *Server) handleVisualCheck(ctx context.Context, req *mcpsdk.GetPromptReq
 	log.Println("Handling visual-check prompt")
 
 	screenshotSource := ""
-	if val, ok := req.Params.Arguments["screenshot_source"]; ok {
-		screenshotSource = val
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["screenshot_source"]; ok {
+			screenshotSource = val
+		}
 	}
 
 	if screenshotSource == "" {
@@ -375,8 +377,10 @@ func (s *Server) handleProblemDetection(ctx context.Context, req *mcpsdk.GetProm
 	log.Println("Handling problem-detection prompt")
 
 	screenshotSource := ""
-	if val, ok := req.Params.Arguments["screenshot_source"]; ok {
-		screenshotSource = val
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["screenshot_source"]; ok {
+			screenshotSource = val
+		}
 	}
 
 	if screenshotSource == "" {
@@ -440,8 +444,10 @@ func (s *Server) handlePresetSwitcher(ctx context.Context, req *mcpsdk.GetPrompt
 	log.Println("Handling preset-switcher prompt")
 
 	presetName := ""
-	if val, ok := req.Params.Arguments["preset_name"]; ok {
-		presetName = val
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["preset_name"]; ok {
+			presetName = val
+		}
 	}
 
 	promptText := `Help me manage scene presets for quick configuration switching:
