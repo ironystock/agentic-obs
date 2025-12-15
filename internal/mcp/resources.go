@@ -11,6 +11,13 @@ import (
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// Resource URI prefixes for MCP resource identification
+const (
+	SceneURIPrefix      = "obs://scene/"
+	ScreenshotURIPrefix = "obs://screenshot/"
+	PresetURIPrefix     = "obs://preset/"
+)
+
 // SceneDetails contains detailed information about a scene
 type SceneDetails struct {
 	Name        string                   `json:"name"`
@@ -117,14 +124,13 @@ func (s *Server) handleResourceRead(ctx context.Context, request *mcpsdk.ReadRes
 // extractSceneNameFromURI extracts the scene name from a resource URI
 // Expected format: obs://scene/{scene_name}
 func extractSceneNameFromURI(uri string) (string, error) {
-	const prefix = "obs://scene/"
-	if len(uri) <= len(prefix) {
+	if len(uri) <= len(SceneURIPrefix) {
 		return "", fmt.Errorf("URI too short")
 	}
-	if uri[:len(prefix)] != prefix {
-		return "", fmt.Errorf("URI must start with %s", prefix)
+	if uri[:len(SceneURIPrefix)] != SceneURIPrefix {
+		return "", fmt.Errorf("URI must start with %s", SceneURIPrefix)
 	}
-	return uri[len(prefix):], nil
+	return uri[len(SceneURIPrefix):], nil
 }
 
 // convertSourcesToMap converts OBS SceneSource structs to generic map format for JSON serialization
@@ -241,25 +247,23 @@ func (s *Server) handlePresetResourceRead(ctx context.Context, request *mcpsdk.R
 // extractScreenshotNameFromURI extracts the screenshot source name from a resource URI
 // Expected format: obs://screenshot/{sourceName}
 func extractScreenshotNameFromURI(uri string) (string, error) {
-	const prefix = "obs://screenshot/"
-	if len(uri) <= len(prefix) {
+	if len(uri) <= len(ScreenshotURIPrefix) {
 		return "", fmt.Errorf("URI too short")
 	}
-	if uri[:len(prefix)] != prefix {
-		return "", fmt.Errorf("URI must start with %s", prefix)
+	if uri[:len(ScreenshotURIPrefix)] != ScreenshotURIPrefix {
+		return "", fmt.Errorf("URI must start with %s", ScreenshotURIPrefix)
 	}
-	return uri[len(prefix):], nil
+	return uri[len(ScreenshotURIPrefix):], nil
 }
 
 // extractPresetNameFromURI extracts the preset name from a resource URI
 // Expected format: obs://preset/{presetName}
 func extractPresetNameFromURI(uri string) (string, error) {
-	const prefix = "obs://preset/"
-	if len(uri) <= len(prefix) {
+	if len(uri) <= len(PresetURIPrefix) {
 		return "", fmt.Errorf("URI too short")
 	}
-	if uri[:len(prefix)] != prefix {
-		return "", fmt.Errorf("URI must start with %s", prefix)
+	if uri[:len(PresetURIPrefix)] != PresetURIPrefix {
+		return "", fmt.Errorf("URI must start with %s", PresetURIPrefix)
 	}
-	return uri[len(prefix):], nil
+	return uri[len(PresetURIPrefix):], nil
 }
