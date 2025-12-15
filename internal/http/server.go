@@ -134,7 +134,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		if err := s.httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
-			// Log error but don't crash - the server will be marked as not running
+			log.Printf("HTTP server error: %v", err)
 			s.mu.Lock()
 			s.running = false
 			s.mu.Unlock()

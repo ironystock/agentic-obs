@@ -3,6 +3,7 @@ package screenshot
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -18,6 +19,11 @@ type OBSScreenshotter interface {
 }
 
 // Config holds screenshot manager configuration options.
+//
+// Storage Considerations: Each screenshot is stored as base64-encoded image data in SQLite.
+// A typical 1080p PNG screenshot is ~1-2MB, resulting in ~1.3-2.6MB of base64 data per image.
+// With the default of 10 screenshots per source, expect ~13-26MB of storage per source.
+// Adjust MaxScreenshotsPerSource based on available disk space and number of sources.
 type Config struct {
 	// MaxScreenshotsPerSource is the maximum number of screenshots to keep per source.
 	// Older screenshots are automatically cleaned up. Default: 10
@@ -285,16 +291,19 @@ func (w *worker) run() {
 	ticker := time.NewTicker(w.getCadence())
 	defer ticker.Stop()
 
+	lastCadence := w.getCadence()
+
 	for {
 		select {
 		case <-w.ctx.Done():
 			return
 		case <-ticker.C:
 			w.capture()
-			// Check if cadence changed
-			newCadence := w.getCadence()
-			if ticker.Reset(newCadence); newCadence != w.getCadence() {
-				ticker.Reset(w.getCadence())
+			// Check if cadence changed and reset ticker if needed
+			currentCadence := w.getCadence()
+			if currentCadence != lastCadence {
+				ticker.Reset(currentCadence)
+				lastCadence = currentCadence
 			}
 		}
 	}
@@ -335,6 +344,7 @@ func (w *worker) capture() {
 
 	imageData, err := w.obsClient.TakeSourceScreenshot(opts)
 	if err != nil {
+		log.Printf("Screenshot capture failed for source %q: %v", w.source.Name, err)
 		return
 	}
 
@@ -354,5 +364,7 @@ func (w *worker) capture() {
 		SizeBytes: sizeBytes,
 	}
 
-	w.storage.SaveScreenshot(w.ctx, screenshot)
+	if _, err := w.storage.SaveScreenshot(w.ctx, screenshot); err != nil {
+		log.Printf("Failed to save screenshot for source %q: %v", w.source.Name, err)
+	}
 }

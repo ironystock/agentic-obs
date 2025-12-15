@@ -2,6 +2,7 @@ package obs
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/sceneitems"
@@ -629,7 +630,14 @@ func (c *Client) TakeSourceScreenshot(opts ScreenshotOptions) (string, error) {
 		return "", fmt.Errorf("failed to capture screenshot of '%s': %w", opts.SourceName, err)
 	}
 
-	return resp.ImageData, nil
+	// OBS returns data as a data URI (e.g., "data:image/png;base64,iVBORw0...")
+	// Strip the prefix to return clean base64 data
+	imageData := resp.ImageData
+	if idx := strings.Index(imageData, ","); idx != -1 {
+		imageData = imageData[idx+1:]
+	}
+
+	return imageData, nil
 }
 
 // BrowserSourceSettings holds configuration for creating a browser source.
