@@ -54,9 +54,15 @@ agentic-obs/
 
 ### Installation
 
+**Option 1: Install with Go (Recommended)**
+```bash
+go install github.com/ironystock/agentic-obs@latest
+```
+
+**Option 2: Build from Source**
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/ironystock/agentic-obs.git
 cd agentic-obs
 
 # Install dependencies
@@ -72,7 +78,10 @@ go build -o agentic-obs main.go
 ### Running the Project
 
 ```bash
-# Run directly
+# Run via go install (if $GOPATH/bin is in PATH)
+agentic-obs
+
+# Run directly from source
 go run main.go
 
 # Build and run
@@ -117,7 +126,7 @@ Configuration & Presets
 
 **OBS Scenes** are exposed as MCP resources with the following structure:
 
-- **Resource URI Pattern**: `obs://scene/{scene_name}`
+- **Resource URI Pattern**: `obs://scene_{scene_name}`
 - **Resource Type**: `obs-scene`
 - **Content**: JSON representation of scene configuration (sources, settings)
 - **Notifications**:
@@ -213,6 +222,7 @@ go mod tidy
 - [ ] Health check and monitoring endpoints
 - [ ] Additional resource types (sources, filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in to notifications)
+- [ ] **Agentic Screenshot Sources**: Design strategy for creating "screenshot capture" sources that can be programmatically added to user scenes, enabling periodic scene screenshots on a configurable cadence for monitoring, archiving, or analysis purposes
 
 ### Future Research Topics
 

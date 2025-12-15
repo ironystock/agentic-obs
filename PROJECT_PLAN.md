@@ -162,7 +162,7 @@ agentic-obs/
 **Decision:** Expose OBS scenes as MCP resources, enabling server-initiated notifications for scene changes.
 
 **Resource Design:**
-- **URI Pattern:** `obs://scene/{scene_name}`
+- **URI Pattern:** `obs://scene_{scene_name}`
 - **Resource Type:** `obs-scene`
 - **Content:** JSON representation of scene configuration
 - **Operations:** `resources/list`, `resources/read`
@@ -250,7 +250,7 @@ agentic-obs/
 
 | Resource Type | URI Pattern | Operations | Priority |
 |---------------|-------------|------------|----------|
-| **Scenes** | `obs://scene/{name}` | `list`, `read` | P0 |
+| **Scenes** | `obs://scene_{name}` | `list`, `read` | P0 |
 
 **Notifications:**
 - `notifications/resources/list_changed` - Scene added/removed
@@ -327,10 +327,10 @@ CREATE TABLE state (
 - **Audio Inputs:** Microphones, desktop audio, etc.
 
 **Resource URI Patterns:**
-- `obs://source/{scene_name}/{source_name}`
-- `obs://filter/{source_name}/{filter_name}`
-- `obs://transition/{transition_name}`
-- `obs://audio-input/{input_name}`
+- `obs://source_{scene_name}_{source_name}`
+- `obs://filter_{source_name}_{filter_name}`
+- `obs://transition_{transition_name}`
+- `obs://audio_{input_name}`
 
 **Research Needed:**
 - Which resources provide most value for AI interactions
@@ -467,7 +467,7 @@ CREATE TABLE state (
 
 1. **Define Resource Schema** (`internal/mcp/resources.go`)
    ```go
-   // Resource URI: obs://scene/{scene_name}
+   // Resource URI: obs://scene_{scene_name}
    type SceneResource struct {
        URI         string `json:"uri"`
        Name        string `json:"name"`
@@ -494,7 +494,7 @@ CREATE TABLE state (
    }
 
    func (c *Client) handleCurrentProgramSceneChanged(event *events.CurrentProgramSceneChanged) {
-       c.notifyResourceUpdated(fmt.Sprintf("obs://scene/%s", event.SceneName))
+       c.notifyResourceUpdated(fmt.Sprintf("obs://scene_%s", event.SceneName))
    }
    ```
 

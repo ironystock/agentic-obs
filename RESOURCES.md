@@ -10,7 +10,7 @@ This document describes how OBS entities are exposed as MCP resources and how no
 
 ### Resource Schema
 
-**URI Pattern:** `obs://scene/{scene_name}`
+**URI Pattern:** `obs://scene_{scene_name}`
 
 **Resource Type:** `obs-scene`
 
@@ -28,14 +28,14 @@ Returns all available scenes as resources.
 {
   "resources": [
     {
-      "uri": "obs://scene/Gaming",
-      "name": "Gaming",
+      "uri": "obs://scene_Gaming",
+      "name": "scene_Gaming",
       "mimeType": "application/json",
       "description": "Gaming scene with webcam and game capture"
     },
     {
-      "uri": "obs://scene/Chat",
-      "name": "Chat",
+      "uri": "obs://scene_Chat",
+      "name": "scene_Chat",
       "mimeType": "application/json",
       "description": "Chat-focused scene"
     }
@@ -51,7 +51,7 @@ Returns detailed configuration for a specific scene.
 
 ```json
 {
-  "uri": "obs://scene/Gaming"
+  "uri": "obs://scene_Gaming"
 }
 ```
 
@@ -61,7 +61,7 @@ Returns detailed configuration for a specific scene.
 {
   "contents": [
     {
-      "uri": "obs://scene/Gaming",
+      "uri": "obs://scene_Gaming",
       "mimeType": "application/json",
       "text": "{\"name\":\"Gaming\",\"isActive\":true,\"sources\":[...]}"
     }
@@ -183,7 +183,7 @@ func (c *Client) handleSceneRemoved(event *events.SceneRemoved) {
 
 func (c *Client) handleCurrentProgramSceneChanged(event *events.CurrentProgramSceneChanged) {
     log.Printf("Scene changed to: %s", event.SceneName)
-    uri := fmt.Sprintf("obs://scene/%s", event.SceneName)
+    uri := fmt.Sprintf("obs://scene_%s", event.SceneName)
     c.mcpServer.SendResourceUpdated(uri)
 }
 ```
@@ -200,8 +200,8 @@ func handleResourcesList(ctx context.Context, obsClient *obs.Client) ([]*mcp.Res
     resources := make([]*mcp.Resource, len(scenes))
     for i, scene := range scenes {
         resources[i] = &mcp.Resource{
-            URI:         fmt.Sprintf("obs://scene/%s", scene.Name),
-            Name:        scene.Name,
+            URI:         fmt.Sprintf("obs://scene_%s", scene.Name),
+            Name:        fmt.Sprintf("scene_%s", scene.Name),
             MimeType:    "application/json",
             Description: fmt.Sprintf("OBS Scene: %s", scene.Name),
         }
@@ -211,7 +211,7 @@ func handleResourcesList(ctx context.Context, obsClient *obs.Client) ([]*mcp.Res
 
 func handleResourceRead(ctx context.Context, uri string, obsClient *obs.Client) (*mcp.ResourceContent, error) {
     // Extract scene name from URI
-    sceneName := strings.TrimPrefix(uri, "obs://scene/")
+    sceneName := strings.TrimPrefix(uri, "obs://scene_")
 
     // Get scene details from OBS
     scene, err := obsClient.GetSceneByName(sceneName)
@@ -255,9 +255,9 @@ func handleResourceRead(ctx context.Context, uri string, obsClient *obs.Client) 
 
 *[User switches to Gaming scene in OBS]*
 
-**Server → AI:** `notifications/resources/updated` with `uri: "obs://scene/Gaming"`
+**Server → AI:** `notifications/resources/updated` with `uri: "obs://scene_Gaming"`
 
-**AI → Server:** `resources/read` for `obs://scene/Gaming`
+**AI → Server:** `resources/read` for `obs://scene_Gaming`
 
 **Server → AI:** `{name: "Gaming", isActive: true, ...}`
 
@@ -267,7 +267,7 @@ func handleResourceRead(ctx context.Context, uri string, obsClient *obs.Client) 
 
 ### Sources as Resources
 
-**URI Pattern:** `obs://source/{scene_name}/{source_name}`
+**URI Pattern:** `obs://source_{scene_name}_{source_name}`
 
 **Use Cases:**
 
@@ -282,7 +282,7 @@ func handleResourceRead(ctx context.Context, uri string, obsClient *obs.Client) 
 
 ### Audio Inputs as Resources
 
-**URI Pattern:** `obs://audio-input/{input_name}`
+**URI Pattern:** `obs://audio_{input_name}`
 
 **Use Cases:**
 
@@ -296,7 +296,7 @@ func handleResourceRead(ctx context.Context, uri string, obsClient *obs.Client) 
 
 ### Filters as Resources
 
-**URI Pattern:** `obs://filter/{source_name}/{filter_name}`
+**URI Pattern:** `obs://filter_{source_name}_{filter_name}`
 
 **Use Cases:**
 
@@ -307,6 +307,46 @@ func handleResourceRead(ctx context.Context, uri string, obsClient *obs.Client) 
 
 - `notifications/resources/list_changed` - Filter added/removed
 - `notifications/resources/updated` - Filter settings changed
+
+### Agentic Screenshot Sources (Future)
+
+**Concept:** Programmatically create and manage OBS sources that capture scene screenshots on a cadence.
+
+**URI Pattern:** `obs://agentic_screenshot_{scene_name}_{interval}`
+
+**Use Cases:**
+- Periodic scene monitoring for AI analysis
+- Automated scene archiving
+- Visual change detection
+- Content moderation workflows
+- Training data collection for computer vision
+
+**Implementation Strategy:**
+- Create OBS "Browser Source" or "Image Source" pointing to local endpoint
+- MCP server provides HTTP endpoint that returns latest screenshot
+- Configurable capture cadence (e.g., every 5s, 30s, 1m)
+- Screenshots stored temporarily in SQLite or filesystem
+- AI client can request latest screenshot via resource read
+- Automatic cleanup of old screenshots
+
+**Tools:**
+- `create_screenshot_source` - Add screenshot capture source to scene
+- `configure_screenshot_cadence` - Set capture interval
+- `remove_screenshot_source` - Clean up agentic source
+
+**Resource Operations:**
+- `resources/read` - Get latest screenshot as base64-encoded image
+- `resources/list` - List all active screenshot sources
+
+**Notifications:**
+- `notifications/resources/updated` - New screenshot available
+
+**Research Needed:**
+- Best OBS source type for programmable image updates
+- Screenshot storage strategy (memory vs disk vs SQLite blob)
+- Performance impact of frequent captures
+- Image encoding format (JPEG vs PNG vs WebP)
+- Retention policy for old screenshots
 
 ## Best Practices
 

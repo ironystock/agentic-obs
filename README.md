@@ -23,20 +23,29 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Installation
 
-### 1. Clone the Repository
+### Option 1: Install with Go (Recommended)
 
 ```bash
-git clone <repository-url>
+go install github.com/ironystock/agentic-obs@latest
+```
+
+This installs the `agentic-obs` binary to your `$GOPATH/bin` directory.
+
+### Option 2: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/ironystock/agentic-obs.git
 cd agentic-obs
-```
 
-### 2. Install Dependencies
-
-```bash
+# Install dependencies
 go mod download
+
+# Build the server
+go build -o agentic-obs main.go
 ```
 
-### 3. Configure OBS Studio
+### Configure OBS Studio
 
 1. Open OBS Studio
 2. Go to **Tools → WebSocket Server Settings**
@@ -44,21 +53,18 @@ go mod download
 4. Set a password (optional but recommended)
 5. Note your connection details
 
-### 4. Build the Server
-
-```bash
-go build -o agentic-obs main.go
-```
-
 ## Usage
 
 ### Running the Server
 
 ```bash
-# Run directly
+# If installed via go install (ensure $GOPATH/bin is in your PATH)
+agentic-obs
+
+# Or run directly from source
 go run main.go
 
-# Or use the built binary
+# Or use a built binary
 ./agentic-obs
 ```
 
@@ -69,11 +75,7 @@ On first run, the server will:
 
 ### Connecting to MCP Clients
 
-This server uses stdio transport. Configure your MCP client to execute:
-
-```bash
-/path/to/agentic-obs
-```
+This server uses stdio transport. Configure your MCP client to execute the `agentic-obs` command.
 
 Example Claude Desktop configuration (`claude_desktop_config.json`):
 
@@ -81,7 +83,18 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 {
   "mcpServers": {
     "obs": {
-      "command": "E:\\code\\agentic-obs\\agentic-obs.exe"
+      "command": "agentic-obs"
+    }
+  }
+}
+```
+
+**Note:** If you built from source or the binary isn't in your PATH, use the full path:
+```json
+{
+  "mcpServers": {
+    "obs": {
+      "command": "/full/path/to/agentic-obs"
     }
   }
 }
