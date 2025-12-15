@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ironystock/agentic-obs/internal/obs"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // SceneDetails contains detailed information about a scene

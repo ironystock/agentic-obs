@@ -8,6 +8,27 @@ import (
 	"time"
 )
 
+// parseTimestamp parses a timestamp string from SQLite.
+// SQLite can return timestamps in various formats depending on the driver.
+func parseTimestamp(s string) (time.Time, error) {
+	// Try common timestamp formats
+	formats := []string{
+		time.RFC3339,           // "2006-01-02T15:04:05Z07:00"
+		"2006-01-02T15:04:05Z", // ISO 8601 with Z
+		"2006-01-02 15:04:05",  // SQLite default
+		time.DateTime,          // "2006-01-02 15:04:05"
+	}
+
+	// Normalize the timestamp - remove trailing Z if present for some formats
+	for _, format := range formats {
+		if t, err := time.Parse(format, s); err == nil {
+			return t, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("unable to parse timestamp: %s", s)
+}
+
 // ScenePreset represents a user-defined OBS scene preset.
 // Presets allow users to save and restore specific scene configurations,
 // including which sources are visible and their settings.
@@ -90,7 +111,7 @@ func (db *DB) GetScenePreset(ctx context.Context, name string) (*ScenePreset, er
 	}
 
 	// Parse created_at timestamp
-	preset.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAt)
+	preset.CreatedAt, err = parseTimestamp(createdAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse created_at timestamp for preset '%s': %w", name, err)
 	}
@@ -128,7 +149,7 @@ func (db *DB) GetScenePresetByID(ctx context.Context, id int64) (*ScenePreset, e
 	}
 
 	// Parse created_at timestamp
-	preset.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAt)
+	preset.CreatedAt, err = parseTimestamp(createdAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse created_at timestamp for preset ID %d: %w", id, err)
 	}
@@ -185,7 +206,7 @@ func (db *DB) ListScenePresets(ctx context.Context, sceneName string) ([]*SceneP
 		}
 
 		// Parse created_at timestamp
-		preset.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAt)
+		preset.CreatedAt, err = parseTimestamp(createdAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse created_at timestamp for preset '%s': %w", preset.Name, err)
 		}
