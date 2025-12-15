@@ -49,6 +49,10 @@ type OBSClient interface {
 	// Status
 	GetOBSStatus() (*obs.OBSStatus, error)
 
+	// Scene preset operations
+	CaptureSceneState(sceneName string) ([]obs.SourceState, error)
+	ApplyScenePreset(sceneName string, sources []obs.SourceState) error
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }

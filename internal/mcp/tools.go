@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/ironystock/agentic-obs/internal/obs"
+	"github.com/ironystock/agentic-obs/internal/storage"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -41,6 +43,28 @@ type SetVolumeInput struct {
 	InputName string   `json:"input_name"`
 	VolumeDb  *float64 `json:"volume_db,omitempty"`
 	VolumeMul *float64 `json:"volume_mul,omitempty"`
+}
+
+// ListPresetsInput is the input for listing scene presets
+type ListPresetsInput struct {
+	SceneName string `json:"scene_name,omitempty"`
+}
+
+// PresetNameInput is the input for preset operations by name
+type PresetNameInput struct {
+	PresetName string `json:"preset_name"`
+}
+
+// RenamePresetInput is the input for renaming a preset
+type RenamePresetInput struct {
+	OldName string `json:"old_name"`
+	NewName string `json:"new_name"`
+}
+
+// SavePresetInput is the input for saving a scene preset
+type SavePresetInput struct {
+	PresetName string `json:"preset_name"`
+	SceneName  string `json:"scene_name"`
 }
 
 // registerToolHandlers registers all MCP tool handlers with the server
@@ -201,6 +225,63 @@ func (s *Server) registerToolHandlers() {
 			Description: "Get overall OBS status including version, connection state, and active scene",
 		},
 		s.handleGetOBSStatus,
+	)
+
+	// Scene preset tools
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "list_scene_presets",
+			Description: "List all saved scene presets, optionally filtered by scene name",
+		},
+		s.handleListScenePresets,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "get_preset_details",
+			Description: "Get detailed information about a specific scene preset including source states",
+		},
+		s.handleGetPresetDetails,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "delete_scene_preset",
+			Description: "Delete a saved scene preset by name",
+		},
+		s.handleDeleteScenePreset,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "rename_scene_preset",
+			Description: "Rename an existing scene preset",
+		},
+		s.handleRenameScenePreset,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "save_scene_preset",
+			Description: "Save the current state of a scene as a named preset",
+		},
+		s.handleSaveScenePreset,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "apply_scene_preset",
+			Description: "Apply a saved preset to restore source visibility states",
+		},
+		s.handleApplyScenePreset,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "get_input_volume",
+			Description: "Get the current volume level of an audio input (returns dB and multiplier values)",
+		},
+		s.handleGetInputVolume,
 	)
 
 	log.Println("Tool handlers registered successfully")
@@ -441,5 +522,176 @@ func (s *Server) handleSetInputVolume(ctx context.Context, request *mcpsdk.CallT
 
 	return nil, SimpleResult{
 		Message: fmt.Sprintf("Successfully set volume for input: %s", input.InputName),
+	}, nil
+}
+
+// Scene preset tool handlers
+
+func (s *Server) handleListScenePresets(ctx context.Context, request *mcpsdk.CallToolRequest, input ListPresetsInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Listing scene presets (filter: %s)", input.SceneName)
+
+	presets, err := s.storage.ListScenePresets(ctx, input.SceneName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list scene presets: %w", err)
+	}
+
+	// Convert to simpler response format (without full source details)
+	result := make([]map[string]interface{}, len(presets))
+	for i, p := range presets {
+		result[i] = map[string]interface{}{
+			"id":         p.ID,
+			"name":       p.Name,
+			"scene_name": p.SceneName,
+			"created_at": p.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+	}
+
+	return nil, map[string]interface{}{
+		"presets": result,
+		"count":   len(presets),
+	}, nil
+}
+
+func (s *Server) handleGetPresetDetails(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Getting preset details for: %s", input.PresetName)
+
+	preset, err := s.storage.GetScenePreset(ctx, input.PresetName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get preset details: %w", err)
+	}
+
+	return nil, map[string]interface{}{
+		"id":         preset.ID,
+		"name":       preset.Name,
+		"scene_name": preset.SceneName,
+		"sources":    preset.Sources,
+		"created_at": preset.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}, nil
+}
+
+func (s *Server) handleDeleteScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Deleting scene preset: %s", input.PresetName)
+
+	if err := s.storage.DeleteScenePreset(ctx, input.PresetName); err != nil {
+		return nil, nil, fmt.Errorf("failed to delete preset: %w", err)
+	}
+
+	return nil, SimpleResult{
+		Message: fmt.Sprintf("Successfully deleted preset: %s", input.PresetName),
+	}, nil
+}
+
+func (s *Server) handleRenameScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input RenamePresetInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Renaming preset from '%s' to '%s'", input.OldName, input.NewName)
+
+	if err := s.storage.RenameScenePreset(ctx, input.OldName, input.NewName); err != nil {
+		return nil, nil, fmt.Errorf("failed to rename preset: %w", err)
+	}
+
+	return nil, SimpleResult{
+		Message: fmt.Sprintf("Successfully renamed preset from '%s' to '%s'", input.OldName, input.NewName),
+	}, nil
+}
+
+func (s *Server) handleGetInputVolume(ctx context.Context, request *mcpsdk.CallToolRequest, input InputNameInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Getting volume for input: %s", input.InputName)
+
+	volumeDb, volumeMul, err := s.obsClient.GetInputVolume(input.InputName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get input volume: %w", err)
+	}
+
+	return nil, map[string]interface{}{
+		"input_name": input.InputName,
+		"volume_db":  volumeDb,
+		"volume_mul": volumeMul,
+	}, nil
+}
+
+func (s *Server) handleSaveScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input SavePresetInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Saving scene preset '%s' for scene '%s'", input.PresetName, input.SceneName)
+
+	// Capture current scene state from OBS
+	states, err := s.obsClient.CaptureSceneState(input.SceneName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to capture scene state: %w", err)
+	}
+
+	// Convert OBS source states to storage format
+	sources := make([]storage.SourceState, len(states))
+	for i, state := range states {
+		sources[i] = storage.SourceState{
+			Name:    state.Name,
+			Visible: state.Enabled,
+		}
+	}
+
+	// Create preset in storage
+	preset := storage.ScenePreset{
+		Name:      input.PresetName,
+		SceneName: input.SceneName,
+		Sources:   sources,
+	}
+
+	id, err := s.storage.CreateScenePreset(ctx, preset)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to save preset: %w", err)
+	}
+
+	return nil, map[string]interface{}{
+		"id":           id,
+		"preset_name":  input.PresetName,
+		"scene_name":   input.SceneName,
+		"source_count": len(sources),
+		"message":      fmt.Sprintf("Successfully saved preset '%s' with %d sources", input.PresetName, len(sources)),
+	}, nil
+}
+
+func (s *Server) handleApplyScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Applying scene preset: %s", input.PresetName)
+
+	// Load preset from storage
+	preset, err := s.storage.GetScenePreset(ctx, input.PresetName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load preset: %w", err)
+	}
+
+	// Get current scene items to map names to IDs
+	scene, err := s.obsClient.GetSceneByName(preset.SceneName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get scene '%s': %w", preset.SceneName, err)
+	}
+
+	// Build name-to-ID map
+	nameToID := make(map[string]int)
+	for _, src := range scene.Sources {
+		nameToID[src.Name] = src.ID
+	}
+
+	// Convert storage format to OBS source states
+	obsStates := make([]obs.SourceState, 0, len(preset.Sources))
+	for _, src := range preset.Sources {
+		id, exists := nameToID[src.Name]
+		if !exists {
+			log.Printf("Warning: source '%s' not found in scene, skipping", src.Name)
+			continue
+		}
+		obsStates = append(obsStates, obs.SourceState{
+			ID:      id,
+			Name:    src.Name,
+			Enabled: src.Visible,
+		})
+	}
+
+	// Apply preset to OBS
+	if err := s.obsClient.ApplyScenePreset(preset.SceneName, obsStates); err != nil {
+		return nil, nil, fmt.Errorf("failed to apply preset: %w", err)
+	}
+
+	return nil, map[string]interface{}{
+		"preset_name":   input.PresetName,
+		"scene_name":    preset.SceneName,
+		"applied_count": len(obsStates),
+		"message":       fmt.Sprintf("Successfully applied preset '%s' to scene '%s'", input.PresetName, preset.SceneName),
 	}, nil
 }
