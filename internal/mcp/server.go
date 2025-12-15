@@ -95,6 +95,9 @@ func NewServer(config ServerConfig) (*Server, error) {
 	// Register tool handlers
 	s.registerToolHandlers()
 
+	// Register prompt handlers
+	s.registerPrompts()
+
 	log.Printf("MCP Server initialized: %s v%s", config.ServerName, config.ServerVersion)
 	return s, nil
 }

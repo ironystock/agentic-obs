@@ -1678,7 +1678,336 @@ Check: OBS WebSocket settings and stored credentials
 
 ---
 
-**Document Version:** 2.0
+## MCP Resources
+
+MCP resources provide direct access to OBS data structures, enabling clients to read and monitor OBS state efficiently. Unlike tools (which perform actions), resources expose data that can be read, listed, and monitored for changes.
+
+### What are MCP Resources?
+
+Resources are addressable data objects exposed via URI patterns. Clients can:
+- **List** all available resources of a given type
+- **Read** individual resource content (JSON or binary)
+- **Subscribe** to notifications when resources change (future enhancement)
+
+### Available Resources
+
+The agentic-obs server exposes three types of resources:
+
+#### 1. Scene Resources
+
+**URI Pattern:** `obs://scene/{sceneName}`
+**Content Type:** `obs-scene` (JSON)
+**Description:** Scene configuration including sources, settings, and current state
+
+**Example Resource URI:** `obs://scene/Gaming`
+
+**Content Structure:**
+```json
+{
+  "name": "Gaming",
+  "sources": [
+    {"id": 1, "name": "Webcam", "visible": true},
+    {"id": 2, "name": "Chat Overlay", "visible": false}
+  ],
+  "is_current": true
+}
+```
+
+**Notifications:**
+- `notifications/resources/list_changed` - When scenes are created or deleted
+- `notifications/resources/updated` - When a specific scene is modified or becomes active
+
+#### 2. Screenshot Resources
+
+**URI Pattern:** `obs://screenshot/{sourceName}`
+**Content Type:** `image/png` or `image/jpeg` (binary)
+**Description:** Binary image data from screenshot capture sources
+
+**Example Resource URI:** `obs://screenshot/stream-monitor`
+
+**Content:** Binary image data (PNG or JPEG format)
+
+**Use Cases:**
+- Direct image access for AI visual analysis
+- Embed screenshots in MCP resource workflows
+- Monitor stream output visually
+
+**Note:** Screenshot resources require creating a screenshot source first using the `create_screenshot_source` tool.
+
+#### 3. Preset Resources
+
+**URI Pattern:** `obs://preset/{presetName}`
+**Content Type:** `obs-preset` (JSON)
+**Description:** Scene preset configuration with source visibility states
+
+**Example Resource URI:** `obs://preset/gaming-webcam-on`
+
+**Content Structure:**
+```json
+{
+  "id": 1,
+  "name": "gaming-webcam-on",
+  "scene_name": "Gaming",
+  "description": "Full overlay with webcam",
+  "sources": [
+    {"name": "Webcam", "visible": true},
+    {"name": "Chat Overlay", "visible": true},
+    {"name": "Alert Box", "visible": true}
+  ],
+  "created_at": "2025-01-15T10:30:00Z"
+}
+```
+
+### Using Resources
+
+**List All Resources:**
+```
+Client: resources/list
+Server: Returns list of all resources across all types (scenes, screenshots, presets)
+```
+
+**Read Specific Resource:**
+```
+Client: resources/read with URI "obs://scene/Gaming"
+Server: Returns JSON scene configuration
+```
+
+**Monitor Changes:**
+Resources send notifications when they change, allowing clients to stay synchronized with OBS state in real-time.
+
+### Resource vs Tool Usage
+
+- **Use Resources when:** You need to read/monitor OBS state, require notifications on changes, or want structured data access
+- **Use Tools when:** You need to perform actions or modify OBS state
+
+**Example:** Use `resources/read` on `obs://scene/Gaming` to get scene configuration, but use the `set_current_scene` tool to switch to that scene.
+
+---
+
+## MCP Prompts
+
+MCP prompts are pre-built workflow templates that guide AI assistants through complex multi-step operations. They combine multiple tools and resources into cohesive workflows with best practices, error handling, and user guidance built-in.
+
+### What are MCP Prompts?
+
+Prompts provide:
+- **Structured workflows** for common OBS tasks
+- **Context-aware guidance** based on current OBS state
+- **Checklists and verification steps** to ensure quality
+- **Error handling** and recovery suggestions
+- **Best practices** for streaming, recording, and diagnostics
+
+### Available Prompts
+
+The agentic-obs server provides 10 workflow prompts:
+
+#### 1. stream-launch
+
+**Arguments:** None
+**Purpose:** Pre-stream checklist and setup guidance
+
+**What it does:**
+- Verifies OBS connection and health
+- Checks audio levels and sources
+- Reviews scene configuration
+- Confirms stream settings
+- Provides go-live checklist
+
+**Example usage:** "Help me prepare to go live"
+
+---
+
+#### 2. stream-teardown
+
+**Arguments:** None
+**Purpose:** End-stream cleanup and shutdown workflow
+
+**What it does:**
+- Switches to ending scene if configured
+- Stops streaming gracefully
+- Provides post-stream stats
+- Suggests cleanup actions
+- Verifies stream ended properly
+
+**Example usage:** "Help me end my stream properly"
+
+---
+
+#### 3. audio-check
+
+**Arguments:** None
+**Purpose:** Audio verification and diagnostics
+
+**What it does:**
+- Lists all audio sources
+- Checks mute states
+- Reviews volume levels
+- Identifies potential issues
+- Provides audio mixing guidance
+
+**Example usage:** "Check my audio setup"
+
+---
+
+#### 4. visual-check
+
+**Arguments:** `screenshot_source` (required)
+**Purpose:** Visual layout analysis using screenshot sources
+
+**What it does:**
+- Captures current visual output
+- Analyzes scene composition
+- Identifies layout issues
+- Provides design feedback
+- Suggests improvements
+
+**Example usage:** "Analyze my current stream layout using the 'stream-monitor' screenshot"
+
+**Requires:** A screenshot source created with `create_screenshot_source`
+
+---
+
+#### 5. health-check
+
+**Arguments:** None
+**Purpose:** Comprehensive OBS diagnostic and status check
+
+**What it does:**
+- Checks OBS connection and version
+- Reviews performance metrics (FPS, dropped frames)
+- Verifies recording/streaming status
+- Identifies potential issues
+- Provides health report
+
+**Example usage:** "Run a full health check on OBS"
+
+---
+
+#### 6. problem-detection
+
+**Arguments:** `screenshot_source` (required)
+**Purpose:** Automated issue detection from visual monitoring
+
+**What it does:**
+- Analyzes screenshot for problems
+- Detects black screens, frozen sources
+- Identifies missing overlays or elements
+- Checks for visual artifacts
+- Suggests fixes for detected issues
+
+**Example usage:** "Check for problems in my stream using 'stream-monitor'"
+
+**Requires:** A screenshot source created with `create_screenshot_source`
+
+---
+
+#### 7. preset-switcher
+
+**Arguments:** `preset_name` (optional)
+**Purpose:** Scene preset management and switching
+
+**What it does:**
+- Lists available presets if no name provided
+- Applies specified preset
+- Verifies preset was applied correctly
+- Provides preset management guidance
+- Suggests preset organization
+
+**Example usage:**
+- "Switch to my 'gaming-full-overlay' preset"
+- "Show me my available presets" (no argument)
+
+---
+
+#### 8. recording-workflow
+
+**Arguments:** None
+**Purpose:** Complete recording session management
+
+**What it does:**
+- Guides through recording setup
+- Verifies disk space and settings
+- Manages recording start/stop
+- Monitors recording duration and size
+- Handles pause/resume operations
+- Provides post-recording summary
+
+**Example usage:** "Help me record a session"
+
+---
+
+#### 9. scene-organizer
+
+**Arguments:** None
+**Purpose:** Scene organization and cleanup guidance
+
+**What it does:**
+- Lists all scenes with analysis
+- Identifies unused or duplicate scenes
+- Suggests organization improvements
+- Provides cleanup recommendations
+- Helps manage scene complexity
+
+**Example usage:** "Help me organize my OBS scenes"
+
+---
+
+#### 10. quick-status
+
+**Arguments:** None
+**Purpose:** Brief status summary for rapid checks
+
+**What it does:**
+- Provides condensed OBS status
+- Shows key metrics (scene, recording, streaming)
+- Highlights any issues
+- Quick health indicator
+
+**Example usage:** "Give me a quick status update"
+
+---
+
+### Using Prompts
+
+Prompts are invoked through the MCP protocol:
+
+```
+Client: prompts/list
+Server: Returns list of all available prompts with descriptions
+
+Client: prompts/get with name "stream-launch"
+Server: Returns prompt template and required arguments
+
+Client: Execute prompt with provided arguments
+Server: Guides through workflow using tools and resources
+```
+
+### Prompt Benefits
+
+1. **Consistency:** Ensures best practices are followed every time
+2. **Efficiency:** Multi-step workflows in single invocations
+3. **Guidance:** Context-aware recommendations based on current state
+4. **Error Prevention:** Built-in validation and pre-flight checks
+5. **Learning:** Demonstrates proper tool usage patterns
+
+### Combining Prompts with Tools and Resources
+
+Prompts use both tools and resources internally:
+- **Tools** for actions (start streaming, switch scene, etc.)
+- **Resources** for reading state (scene configuration, presets, etc.)
+- **Notifications** for real-time updates during workflows
+
+**Example:** The `stream-launch` prompt uses:
+- `get_obs_status` tool for health check
+- `list_scenes` tool to verify scenes exist
+- `obs://scene/*` resources to read scene configurations
+- `get_input_mute` and `get_input_volume` tools for audio checks
+
+---
+
+**Document Version:** 3.0
 **Last Updated:** 2025-12-15
-**agentic-obs Version:** Phase 3 Complete
+**agentic-obs Version:** Phase 4 Complete
 **Total Tools:** 30
+**Total Resources:** 3 types (scenes, screenshots, presets)
+**Total Prompts:** 10
