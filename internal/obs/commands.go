@@ -11,35 +11,35 @@ import (
 
 // Scene represents an OBS scene with its sources.
 type Scene struct {
-	Name    string         `json:"name"`
-	Index   int            `json:"index"`
-	Sources []SceneSource  `json:"sources"`
+	Name    string        `json:"name"`
+	Index   int           `json:"index"`
+	Sources []SceneSource `json:"sources"`
 }
 
 // SceneSource represents a source within a scene.
 type SceneSource struct {
-	ID             int     `json:"id"`
-	Name           string  `json:"name"`
-	Type           string  `json:"type"`
-	Enabled        bool    `json:"enabled"`
-	X              float64 `json:"x"`
-	Y              float64 `json:"y"`
-	Width          float64 `json:"width"`
-	Height         float64 `json:"height"`
-	ScaleX         float64 `json:"scale_x"`
-	ScaleY         float64 `json:"scale_y"`
-	Rotation       float64 `json:"rotation"`
-	Visible        bool    `json:"visible"`
-	Locked         bool    `json:"locked"`
+	ID       int     `json:"id"`
+	Name     string  `json:"name"`
+	Type     string  `json:"type"`
+	Enabled  bool    `json:"enabled"`
+	X        float64 `json:"x"`
+	Y        float64 `json:"y"`
+	Width    float64 `json:"width"`
+	Height   float64 `json:"height"`
+	ScaleX   float64 `json:"scale_x"`
+	ScaleY   float64 `json:"scale_y"`
+	Rotation float64 `json:"rotation"`
+	Visible  bool    `json:"visible"`
+	Locked   bool    `json:"locked"`
 }
 
 // RecordingStatus represents the current recording state.
 type RecordingStatus struct {
-	Active       bool   `json:"active"`
-	Paused       bool   `json:"paused"`
-	Timecode     string `json:"timecode,omitempty"`
-	OutputPath   string `json:"output_path,omitempty"`
-	OutputBytes  int64  `json:"output_bytes,omitempty"`
+	Active      bool   `json:"active"`
+	Paused      bool   `json:"paused"`
+	Timecode    string `json:"timecode,omitempty"`
+	OutputPath  string `json:"output_path,omitempty"`
+	OutputBytes int64  `json:"output_bytes,omitempty"`
 }
 
 // StreamingStatus represents the current streaming state.

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"log"
 
-	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ironystock/agentic-obs/internal/obs"
 	"github.com/ironystock/agentic-obs/internal/storage"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Server represents the MCP server instance for OBS control
 type Server struct {
-	mcpServer   *mcpsdk.Server
-	obsClient   *obs.Client
-	storage     *storage.DB
-	ctx         context.Context
-	cancel      context.CancelFunc
+	mcpServer *mcpsdk.Server
+	obsClient OBSClient
+	storage   *storage.DB
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 // ServerConfig holds configuration for server initialization
@@ -156,8 +156,13 @@ func (s *Server) handleOBSEventNotification(eventType obs.EventType, data map[st
 }
 
 // GetOBSClient returns the OBS client instance (for internal use)
-func (s *Server) GetOBSClient() *obs.Client {
+func (s *Server) GetOBSClient() OBSClient {
 	return s.obsClient
+}
+
+// SetOBSClient sets the OBS client (primarily for testing with mocks)
+func (s *Server) SetOBSClient(client OBSClient) {
+	s.obsClient = client
 }
 
 // GetStorage returns the storage instance (for internal use)
