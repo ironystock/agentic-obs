@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -14,11 +15,47 @@ import (
 )
 
 // Config holds HTTP server configuration options.
+//
+// Security Note: This server is designed for local use (localhost binding by default).
+// If exposed externally, consider adding rate limiting and authentication at the
+// reverse proxy or load balancer level.
 type Config struct {
 	// Host to bind to (default: "localhost")
 	Host string
 	// Port to listen on (default: 8765)
 	Port int
+}
+
+// isValidSourceName validates that a source name is safe to use.
+// Returns false if the name contains path traversal patterns, path separators,
+// null bytes, or other potentially dangerous characters.
+func isValidSourceName(name string) bool {
+	// Reject empty names
+	if name == "" {
+		return false
+	}
+
+	// Reject names containing null bytes
+	if strings.ContainsRune(name, '\x00') {
+		return false
+	}
+
+	// Reject path separators (both Unix and Windows style)
+	if strings.ContainsAny(name, "/\\") {
+		return false
+	}
+
+	// Reject parent directory patterns
+	if strings.Contains(name, "..") {
+		return false
+	}
+
+	// Reject names that are just dots
+	if name == "." {
+		return false
+	}
+
+	return true
 }
 
 // DefaultConfig returns the default HTTP server configuration.
@@ -159,16 +196,25 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request) {
 	}
 	sourceName := path
 
+	// Validate source name to prevent path traversal attacks
+	if !isValidSourceName(sourceName) {
+		log.Printf("Invalid source name rejected: %q", sourceName)
+		http.Error(w, "Invalid source name", http.StatusBadRequest)
+		return
+	}
+
 	// Look up the screenshot source by name
 	source, err := s.storage.GetScreenshotSourceByName(r.Context(), sourceName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Screenshot source not found: %s", sourceName), http.StatusNotFound)
+		log.Printf("Screenshot source lookup failed for %q: %v", sourceName, err)
+		http.Error(w, "Source not found", http.StatusNotFound)
 		return
 	}
 
 	// Get the latest screenshot for this source
 	screenshot, err := s.storage.GetLatestScreenshot(r.Context(), source.ID)
 	if err != nil {
+		log.Printf("No screenshots available for source %q (ID: %d): %v", sourceName, source.ID, err)
 		http.Error(w, "No screenshots available", http.StatusNotFound)
 		return
 	}
@@ -176,7 +222,8 @@ func (s *Server) handleScreenshot(w http.ResponseWriter, r *http.Request) {
 	// Decode base64 image data
 	imageData, err := base64.StdEncoding.DecodeString(screenshot.ImageData)
 	if err != nil {
-		http.Error(w, "Failed to decode image data", http.StatusInternalServerError)
+		log.Printf("Failed to decode screenshot data for source %q: %v", sourceName, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
