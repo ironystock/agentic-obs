@@ -8,13 +8,17 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
+- **30 MCP Tools**: Comprehensive control over OBS Studio operations
 - **Scene Management**: List, switch, create, and remove OBS scenes
 - **Scene Presets**: Save and restore source visibility configurations
 - **Recording Control**: Start, stop, pause, resume, and monitor recording
 - **Streaming Control**: Start, stop, and monitor streaming
 - **Source Management**: List and control source visibility
 - **Audio Control**: Manage input mute and volume levels
+- **Screenshot Sources**: AI visual monitoring with periodic image capture
 - **Status Monitoring**: Query OBS connection and operational status
+- **3 MCP Resources**: Scenes, screenshots, and presets exposed as resources
+- **10 MCP Prompts**: Pre-built workflows for common tasks and diagnostics
 
 ## Prerequisites
 
@@ -174,6 +178,40 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 | `get_obs_status` | Get overall OBS status and connection info |
 
 **Total: 30 tools**
+
+## MCP Resources
+
+The server exposes OBS data as MCP resources for efficient access and monitoring:
+
+| Resource Type | URI Pattern | Content Type | Description |
+|---------------|-------------|--------------|-------------|
+| Scenes | `obs://scene/{name}` | `obs-scene` (JSON) | Scene configuration with sources and settings |
+| Screenshots | `obs://screenshot/{name}` | `image/png` or `image/jpeg` | Binary screenshot images from capture sources |
+| Presets | `obs://preset/{name}` | `obs-preset` (JSON) | Scene preset configurations with source visibility |
+
+**Usage:**
+- `resources/list` - List all available resources
+- `resources/read` - Get detailed resource content
+- Resources support notifications for real-time updates
+
+## MCP Prompts
+
+Pre-built workflow prompts guide AI assistants through common OBS tasks:
+
+| Prompt | Arguments | Purpose |
+|--------|-----------|---------|
+| `stream-launch` | none | Pre-stream checklist and setup |
+| `stream-teardown` | none | End-stream cleanup workflow |
+| `audio-check` | none | Audio verification and diagnostics |
+| `visual-check` | screenshot_source | Visual layout analysis |
+| `health-check` | none | Comprehensive OBS diagnostics |
+| `problem-detection` | screenshot_source | Automated issue detection |
+| `preset-switcher` | preset_name (optional) | Scene preset management |
+| `recording-workflow` | none | Recording session guidance |
+| `scene-organizer` | none | Scene organization and cleanup |
+| `quick-status` | none | Brief status summary |
+
+Prompts combine multiple tools into cohesive workflows with best practices built-in.
 
 ## Development
 

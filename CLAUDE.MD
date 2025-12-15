@@ -104,6 +104,9 @@ go install
 MCP Client (Claude/AI Agent)
     ↕ stdio (JSON-RPC)
 MCP Server (this project)
+    ├─ Tools (30 total)
+    ├─ Resources (scenes, screenshots, presets)
+    ├─ Prompts (10 workflows)
     ↕ WebSocket (port 4455)
 OBS Studio (obs-websocket)
     ↕ SQLite (local)
@@ -130,19 +133,32 @@ Configuration & Presets
 
 ### MCP Resources
 
-**OBS Scenes** are exposed as MCP resources with the following structure:
+The server exposes three types of MCP resources for client access:
 
-- **Resource URI Pattern**: `obs://scene_{scene_name}`
+**1. OBS Scenes** - Scene configurations and source layouts
+- **Resource URI Pattern**: `obs://scene/{sceneName}`
 - **Resource Type**: `obs-scene`
 - **Content**: JSON representation of scene configuration (sources, settings)
 - **Notifications**:
   - `notifications/resources/list_changed` - When scenes are created/deleted
   - `notifications/resources/updated` - When a specific scene is modified or becomes active
 
+**2. Screenshot Images** - Binary screenshot data
+- **Resource URI Pattern**: `obs://screenshot/{sourceName}`
+- **Resource Type**: `image/png` or `image/jpeg`
+- **Content**: Binary image data (PNG or JPEG format)
+- **Description**: Direct access to screenshot images as MCP resources
+
+**3. Scene Presets** - Saved source visibility configurations
+- **Resource URI Pattern**: `obs://preset/{presetName}`
+- **Resource Type**: `obs-preset`
+- **Content**: JSON representation of preset configuration (scene, sources, visibility states)
+- **Description**: Access to saved scene preset configurations
+
 **Resource Operations:**
-- `resources/list` - List all available scenes
-- `resources/read` - Get detailed scene configuration
-- `resources/subscribe` - Subscribe to scene change notifications (future)
+- `resources/list` - List all available resources of all types
+- `resources/read` - Get detailed resource content (JSON or binary)
+- `resources/subscribe` - Subscribe to resource change notifications (future)
 
 ### MCP Tools Implemented (30 tools)
 
@@ -157,6 +173,30 @@ Core tools for OBS control:
 - **Status**: `get_obs_status` (overall OBS connection and state)
 
 **Note:** Scenes are also exposed as MCP resources (`resources/list`), enabling notification support.
+
+### MCP Prompts Implemented (10 prompts)
+
+Pre-built prompts for common OBS workflows and tasks:
+
+| Prompt | Arguments | Description |
+|--------|-----------|-------------|
+| `stream-launch` | none | Pre-stream checklist and setup guidance |
+| `stream-teardown` | none | End-stream cleanup and shutdown workflow |
+| `audio-check` | none | Audio verification and diagnostics |
+| `visual-check` | screenshot_source (required) | Visual layout analysis using screenshot sources |
+| `health-check` | none | Comprehensive OBS diagnostic and status check |
+| `problem-detection` | screenshot_source (required) | Automated issue detection from visual monitoring |
+| `preset-switcher` | preset_name (optional) | Scene preset management and switching |
+| `recording-workflow` | none | Complete recording session management |
+| `scene-organizer` | none | Scene organization and cleanup guidance |
+| `quick-status` | none | Brief status summary for rapid checks |
+
+**Prompts enhance the AI assistant's capability to:**
+- Guide users through complex multi-step workflows
+- Provide context-aware recommendations
+- Automate common tasks with best practices built-in
+- Offer structured checklists and verification steps
+- Combine multiple tools into cohesive operations
 
 ## Important Context for AI Assistants
 
@@ -191,11 +231,19 @@ Core tools for OBS control:
 - Background capture manager with configurable cadence
 - Automatic cleanup to keep storage bounded
 
+**Phase 4 (Complete):**
+- MCP Resources expansion: 3 resource types (scenes, screenshots, presets)
+- MCP Prompts: 10 workflow prompts for common tasks
+- Screenshots and presets exposed as MCP resources
+- Resource URIs: `obs://scene/{name}`, `obs://screenshot/{name}`, `obs://preset/{name}`
+- Workflow prompts for streaming, recording, diagnostics, and management
+
 **Future Enhancements:**
 - Multi-instance OBS support (requires architecture refactor)
 - Additional resource types (sources, filters, transitions)
 - Automation rules and macros
 - Interactive setup (TUI and web interface)
+- Resource subscriptions (explicit client opt-in to notifications)
 
 ### Testing
 
@@ -233,8 +281,9 @@ go mod tidy
 ### Areas Needing Attention
 
 **TODO - Future Enhancements:**
-- [x] **Agentic Screenshot Sources** (Phase C): Enable AI to "see" stream via periodic screenshot capture with HTTP serving ✓
-- [ ] Automation rules and macros (Phase D): Event-triggered actions and multi-step sequences
+- [x] **Agentic Screenshot Sources** (Phase 3): Enable AI to "see" stream via periodic screenshot capture with HTTP serving ✓
+- [x] **MCP Resources & Prompts** (Phase 4): Expand resources and add workflow prompts ✓
+- [ ] Automation rules and macros (Phase 5): Event-triggered actions and multi-step sequences
 - [ ] Multi-target OBS support (architecture decision needed)
 - [ ] Interactive installation UX (TUI + Web)
 - [ ] Health check and monitoring endpoints

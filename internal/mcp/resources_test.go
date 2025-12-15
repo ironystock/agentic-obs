@@ -114,3 +114,89 @@ func TestSceneDetails(t *testing.T) {
 		assert.Len(t, details.Sources, 1)
 	})
 }
+
+func TestExtractScreenshotNameFromURI(t *testing.T) {
+	t.Run("extracts screenshot name from valid URI", func(t *testing.T) {
+		name, err := extractScreenshotNameFromURI("obs://screenshot/gameplay")
+		assert.NoError(t, err)
+		assert.Equal(t, "gameplay", name)
+	})
+
+	t.Run("extracts screenshot name with spaces", func(t *testing.T) {
+		name, err := extractScreenshotNameFromURI("obs://screenshot/my monitor")
+		assert.NoError(t, err)
+		assert.Equal(t, "my monitor", name)
+	})
+
+	t.Run("extracts screenshot name with special characters", func(t *testing.T) {
+		name, err := extractScreenshotNameFromURI("obs://screenshot/webcam_1080p")
+		assert.NoError(t, err)
+		assert.Equal(t, "webcam_1080p", name)
+	})
+
+	t.Run("returns error for URI too short", func(t *testing.T) {
+		_, err := extractScreenshotNameFromURI("obs://screenshot/")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "too short")
+	})
+
+	t.Run("returns error for invalid prefix", func(t *testing.T) {
+		_, err := extractScreenshotNameFromURI("obs://scene/longenoughtestname")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must start with")
+	})
+
+	t.Run("returns error for wrong scheme", func(t *testing.T) {
+		_, err := extractScreenshotNameFromURI("http://screenshot/gameplay")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must start with")
+	})
+
+	t.Run("returns error for empty URI", func(t *testing.T) {
+		_, err := extractScreenshotNameFromURI("")
+		assert.Error(t, err)
+	})
+}
+
+func TestExtractPresetNameFromURI(t *testing.T) {
+	t.Run("extracts preset name from valid URI", func(t *testing.T) {
+		name, err := extractPresetNameFromURI("obs://preset/streaming")
+		assert.NoError(t, err)
+		assert.Equal(t, "streaming", name)
+	})
+
+	t.Run("extracts preset name with spaces", func(t *testing.T) {
+		name, err := extractPresetNameFromURI("obs://preset/my layout")
+		assert.NoError(t, err)
+		assert.Equal(t, "my layout", name)
+	})
+
+	t.Run("extracts preset name with special characters", func(t *testing.T) {
+		name, err := extractPresetNameFromURI("obs://preset/recording_setup_v2")
+		assert.NoError(t, err)
+		assert.Equal(t, "recording_setup_v2", name)
+	})
+
+	t.Run("returns error for URI too short", func(t *testing.T) {
+		_, err := extractPresetNameFromURI("obs://preset/")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "too short")
+	})
+
+	t.Run("returns error for invalid prefix", func(t *testing.T) {
+		_, err := extractPresetNameFromURI("obs://scene/test")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must start with")
+	})
+
+	t.Run("returns error for wrong scheme", func(t *testing.T) {
+		_, err := extractPresetNameFromURI("http://preset/streaming")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must start with")
+	})
+
+	t.Run("returns error for empty URI", func(t *testing.T) {
+		_, err := extractPresetNameFromURI("")
+		assert.Error(t, err)
+	})
+}
