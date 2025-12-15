@@ -2,12 +2,14 @@ package mcp
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ironystock/agentic-obs/internal/mcp/testutil"
+	"github.com/ironystock/agentic-obs/internal/storage"
 )
 
 // testServer creates a minimal test server with a mock OBS client.
@@ -671,5 +673,355 @@ func TestNilRequest(t *testing.T) {
 
 		_, _, err = server.handleGetOBSStatus(context.Background(), nil, struct{}{})
 		assert.NoError(t, err)
+	})
+}
+
+// testServerWithStorage creates a test server with mock OBS client and real storage.
+func testServerWithStorage(t *testing.T) (*Server, *testutil.MockOBSClient, *storage.DB) {
+	t.Helper()
+
+	mock := testutil.NewMockOBSClient()
+	mock.Connect()
+
+	// Create temp database
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+
+	db, err := storage.New(context.Background(), storage.Config{Path: dbPath})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		db.Close()
+	})
+
+	server := &Server{
+		obsClient: mock,
+		storage:   db,
+		ctx:       context.Background(),
+	}
+
+	return server, mock, db
+}
+
+// Test scene preset tools
+
+func TestHandleListScenePresets(t *testing.T) {
+	t.Run("returns empty list initially", func(t *testing.T) {
+		server, _, _ := testServerWithStorage(t)
+
+		input := ListPresetsInput{}
+		_, result, err := server.handleListScenePresets(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, 0, resultMap["count"])
+	})
+
+	t.Run("lists created presets", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create a preset directly in storage
+		_, err := db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name:      "Test Preset",
+			SceneName: "Scene 1",
+			Sources:   []storage.SourceState{{Name: "Webcam", Visible: true}},
+		})
+		require.NoError(t, err)
+
+		input := ListPresetsInput{}
+		_, result, err := server.handleListScenePresets(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, 1, resultMap["count"])
+
+		presets := resultMap["presets"].([]map[string]interface{})
+		assert.Equal(t, "Test Preset", presets[0]["name"])
+	})
+
+	t.Run("filters by scene name", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create presets for different scenes
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name: "Preset 1", SceneName: "Scene 1", Sources: []storage.SourceState{},
+		})
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name: "Preset 2", SceneName: "Scene 2", Sources: []storage.SourceState{},
+		})
+
+		input := ListPresetsInput{SceneName: "Scene 1"}
+		_, result, err := server.handleListScenePresets(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, 1, resultMap["count"])
+	})
+}
+
+func TestHandleGetPresetDetails(t *testing.T) {
+	t.Run("returns preset details", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create a preset
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name:      "My Preset",
+			SceneName: "Gaming",
+			Sources:   []storage.SourceState{{Name: "Webcam", Visible: true}},
+		})
+
+		input := PresetNameInput{PresetName: "My Preset"}
+		_, result, err := server.handleGetPresetDetails(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, "My Preset", resultMap["name"])
+		assert.Equal(t, "Gaming", resultMap["scene_name"])
+		assert.NotNil(t, resultMap["sources"])
+	})
+
+	t.Run("returns error for non-existent preset", func(t *testing.T) {
+		server, _, _ := testServerWithStorage(t)
+
+		input := PresetNameInput{PresetName: "NonExistent"}
+		_, _, err := server.handleGetPresetDetails(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleDeleteScenePreset(t *testing.T) {
+	t.Run("deletes preset successfully", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create a preset
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name: "To Delete", SceneName: "Scene 1", Sources: []storage.SourceState{},
+		})
+
+		input := PresetNameInput{PresetName: "To Delete"}
+		_, result, err := server.handleDeleteScenePreset(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		simpleResult := result.(SimpleResult)
+		assert.Contains(t, simpleResult.Message, "To Delete")
+
+		// Verify preset was deleted
+		_, err = db.GetScenePreset(context.Background(), "To Delete")
+		assert.Error(t, err)
+	})
+
+	t.Run("returns error for non-existent preset", func(t *testing.T) {
+		server, _, _ := testServerWithStorage(t)
+
+		input := PresetNameInput{PresetName: "NonExistent"}
+		_, _, err := server.handleDeleteScenePreset(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleRenameScenePreset(t *testing.T) {
+	t.Run("renames preset successfully", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create a preset
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name: "Old Name", SceneName: "Scene 1", Sources: []storage.SourceState{},
+		})
+
+		input := RenamePresetInput{OldName: "Old Name", NewName: "New Name"}
+		_, result, err := server.handleRenameScenePreset(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		simpleResult := result.(SimpleResult)
+		assert.Contains(t, simpleResult.Message, "New Name")
+
+		// Verify preset was renamed
+		preset, err := db.GetScenePreset(context.Background(), "New Name")
+		assert.NoError(t, err)
+		assert.Equal(t, "New Name", preset.Name)
+	})
+
+	t.Run("returns error for non-existent preset", func(t *testing.T) {
+		server, _, _ := testServerWithStorage(t)
+
+		input := RenamePresetInput{OldName: "NonExistent", NewName: "New Name"}
+		_, _, err := server.handleRenameScenePreset(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleGetInputVolume(t *testing.T) {
+	t.Run("returns input volume", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetInputVolumeState("Microphone", -6.0)
+
+		input := InputNameInput{InputName: "Microphone"}
+		_, result, err := server.handleGetInputVolume(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, "Microphone", resultMap["input_name"])
+		assert.Equal(t, -6.0, resultMap["volume_db"])
+		assert.NotNil(t, resultMap["volume_mul"])
+	})
+
+	t.Run("returns error for non-existent input", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := InputNameInput{InputName: "NonExistent"}
+		_, _, err := server.handleGetInputVolume(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleSaveScenePreset(t *testing.T) {
+	t.Run("saves scene preset successfully", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		input := SavePresetInput{PresetName: "Gaming Setup", SceneName: "Scene 1"}
+		_, result, err := server.handleSaveScenePreset(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, "Gaming Setup", resultMap["preset_name"])
+		assert.Equal(t, "Scene 1", resultMap["scene_name"])
+		assert.NotNil(t, resultMap["id"])
+
+		// Verify preset was saved
+		preset, err := db.GetScenePreset(context.Background(), "Gaming Setup")
+		assert.NoError(t, err)
+		assert.Equal(t, "Scene 1", preset.SceneName)
+		assert.Len(t, preset.Sources, 2) // Scene 1 has 2 sources in mock
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _, _ := testServerWithStorage(t)
+
+		input := SavePresetInput{PresetName: "Test", SceneName: "NonExistent"}
+		_, _, err := server.handleSaveScenePreset(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for duplicate preset name", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create a preset first
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name: "Duplicate", SceneName: "Scene 1", Sources: []storage.SourceState{},
+		})
+
+		input := SavePresetInput{PresetName: "Duplicate", SceneName: "Scene 1"}
+		_, _, err := server.handleSaveScenePreset(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "UNIQUE constraint failed")
+	})
+}
+
+func TestHandleApplyScenePreset(t *testing.T) {
+	t.Run("applies scene preset successfully", func(t *testing.T) {
+		server, mock, db := testServerWithStorage(t)
+
+		// Create a preset with specific source states
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name:      "Test Preset",
+			SceneName: "Scene 1",
+			Sources: []storage.SourceState{
+				{Name: "Webcam", Visible: false}, // Will be disabled
+				{Name: "Text", Visible: true},    // Will stay enabled
+			},
+		})
+
+		input := PresetNameInput{PresetName: "Test Preset"}
+		_, result, err := server.handleApplyScenePreset(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, "Test Preset", resultMap["preset_name"])
+		assert.Equal(t, "Scene 1", resultMap["scene_name"])
+
+		// Verify source states were applied
+		scene, _ := mock.GetSceneByName("Scene 1")
+		for _, src := range scene.Sources {
+			if src.Name == "Webcam" {
+				assert.False(t, src.Enabled)
+			}
+			if src.Name == "Text" {
+				assert.True(t, src.Enabled)
+			}
+		}
+	})
+
+	t.Run("returns error for non-existent preset", func(t *testing.T) {
+		server, _, _ := testServerWithStorage(t)
+
+		input := PresetNameInput{PresetName: "NonExistent"}
+		_, _, err := server.handleApplyScenePreset(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("skips sources not found in scene", func(t *testing.T) {
+		server, _, db := testServerWithStorage(t)
+
+		// Create a preset with a source that doesn't exist in the scene
+		db.CreateScenePreset(context.Background(), storage.ScenePreset{
+			Name:      "Preset With Missing Source",
+			SceneName: "Scene 1",
+			Sources: []storage.SourceState{
+				{Name: "Webcam", Visible: true},
+				{Name: "NonExistentSource", Visible: false}, // This source doesn't exist
+			},
+		})
+
+		input := PresetNameInput{PresetName: "Preset With Missing Source"}
+		_, result, err := server.handleApplyScenePreset(context.Background(), nil, input)
+
+		// Should succeed but only apply 1 source
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, 1, resultMap["applied_count"])
+	})
+}
+
+// Test complete preset workflow
+func TestPresetWorkflow(t *testing.T) {
+	t.Run("complete save and apply workflow", func(t *testing.T) {
+		server, mock, _ := testServerWithStorage(t)
+
+		// Save the current state of Scene 1
+		saveInput := SavePresetInput{PresetName: "Scene1 State", SceneName: "Scene 1"}
+		_, _, err := server.handleSaveScenePreset(context.Background(), nil, saveInput)
+		require.NoError(t, err)
+
+		// Modify the scene by toggling a source
+		mock.ToggleSourceVisibility("Scene 1", 1) // Toggle Webcam
+
+		// Apply the saved preset to restore original state
+		applyInput := PresetNameInput{PresetName: "Scene1 State"}
+		_, _, err = server.handleApplyScenePreset(context.Background(), nil, applyInput)
+		require.NoError(t, err)
+
+		// Verify the scene was restored
+		scene, _ := mock.GetSceneByName("Scene 1")
+		for _, src := range scene.Sources {
+			if src.ID == 1 {
+				assert.True(t, src.Enabled) // Should be restored to original state
+			}
+		}
 	})
 }

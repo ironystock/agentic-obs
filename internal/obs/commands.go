@@ -521,3 +521,59 @@ type OBSStatus struct {
 	Frames           int     `json:"frames"`
 	DroppedFrames    int     `json:"dropped_frames"`
 }
+
+// SourceState represents the visibility state of a source for preset capture/apply.
+type SourceState struct {
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
+}
+
+// CaptureSceneState captures the current state of all sources in a scene.
+// Returns source IDs, names, and their enabled (visible) states.
+// TODO: For scenes with >25 sources, consider implementing batch operations or
+// concurrent processing to improve performance.
+func (c *Client) CaptureSceneState(sceneName string) ([]SourceState, error) {
+	scene, err := c.GetSceneByName(sceneName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to capture scene state: %w", err)
+	}
+
+	states := make([]SourceState, len(scene.Sources))
+	for i, src := range scene.Sources {
+		states[i] = SourceState{
+			ID:      src.ID,
+			Name:    src.Name,
+			Enabled: src.Enabled,
+		}
+	}
+
+	return states, nil
+}
+
+// ApplyScenePreset applies source visibility states to a scene.
+// This sets each source's enabled state according to the provided states.
+// TODO: For scenes with >25 sources, consider implementing batch operations to improve
+// performance and provide better error handling (collect partial failures rather than
+// failing on first error).
+func (c *Client) ApplyScenePreset(sceneName string, sources []SourceState) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	for _, src := range sources {
+		sceneItemID := src.ID
+		enabled := src.Enabled
+		_, err := client.SceneItems.SetSceneItemEnabled(&sceneitems.SetSceneItemEnabledParams{
+			SceneName:        &sceneName,
+			SceneItemId:      &sceneItemID,
+			SceneItemEnabled: &enabled,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to set visibility for source '%s' (ID %d): %w", src.Name, src.ID, err)
+		}
+	}
+
+	return nil
+}
