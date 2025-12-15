@@ -8,6 +8,7 @@ This directory contains example prompts and workflows for using agentic-obs with
   - Scene management
   - Recording control
   - Audio settings
+  - Screenshot visual monitoring
   - Multi-step workflows
 
 ## How to Use These Examples
@@ -44,6 +45,7 @@ examples/
     ├── scenes.md          # Scene management examples
     ├── recording.md       # Recording workflow examples
     ├── audio.md           # Audio control examples
+    ├── screenshots.md     # Visual monitoring examples
     └── workflows.md       # Multi-step workflow examples
 ```
 

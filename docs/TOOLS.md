@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Comprehensive documentation for all 19 Model Context Protocol (MCP) tools provided by the agentic-obs server.
+Comprehensive documentation for all 30 Model Context Protocol (MCP) tools provided by the agentic-obs server.
 
 ## Table of Contents
 
@@ -10,6 +10,13 @@ Comprehensive documentation for all 19 Model Context Protocol (MCP) tools provid
   - [set_current_scene](#set_current_scene)
   - [create_scene](#create_scene)
   - [remove_scene](#remove_scene)
+- [Scene Presets](#scene-presets)
+  - [save_scene_preset](#save_scene_preset)
+  - [list_scene_presets](#list_scene_presets)
+  - [get_preset_details](#get_preset_details)
+  - [apply_scene_preset](#apply_scene_preset)
+  - [rename_scene_preset](#rename_scene_preset)
+  - [delete_scene_preset](#delete_scene_preset)
 - [Recording](#recording)
   - [start_recording](#start_recording)
   - [stop_recording](#stop_recording)
@@ -28,6 +35,12 @@ Comprehensive documentation for all 19 Model Context Protocol (MCP) tools provid
   - [get_input_mute](#get_input_mute)
   - [toggle_input_mute](#toggle_input_mute)
   - [set_input_volume](#set_input_volume)
+  - [get_input_volume](#get_input_volume)
+- [Screenshot Sources](#screenshot-sources)
+  - [create_screenshot_source](#create_screenshot_source)
+  - [remove_screenshot_source](#remove_screenshot_source)
+  - [list_screenshot_sources](#list_screenshot_sources)
+  - [configure_screenshot_cadence](#configure_screenshot_cadence)
 - [Status](#status)
   - [get_obs_status](#get_obs_status)
 - [Common Patterns](#common-patterns)
@@ -37,7 +50,18 @@ Comprehensive documentation for all 19 Model Context Protocol (MCP) tools provid
 
 ## Overview
 
-The agentic-obs MCP server provides 19 tools organized into 6 categories for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
+The agentic-obs MCP server provides 30 tools organized into 8 categories for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| Scene Management | 4 | List, switch, create, remove scenes |
+| Scene Presets | 6 | Save and restore source visibility configurations |
+| Recording | 5 | Start, stop, pause, resume, status |
+| Streaming | 3 | Start, stop, status |
+| Sources | 3 | List, toggle visibility, get settings |
+| Audio | 4 | Mute, volume control |
+| Screenshot Sources | 4 | AI visual monitoring of stream output |
+| Status | 1 | Overall OBS status |
 
 **General Prerequisites:**
 - OBS Studio 28+ running with WebSocket server enabled
@@ -264,6 +288,187 @@ The agentic-obs MCP server provides 19 tools organized into 6 categories for com
 - Confirm with user before deleting scenes (destructive operation)
 - Cannot undo scene deletion - all sources in scene are lost
 - Use scene naming conventions to identify temporary scenes
+
+---
+
+## Scene Presets
+
+Scene presets allow you to save and restore the visibility state of all sources within a scene. This is useful for quickly switching between different "looks" or configurations without creating separate scenes.
+
+### save_scene_preset
+
+**Purpose:** Save the current visibility state of all sources in a scene as a named preset.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| name | string | Yes | Unique name for the preset |
+| scene_name | string | Yes | Name of the scene to capture |
+| description | string | No | Optional description of the preset |
+
+**Return Value Schema:**
+```json
+{
+  "id": 1,
+  "name": "gaming-webcam-on",
+  "scene_name": "Gaming",
+  "message": "Preset saved successfully"
+}
+```
+
+**Use Cases:**
+- Save different overlay configurations (e.g., "with chat", "without chat")
+- Store webcam on/off states for quick toggling
+- Create content-specific source configurations
+- Save pre-stream and during-stream layouts
+
+**Example Natural Language Prompts:**
+- "Save my current Gaming scene layout as 'gaming-full-overlay'"
+- "Create a preset called 'minimal-view' from my current scene"
+- "Save this configuration as 'webcam-only' with description 'Just webcam, no overlays'"
+- "Capture my current source visibility as a preset named 'sponsor-mode'"
+
+---
+
+### list_scene_presets
+
+**Purpose:** List all saved scene presets, optionally filtered by scene name.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | No | Filter presets by scene name |
+
+**Return Value Schema:**
+```json
+{
+  "presets": [
+    {
+      "id": 1,
+      "name": "gaming-webcam-on",
+      "scene_name": "Gaming",
+      "description": "Full overlay with webcam",
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+**Example Natural Language Prompts:**
+- "What presets do I have saved?"
+- "Show me all my scene presets"
+- "List presets for my Gaming scene"
+- "What configurations have I saved?"
+
+---
+
+### get_preset_details
+
+**Purpose:** Get detailed information about a specific preset, including all source visibility states.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| name | string | Yes | Name of the preset |
+
+**Return Value Schema:**
+```json
+{
+  "id": 1,
+  "name": "gaming-webcam-on",
+  "scene_name": "Gaming",
+  "description": "Full overlay with webcam",
+  "sources": [
+    {"name": "Webcam", "visible": true},
+    {"name": "Chat Overlay", "visible": true},
+    {"name": "Alert Box", "visible": true}
+  ],
+  "created_at": "2025-01-15T10:30:00Z"
+}
+```
+
+**Example Natural Language Prompts:**
+- "Show me the details of my 'gaming-webcam-on' preset"
+- "What sources are saved in the 'minimal-view' preset?"
+- "Describe the 'sponsor-mode' preset configuration"
+
+---
+
+### apply_scene_preset
+
+**Purpose:** Apply a saved preset, restoring the source visibility states to the target scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| name | string | Yes | Name of the preset to apply |
+
+**Return Value Schema:**
+```json
+{
+  "message": "Preset 'gaming-webcam-on' applied successfully",
+  "changes": 3
+}
+```
+
+**Use Cases:**
+- Quickly switch between overlay configurations during stream
+- Restore a known-good layout
+- Toggle between different content modes
+- Apply sponsor overlays on command
+
+**Example Natural Language Prompts:**
+- "Apply my 'minimal-view' preset"
+- "Switch to the 'gaming-webcam-on' configuration"
+- "Restore my 'sponsor-mode' layout"
+- "Use the 'interview-setup' preset"
+
+---
+
+### rename_scene_preset
+
+**Purpose:** Rename an existing preset.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| old_name | string | Yes | Current name of the preset |
+| new_name | string | Yes | New name for the preset |
+
+**Return Value Schema:**
+```json
+{
+  "message": "Preset renamed from 'old-name' to 'new-name'"
+}
+```
+
+**Example Natural Language Prompts:**
+- "Rename my 'test-preset' to 'production-layout'"
+- "Change the name of 'gaming1' to 'gaming-with-cam'"
+
+---
+
+### delete_scene_preset
+
+**Purpose:** Delete a saved preset.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| name | string | Yes | Name of the preset to delete |
+
+**Return Value Schema:**
+```json
+{
+  "message": "Preset 'old-preset' deleted successfully"
+}
+```
+
+**Example Natural Language Prompts:**
+- "Delete the 'test-config' preset"
+- "Remove my old 'broken-layout' preset"
+- "Get rid of the 'temp-setup' configuration"
 
 ---
 
@@ -1099,6 +1304,183 @@ The agentic-obs MCP server provides 19 tools organized into 6 categories for com
 
 ---
 
+### get_input_volume
+
+**Purpose:** Retrieve the current volume level of an audio input in both decibel and multiplier formats.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| input_name | string | Yes | Exact name of the audio input |
+
+**Return Value Schema:**
+```json
+{
+  "input_name": "Microphone",
+  "volume_db": -6.0,
+  "volume_mul": 0.501
+}
+```
+
+**Return Fields:**
+- `input_name` (string): Name of the audio input queried
+- `volume_db` (float): Current volume in decibels
+- `volume_mul` (float): Current volume as multiplier (1.0 = 100%)
+
+**Use Cases:**
+- Check current volume before making adjustments
+- Display volume levels in dashboards
+- Verify volume changes were applied
+- Monitor audio levels programmatically
+
+**Example Natural Language Prompts:**
+- "What's the current volume on my microphone?"
+- "Check the volume level of Desktop Audio"
+- "Show me my mic volume in dB"
+- "What's the audio level on my game capture?"
+
+**Related Tools:**
+- `set_input_volume` - Adjust volume levels
+- `get_input_mute` - Check mute state
+- `toggle_input_mute` - Toggle mute
+
+---
+
+## Screenshot Sources
+
+Screenshot sources enable AI assistants to visually observe your OBS output through periodic image capture. This transforms AI from a blind controller into a seeing collaborator that can verify changes, detect problems, and provide layout feedback.
+
+For detailed documentation on use cases and best practices, see [SCREENSHOTS.md](SCREENSHOTS.md).
+
+### create_screenshot_source
+
+**Purpose:** Create a new periodic screenshot capture source for AI visual monitoring.
+
+**Parameters:**
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| name | string | Yes | - | Unique identifier for this source |
+| source_name | string | Yes | - | OBS source or scene name to capture |
+| cadence_ms | integer | No | 5000 | Capture interval in milliseconds |
+| image_format | string | No | "png" | Image format: "png" or "jpg" |
+| image_width | integer | No | 0 | Resize width (0 = original) |
+| image_height | integer | No | 0 | Resize height (0 = original) |
+| quality | integer | No | 80 | Compression quality (1-100) |
+
+**Return Value Schema:**
+```json
+{
+  "id": 1,
+  "name": "stream-monitor",
+  "url": "http://localhost:8765/screenshot/stream-monitor",
+  "message": "Screenshot source created successfully"
+}
+```
+
+**Use Cases:**
+- Visual verification after scene changes
+- Problem detection (black screens, frozen sources, missing overlays)
+- Layout and composition feedback
+- Stream quality monitoring
+- Pre-stream checks
+
+**Example Natural Language Prompts:**
+- "Create a screenshot source called 'stream-view' that captures every 5 seconds"
+- "Set up visual monitoring of my Gaming scene"
+- "I want you to be able to see my stream - set that up"
+- "Create a high-quality screenshot capture at 1080p called 'hd-monitor'"
+- "Set up fast 2-second JPG captures for debugging called 'quick-check'"
+
+**Best Practices:**
+- Use 5-10 second intervals for general monitoring
+- Use 1-2 second intervals for active debugging
+- Use PNG for quality-critical captures, JPG for frequent monitoring
+- Create descriptive names that indicate purpose
+
+---
+
+### remove_screenshot_source
+
+**Purpose:** Stop and delete a screenshot capture source.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| name | string | Yes | Name of the source to remove |
+
+**Return Value Schema:**
+```json
+{
+  "message": "Screenshot source 'stream-monitor' removed successfully"
+}
+```
+
+**Example Natural Language Prompts:**
+- "Remove the screenshot source called 'test-capture'"
+- "Stop capturing screenshots for 'old-monitor'"
+- "Delete the 'temp-check' screenshot source"
+- "Turn off visual monitoring"
+
+---
+
+### list_screenshot_sources
+
+**Purpose:** List all configured screenshot sources with their status and HTTP URLs.
+
+**Parameters:** None
+
+**Return Value Schema:**
+```json
+{
+  "sources": [
+    {
+      "id": 1,
+      "name": "stream-monitor",
+      "source_name": "Gaming",
+      "cadence_ms": 5000,
+      "image_format": "png",
+      "enabled": true,
+      "url": "http://localhost:8765/screenshot/stream-monitor",
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+**Example Natural Language Prompts:**
+- "What screenshot sources do I have set up?"
+- "Show me all my visual monitoring configurations"
+- "List screenshot URLs for all my sources"
+- "What streams am I currently monitoring?"
+
+---
+
+### configure_screenshot_cadence
+
+**Purpose:** Update the capture interval for an existing screenshot source.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| name | string | Yes | Name of the source to update |
+| cadence_ms | integer | Yes | New capture interval in milliseconds |
+
+**Return Value Schema:**
+```json
+{
+  "message": "Screenshot cadence updated to 10000ms for source 'stream-monitor'"
+}
+```
+
+**Example Natural Language Prompts:**
+- "Change my stream-monitor to capture every 10 seconds"
+- "Speed up the screenshot capture to every 2 seconds"
+- "Slow down 'quick-check' to 30-second intervals"
+- "Update the capture rate for 'hd-monitor' to 5 seconds"
+
+---
+
 ## Status
 
 ### get_obs_status
@@ -1296,8 +1678,7 @@ Check: OBS WebSocket settings and stored credentials
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-12-14
-**agentic-obs Version:** Phase 1 Baseline
-**Total Tools:** 19
-**Word Count:** 3,847
+**Document Version:** 2.0
+**Last Updated:** 2025-12-15
+**agentic-obs Version:** Phase 3 Complete
+**Total Tools:** 30

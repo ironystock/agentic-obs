@@ -1,6 +1,6 @@
 # Multi-Step Workflow Prompts
 
-Natural language prompts for complete OBS workflows combining scenes, recording, streaming, and audio control.
+Natural language prompts for complete OBS workflows combining scenes, recording, streaming, audio control, and visual monitoring.
 
 ## Stream Preparation Workflows
 
@@ -364,4 +364,152 @@ Natural language prompts for complete OBS workflows combining scenes, recording,
 
 ---
 
-**Next Steps**: Practice these workflows in a test environment before using them live. Start with simpler workflows and build up to complex multi-step sequences. Refer back to individual prompt files ([scenes.md](scenes.md), [recording.md](recording.md), [audio.md](audio.md)) for more variations of specific actions.
+## Visual Monitoring Workflows
+
+### Stream with Visual Verification
+
+**AI-assisted stream with visual checks:**
+
+1. "Set up visual monitoring of my stream with 10-second captures called 'stream-check'"
+
+2. "Pre-stream check: switch to Starting Soon scene and take a screenshot to verify it looks correct"
+
+3. "Going live - switch to Gaming scene, start streaming, and confirm visually that everything looks good"
+
+4. "Periodic check: how does my stream look? Any issues with the layout?"
+
+5. "Wrapping up: switch to Outro scene, verify it displays correctly, then stop streaming"
+
+6. "Stream complete: remove the screenshot monitoring"
+
+### Scene Change Verification
+
+**Verifying scene transitions:**
+
+1. "Set up a screenshot source called 'scene-verify' with 2-second captures"
+
+2. "Switch to my Gaming scene"
+   AI: [Switches scene, waits for capture]
+   AI: "Scene switched. Your Gaming scene shows: webcam in bottom right, game capture in center, chat overlay on left. Everything looks properly positioned."
+
+3. "Now switch to BRB scene and verify"
+   AI: [Switches scene, waits for capture]
+   AI: "BRB scene is now active. Your 'Be Right Back' message is centered, animated background is running, and chat is hidden as expected."
+
+4. "Good, clean up the screenshot source"
+
+### Problem Detection Workflow
+
+**Diagnosing stream issues with AI help:**
+
+1. "Chat says something looks wrong with my stream. Set up rapid screenshot capture so you can help diagnose"
+
+2. "Take a look - what do you see?"
+   AI: "I can see your webcam is showing but your game capture appears to be a black rectangle. The overlay and chat are fine."
+
+3. "I'll try restarting the game capture. Tell me when it's working"
+   [You restart game capture in OBS]
+   AI: "Game capture is now showing your game. The issue is resolved."
+
+4. "Great, slow down the captures to every 30 seconds for general monitoring"
+
+### Pre-Stream Visual Checklist
+
+**Comprehensive visual pre-flight:**
+
+1. "I'm about to stream. Set up visual monitoring and run through my scenes"
+
+2. "Check Starting Soon scene"
+   AI: "Starting Soon scene looks good: countdown timer visible, logo centered, social links displayed at bottom."
+
+3. "Check Gaming scene"
+   AI: "Gaming scene ready: webcam active and showing you, game capture is live, alerts overlay positioned correctly."
+
+4. "Check BRB scene"
+   AI: "BRB scene verified: message centered, chat hidden, background animation running."
+
+5. "Check Outro scene"
+   AI: "Outro scene ready: social links visible, 'Thanks for watching' text displayed, music player hidden."
+
+6. "Perfect, switch to Starting Soon and start streaming"
+
+### Recording with Visual QA
+
+**Quality assurance for recordings:**
+
+1. "I'm recording a tutorial. Set up screenshot monitoring so you can help with quality"
+
+2. "Start recording on my Tutorial scene"
+   AI: [Starts recording, captures screenshot]
+   AI: "Recording started. Your Tutorial scene shows: screen capture is clear, your webcam is in the corner, no test elements visible. Ready to proceed."
+
+3. [During recording] "Quick check - how does my current frame look?"
+   AI: "Looking good. Screen content is visible and readable, webcam is active, no overlays blocking important content."
+
+4. "Recording done. How did the final scene look?"
+   AI: "Final frame showed your ending slide with contact information clearly visible."
+
+### Layout Design Session
+
+**Interactive scene design with AI feedback:**
+
+1. "I'm redesigning my Gaming scene. Set up frequent captures so you can help"
+
+2. "I moved my webcam to the upper left. How does it look?"
+   AI: "The webcam is now overlapping with your game's health bar. I'd suggest moving it down about 100 pixels or to the upper right corner."
+
+3. "Moved it to upper right. Better?"
+   AI: "Much better. The webcam is now clear of the game UI and balances nicely with your chat overlay on the left."
+
+4. "I increased the webcam size. Too big?"
+   AI: "The webcam is now taking up about 25% of the screen, which feels a bit large for gaming content. Consider reducing to about 15-18% for better balance."
+
+5. "Okay, made it smaller and added a border. Final thoughts?"
+   AI: "Great improvements. The webcam size is now proportional, the border adds nice definition, and the overall layout looks professional and balanced."
+
+### Multi-Scene Comparison
+
+**Reviewing consistency across scenes:**
+
+1. "Set up screenshot sources for my Gaming, Chatting, and BRB scenes"
+
+2. "Show me how each scene looks and tell me if they're consistent"
+   AI: "Gaming scene: clean layout with webcam bottom-right, game capture fills background.
+   Chatting scene: webcam is larger and centered, which is appropriate.
+   BRB scene: consistent branding with other scenes, message is clearly visible.
+   Overall: Your scenes share consistent color scheme and overlay style. The webcam position varies appropriately by context."
+
+3. "Good to know. Remove the monitoring sources"
+
+### Emergency Visual Diagnosis
+
+**Quick troubleshooting during live stream:**
+
+"Emergency! Chat says my stream looks broken. Quick screenshot and tell me what's wrong!"
+
+AI: [Rapid capture]
+AI: "I see the issue: your game capture is showing 'Capture not available' error message. Your webcam and overlays are fine. Try refreshing the game capture source or restarting game capture in OBS."
+
+[You fix it]
+
+"Is it working now?"
+
+AI: "Yes, game capture is now showing your game correctly. Stream looks normal."
+
+---
+
+## Tips for Workflow Prompts
+
+1. **Break complex workflows into steps**: List each action in sequence
+2. **Verify critical operations**: Always ask for confirmation on recording/streaming status
+3. **Use visual verification**: Have AI confirm scene changes look correct
+4. **Specify timing**: Indicate when actions should happen (now vs. when you say so)
+5. **Include all details**: Scene names, audio levels, what should continue running
+6. **Plan for interruptions**: Know your emergency procedures
+7. **Test workflows**: Run through complete sequences before going live
+8. **Save successful patterns**: Reuse workflows that work well
+9. **Adapt on the fly**: Don't be afraid to modify mid-stream
+
+---
+
+**Next Steps**: Practice these workflows in a test environment before using them live. Start with simpler workflows and build up to complex multi-step sequences. Refer back to individual prompt files ([scenes.md](scenes.md), [recording.md](recording.md), [audio.md](audio.md), [screenshots.md](screenshots.md)) for more variations of specific actions.

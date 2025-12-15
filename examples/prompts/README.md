@@ -28,11 +28,19 @@ Audio control examples:
 - Adjusting volume levels
 - Checking audio status
 
+### [screenshots.md](screenshots.md)
+Visual monitoring examples:
+- Setting up AI visual observation
+- Verifying scene changes
+- Problem detection and diagnosis
+- Layout design feedback
+
 ### [workflows.md](workflows.md)
 Multi-step workflow examples:
 - Stream preparation sequences
 - Recording session management
 - Scene transitions with audio
+- Visual verification workflows
 - Complete broadcast workflows
 
 ## How to Use These Prompts
