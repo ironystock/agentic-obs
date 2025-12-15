@@ -1,0 +1,35 @@
+#!/bin/bash
+# Pre-commit hook for documentation consistency
+#
+# Installation:
+#   cp scripts/pre-commit-docs .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Or add to existing pre-commit hook
+
+# Only run if markdown files are staged
+STAGED_MD=$(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
+
+if [ -z "$STAGED_MD" ]; then
+    # No markdown files staged, skip checks
+    exit 0
+fi
+
+echo "Documentation files staged - running consistency checks..."
+
+# Run the verification script if it exists
+if [ -f "scripts/verify-docs.sh" ]; then
+    if ! bash scripts/verify-docs.sh; then
+        echo ""
+        echo "❌ Documentation consistency check failed!"
+        echo "Please fix the issues above before committing."
+        echo ""
+        echo "To bypass this check (not recommended):"
+        echo "  git commit --no-verify"
+        exit 1
+    fi
+else
+    echo "Warning: scripts/verify-docs.sh not found, skipping checks"
+fi
+
+exit 0

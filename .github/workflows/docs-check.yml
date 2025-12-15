@@ -1,0 +1,74 @@
+name: Documentation Consistency Check
+
+on:
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'scripts/verify-docs.sh'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.md'
+      - 'scripts/verify-docs.sh'
+
+jobs:
+  docs-check:
+    name: Verify Documentation Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make verification script executable
+        run: chmod +x scripts/verify-docs.sh
+
+      - name: Run documentation consistency checks
+        run: ./scripts/verify-docs.sh
+
+      - name: Check for broken internal links
+        run: |
+          echo "Checking for broken internal markdown links..."
+          BROKEN_LINKS=0
+
+          # Find all markdown files and check their internal links
+          for file in $(find . -name "*.md" -not -path "./.git/*"); do
+            # Extract markdown links [text](path)
+            links=$(grep -oE '\[([^]]+)\]\(([^)]+)\)' "$file" 2>/dev/null | grep -oE '\(([^)]+)\)' | tr -d '()' || true)
+
+            for link in $links; do
+              # Skip external links and anchors
+              if [[ "$link" == http* ]] || [[ "$link" == \#* ]] || [[ "$link" == mailto* ]]; then
+                continue
+              fi
+
+              # Remove anchor from link
+              link_path="${link%%#*}"
+
+              # Skip empty links
+              if [ -z "$link_path" ]; then
+                continue
+              fi
+
+              # Resolve relative path from file's directory
+              file_dir=$(dirname "$file")
+              resolved_path="$file_dir/$link_path"
+
+              # Normalize path
+              resolved_path=$(realpath -m "$resolved_path" 2>/dev/null || echo "$resolved_path")
+
+              if [ ! -e "$resolved_path" ]; then
+                echo "❌ Broken link in $file: $link"
+                BROKEN_LINKS=1
+              fi
+            done
+          done
+
+          if [ $BROKEN_LINKS -eq 1 ]; then
+            echo ""
+            echo "Broken internal links found!"
+            exit 1
+          else
+            echo "✅ All internal links are valid"
+          fi

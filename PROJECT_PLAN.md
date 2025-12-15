@@ -6,7 +6,7 @@ This document outlines the architecture, decisions, and implementation roadmap f
 
 **Created:** 2025-12-14
 **Updated:** 2025-12-15
-**Status:** ✅ Phase 3 Complete - All 30 Tools Implemented
+**Status:** ✅ Phase 4 Complete - 30 Tools, 3 Resources, 10 Prompts
 
 ---
 
@@ -449,7 +449,41 @@ CREATE TABLE state (
 
 ---
 
-### Phase 4: Future Enhancements (Planned)
+### Phase 4: MCP Resources & Prompts ✅ COMPLETE
+
+**Deliverables:**
+- [x] Screenshot resource (`obs://screenshot/{name}`) - Binary image blob
+- [x] Preset resource (`obs://preset/{name}`) - JSON configuration
+- [x] 10 MCP prompts for workflow automation
+- [x] Prompt argument handling (required/optional)
+- [x] Comprehensive test coverage (57 new tests)
+- [x] Documentation updates (CLAUDE.md, README.md, docs/TOOLS.md)
+
+**MCP Prompts Implemented:**
+| Prompt | Arguments | Purpose |
+|--------|-----------|---------|
+| `stream-launch` | - | Pre-stream checklist |
+| `stream-teardown` | - | End-stream cleanup |
+| `audio-check` | - | Audio verification |
+| `visual-check` | screenshot_source | Visual layout analysis |
+| `health-check` | - | OBS diagnostic |
+| `problem-detection` | screenshot_source | Issue detection |
+| `preset-switcher` | preset_name (opt) | Preset management |
+| `recording-workflow` | - | Recording session |
+| `scene-organizer` | - | Scene organization |
+| `quick-status` | - | Brief status |
+
+**Success Criteria:** ✅ All met
+- 3 MCP resource types (scenes, screenshots, presets)
+- 10 MCP prompts with argument handling
+- All tests passing
+
+**Total Resources:** 3
+**Total Prompts:** 10
+
+---
+
+### Phase 5: Future Enhancements (Planned)
 
 **Deliverables:**
 - [ ] Automation rules and macros (event-triggered actions)
@@ -462,7 +496,7 @@ CREATE TABLE state (
 
 **Success Criteria:**
 - Supports multiple OBS instances
-- Multiple resource types with notifications
+- Additional resource types with notifications
 - Production-ready stability
 
 ---
@@ -571,6 +605,13 @@ CREATE TABLE state (
 - [x] Background capture manager
 - [x] Security review passed
 
+### Phase 4 ✅
+- [x] Screenshot resource (binary blob via MCP)
+- [x] Preset resource (JSON via MCP)
+- [x] 10 MCP prompts for workflows
+- [x] Prompt argument validation
+- [x] 57 new tests (resources + prompts)
+
 ### Long-term
 - [ ] Multi-instance support
 - [ ] Production deployment examples
@@ -623,11 +664,12 @@ CREATE TABLE state (
 
 ---
 
-**Document Version:** 1.3
+**Document Version:** 1.4
 **Last Updated:** 2025-12-15
-**Next Review:** Before Phase 4 planning
+**Next Review:** Before Phase 5 planning
 
 **Changelog:**
+- v1.4 (2025-12-15): Phase 4 complete - MCP resources (screenshots, presets), 10 MCP prompts, comprehensive tests
 - v1.3 (2025-12-15): Phase 3 complete - agentic screenshot sources, HTTP server, background capture manager
 - v1.2 (2025-12-15): Phase 2 complete - scene presets, testing infrastructure, 26 tools
 - v1.1 (2025-12-14): Added scenes-as-resources architecture, MCP notifications, resource implementation patterns

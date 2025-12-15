@@ -74,3 +74,38 @@ Get comprehensive OBS status and connection info
 **Total: 30 MCP tools available**
 
 For detailed information on each tool, see [TOOLS.md](TOOLS.md).
+
+---
+
+## MCP Resources
+
+Resources provide structured access to OBS data via URI patterns:
+
+| Resource | URI Pattern | Content Type | Description |
+|----------|-------------|--------------|-------------|
+| **Scenes** | `obs://scene/{name}` | JSON | Scene configuration and sources |
+| **Screenshots** | `obs://screenshot/{name}` | Binary (PNG/JPEG) | Latest captured screenshot |
+| **Presets** | `obs://preset/{name}` | JSON | Saved source visibility states |
+
+**Total: 3 MCP resources available**
+
+---
+
+## MCP Prompts
+
+Prompts provide pre-built workflow templates for common OBS operations:
+
+| Prompt | Arguments | Description |
+|--------|-----------|-------------|
+| `stream-launch` | - | Pre-stream checklist and setup verification |
+| `stream-teardown` | - | End-stream cleanup sequence |
+| `audio-check` | - | Comprehensive audio source verification |
+| `visual-check` | screenshot_source | AI visual analysis of stream layout |
+| `health-check` | - | Overall OBS status diagnostic |
+| `problem-detection` | screenshot_source | Identify visual issues in stream |
+| `preset-switcher` | preset_name (optional) | Scene preset management |
+| `recording-workflow` | - | Recording session management |
+| `scene-organizer` | - | Scene inventory and organization |
+| `quick-status` | - | Brief OBS status summary |
+
+**Total: 10 MCP prompts available**
