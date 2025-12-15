@@ -186,7 +186,9 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/               # MCP server implementation
 │   ├── obs/               # OBS WebSocket client
-│   └── storage/           # SQLite persistence
+│   ├── storage/           # SQLite persistence
+│   ├── http/              # HTTP server for screenshots
+│   └── screenshot/        # Background capture manager
 └── scripts/               # Development helpers
 ```
 
@@ -233,7 +235,6 @@ Configuration is stored in SQLite (`agentic-obs.db`) and includes:
 
 ## Future Enhancements
 
-- Agentic screenshot sources (AI visual monitoring)
 - Automation rules and macros
 - Multi-instance OBS support
 - Interactive setup UI (TUI and web)

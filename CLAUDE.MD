@@ -233,7 +233,7 @@ go mod tidy
 ### Areas Needing Attention
 
 **TODO - Future Enhancements:**
-- [ ] **Agentic Screenshot Sources** (Phase C): Enable AI to "see" stream via periodic screenshot capture with HTTP serving
+- [x] **Agentic Screenshot Sources** (Phase C): Enable AI to "see" stream via periodic screenshot capture with HTTP serving ✓
 - [ ] Automation rules and macros (Phase D): Event-triggered actions and multi-step sequences
 - [ ] Multi-target OBS support (architecture decision needed)
 - [ ] Interactive installation UX (TUI + Web)
