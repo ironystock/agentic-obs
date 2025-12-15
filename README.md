@@ -102,24 +102,56 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 
 ## Available MCP Tools
 
+### Scene Management (4 tools)
+
 | Tool | Description |
 |------|-------------|
-| `list_scenes` | List all available scenes in OBS |
-| `get_current_scene` | Get the currently active scene |
+| `list_scenes` | List all available scenes and identify current scene |
 | `set_current_scene` | Switch to a specific scene |
+| `create_scene` | Create a new scene |
+| `remove_scene` | Remove a scene |
+
+### Recording Control (5 tools)
+
+| Tool | Description |
+|------|-------------|
 | `start_recording` | Start recording |
 | `stop_recording` | Stop recording |
-| `get_recording_status` | Check if recording is active |
+| `pause_recording` | Pause current recording |
+| `resume_recording` | Resume paused recording |
+| `get_recording_status` | Check recording status and details |
+
+### Streaming Control (3 tools)
+
+| Tool | Description |
+|------|-------------|
 | `start_streaming` | Start streaming |
 | `stop_streaming` | Stop streaming |
-| `get_streaming_status` | Check if streaming is active |
-| `list_sources` | List all sources |
-| `toggle_source_visibility` | Show/hide a source |
+| `get_streaming_status` | Check streaming status |
+
+### Source Management (3 tools)
+
+| Tool | Description |
+|------|-------------|
+| `list_sources` | List all input sources |
+| `toggle_source_visibility` | Show/hide a source in a scene |
 | `get_source_settings` | Get source configuration |
-| `get_input_mute` | Check if input is muted |
-| `toggle_input_mute` | Mute/unmute an input |
-| `set_input_volume` | Set input volume level |
-| `get_obs_status` | Get overall OBS connection status |
+
+### Audio Control (3 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_input_mute` | Check if audio input is muted |
+| `toggle_input_mute` | Toggle audio input mute state |
+| `set_input_volume` | Set audio input volume (dB or multiplier) |
+
+### Status & Monitoring (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `get_obs_status` | Get overall OBS status and connection info |
+
+**Total: 19 tools**
 
 ## Development
 
