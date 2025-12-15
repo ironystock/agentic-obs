@@ -531,6 +531,8 @@ type SourceState struct {
 
 // CaptureSceneState captures the current state of all sources in a scene.
 // Returns source IDs, names, and their enabled (visible) states.
+// TODO: For scenes with >25 sources, consider implementing batch operations or
+// concurrent processing to improve performance.
 func (c *Client) CaptureSceneState(sceneName string) ([]SourceState, error) {
 	scene, err := c.GetSceneByName(sceneName)
 	if err != nil {
@@ -551,6 +553,9 @@ func (c *Client) CaptureSceneState(sceneName string) ([]SourceState, error) {
 
 // ApplyScenePreset applies source visibility states to a scene.
 // This sets each source's enabled state according to the provided states.
+// TODO: For scenes with >25 sources, consider implementing batch operations to improve
+// performance and provide better error handling (collect partial failures rather than
+// failing on first error).
 func (c *Client) ApplyScenePreset(sceneName string, sources []SourceState) error {
 	client, err := c.getClient()
 	if err != nil {
