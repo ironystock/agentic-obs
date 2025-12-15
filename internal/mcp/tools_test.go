@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -693,7 +692,6 @@ func testServerWithStorage(t *testing.T) (*Server, *testutil.MockOBSClient, *sto
 
 	t.Cleanup(func() {
 		db.Close()
-		os.Remove(dbPath)
 	})
 
 	server := &Server{

@@ -47,24 +47,24 @@ type SetVolumeInput struct {
 
 // ListPresetsInput is the input for listing scene presets
 type ListPresetsInput struct {
-	SceneName string `json:"scene_name,omitempty"`
+	SceneName string `json:"scene_name,omitempty" jsonschema:"description=Optional scene name to filter presets by"`
 }
 
 // PresetNameInput is the input for preset operations by name
 type PresetNameInput struct {
-	PresetName string `json:"preset_name"`
+	PresetName string `json:"preset_name" jsonschema:"required,description=Name of the preset to operate on"`
 }
 
 // RenamePresetInput is the input for renaming a preset
 type RenamePresetInput struct {
-	OldName string `json:"old_name"`
-	NewName string `json:"new_name"`
+	OldName string `json:"old_name" jsonschema:"required,description=Current name of the preset to rename"`
+	NewName string `json:"new_name" jsonschema:"required,description=New name for the preset"`
 }
 
 // SavePresetInput is the input for saving a scene preset
 type SavePresetInput struct {
-	PresetName string `json:"preset_name"`
-	SceneName  string `json:"scene_name"`
+	PresetName string `json:"preset_name" jsonschema:"required,description=Name to give the new preset"`
+	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the OBS scene to capture state from"`
 }
 
 // registerToolHandlers registers all MCP tool handlers with the server
@@ -527,6 +527,8 @@ func (s *Server) handleSetInputVolume(ctx context.Context, request *mcpsdk.CallT
 
 // Scene preset tool handlers
 
+// handleListScenePresets returns all saved scene presets, optionally filtered by scene name.
+// Returns a list of preset summaries (id, name, scene_name, created_at) and total count.
 func (s *Server) handleListScenePresets(ctx context.Context, request *mcpsdk.CallToolRequest, input ListPresetsInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Listing scene presets (filter: %s)", input.SceneName)
 
@@ -552,6 +554,9 @@ func (s *Server) handleListScenePresets(ctx context.Context, request *mcpsdk.Cal
 	}, nil
 }
 
+// handleGetPresetDetails retrieves full details of a scene preset including source states.
+// Returns the preset's id, name, scene_name, sources array, and created_at timestamp.
+// Returns an error if the preset does not exist.
 func (s *Server) handleGetPresetDetails(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Getting preset details for: %s", input.PresetName)
 
@@ -569,6 +574,8 @@ func (s *Server) handleGetPresetDetails(ctx context.Context, request *mcpsdk.Cal
 	}, nil
 }
 
+// handleDeleteScenePreset permanently removes a scene preset from storage.
+// Returns a success message or an error if the preset does not exist.
 func (s *Server) handleDeleteScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Deleting scene preset: %s", input.PresetName)
 
@@ -581,6 +588,8 @@ func (s *Server) handleDeleteScenePreset(ctx context.Context, request *mcpsdk.Ca
 	}, nil
 }
 
+// handleRenameScenePreset changes the name of an existing scene preset.
+// Returns a success message or an error if the preset does not exist or the new name conflicts.
 func (s *Server) handleRenameScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input RenamePresetInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Renaming preset from '%s' to '%s'", input.OldName, input.NewName)
 
@@ -593,6 +602,9 @@ func (s *Server) handleRenameScenePreset(ctx context.Context, request *mcpsdk.Ca
 	}, nil
 }
 
+// handleGetInputVolume retrieves the current volume level of an audio input.
+// Returns volume_db (decibels) and volume_mul (linear multiplier) values.
+// Returns an error if the input does not exist or OBS is not connected.
 func (s *Server) handleGetInputVolume(ctx context.Context, request *mcpsdk.CallToolRequest, input InputNameInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Getting volume for input: %s", input.InputName)
 
@@ -608,6 +620,10 @@ func (s *Server) handleGetInputVolume(ctx context.Context, request *mcpsdk.CallT
 	}, nil
 }
 
+// handleSaveScenePreset captures the current source visibility states from an OBS scene
+// and saves them as a named preset in storage. Returns the preset id, name, scene_name,
+// source_count, and a success message. Returns an error if the scene does not exist,
+// OBS is not connected, or a preset with the same name already exists.
 func (s *Server) handleSaveScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input SavePresetInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Saving scene preset '%s' for scene '%s'", input.PresetName, input.SceneName)
 
@@ -647,6 +663,10 @@ func (s *Server) handleSaveScenePreset(ctx context.Context, request *mcpsdk.Call
 	}, nil
 }
 
+// handleApplyScenePreset loads a saved preset and applies its source visibility states
+// to the target OBS scene. Sources that no longer exist in the scene are skipped.
+// Returns the preset_name, scene_name, applied_count, and a success message.
+// Returns an error if the preset does not exist, the scene no longer exists, or OBS is not connected.
 func (s *Server) handleApplyScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
 	log.Printf("Applying scene preset: %s", input.PresetName)
 
