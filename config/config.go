@@ -25,6 +25,28 @@ type Config struct {
 
 	// Database configuration
 	DBPath string
+
+	// Tool group preferences
+	ToolGroups ToolGroupConfig
+
+	// HTTP server configuration
+	WebServer WebServerConfig
+}
+
+// ToolGroupConfig controls which tool categories are enabled
+type ToolGroupConfig struct {
+	Core    bool // Core OBS tools (scenes, recording, streaming, status)
+	Visual  bool // Visual monitoring tools (screenshots)
+	Layout  bool // Layout management tools (scene presets)
+	Audio   bool // Audio control tools
+	Sources bool // Source management tools
+}
+
+// WebServerConfig controls HTTP server settings
+type WebServerConfig struct {
+	Enabled bool   // Whether HTTP server is enabled
+	Host    string // HTTP server host
+	Port    int    // HTTP server port
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -41,6 +63,18 @@ func DefaultConfig() *Config {
 		OBSPort:       "4455",
 		OBSPassword:   "",
 		DBPath:        filepath.Join(homeDir, ".agentic-obs", "db.sqlite"),
+		ToolGroups: ToolGroupConfig{
+			Core:    true,
+			Visual:  true,
+			Layout:  true,
+			Audio:   true,
+			Sources: true,
+		},
+		WebServer: WebServerConfig{
+			Enabled: true,
+			Host:    "localhost",
+			Port:    8765,
+		},
 	}
 }
 
@@ -85,6 +119,76 @@ func (c *Config) DetectOrPrompt() error {
 	return nil
 }
 
+// PromptFirstRunSetup performs initial setup prompts for tool groups and webserver.
+// This is called during first run to let users customize their experience.
+func (c *Config) PromptFirstRunSetup() error {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	fmt.Println("\n=== Feature Configuration ===")
+	fmt.Println("Choose which features to enable (press Enter for defaults):")
+
+	// Helper function to prompt yes/no
+	promptBool := func(prompt string, defaultVal bool) bool {
+		defaultStr := "Y/n"
+		if !defaultVal {
+			defaultStr = "y/N"
+		}
+		fmt.Printf("%s [%s]: ", prompt, defaultStr)
+		if scanner.Scan() {
+			input := strings.TrimSpace(strings.ToLower(scanner.Text()))
+			if input == "" {
+				return defaultVal
+			}
+			return input == "y" || input == "yes"
+		}
+		return defaultVal
+	}
+
+	// Tool group prompts
+	fmt.Println("\n--- Tool Groups ---")
+	c.ToolGroups.Core = promptBool("Core OBS control (scenes, recording, streaming)", c.ToolGroups.Core)
+	c.ToolGroups.Visual = promptBool("Visual monitoring (screenshot capture)", c.ToolGroups.Visual)
+	c.ToolGroups.Layout = promptBool("Layout management (scene presets)", c.ToolGroups.Layout)
+	c.ToolGroups.Audio = promptBool("Audio control (mute, volume)", c.ToolGroups.Audio)
+	c.ToolGroups.Sources = promptBool("Source management (visibility, settings)", c.ToolGroups.Sources)
+
+	// Webserver prompt
+	fmt.Println("\n--- HTTP Server ---")
+	c.WebServer.Enabled = promptBool("Enable HTTP server for screenshot URLs", c.WebServer.Enabled)
+
+	if c.WebServer.Enabled {
+		fmt.Printf("HTTP server port [%d]: ", c.WebServer.Port)
+		if scanner.Scan() {
+			input := strings.TrimSpace(scanner.Text())
+			if input != "" {
+				var port int
+				if _, err := fmt.Sscanf(input, "%d", &port); err == nil && port > 0 && port < 65536 {
+					c.WebServer.Port = port
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading input: %w", err)
+	}
+
+	// Summary
+	fmt.Println("\n--- Configuration Summary ---")
+	fmt.Printf("Core tools: %v\n", c.ToolGroups.Core)
+	fmt.Printf("Visual tools: %v\n", c.ToolGroups.Visual)
+	fmt.Printf("Layout tools: %v\n", c.ToolGroups.Layout)
+	fmt.Printf("Audio tools: %v\n", c.ToolGroups.Audio)
+	fmt.Printf("Source tools: %v\n", c.ToolGroups.Sources)
+	fmt.Printf("HTTP server: %v", c.WebServer.Enabled)
+	if c.WebServer.Enabled {
+		fmt.Printf(" (port %d)", c.WebServer.Port)
+	}
+	fmt.Println()
+
+	return nil
+}
+
 // LoadFromStorage loads configuration from the database
 func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 	cfg := DefaultConfig()
@@ -113,12 +217,37 @@ func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 	if err != nil {
 		log.Printf("Warning: failed to load OBS config from database: %v", err)
 		log.Println("Using default OBS configuration")
-		return cfg, nil
+	} else {
+		cfg.OBSHost = obsConfig.Host
+		cfg.OBSPort = fmt.Sprintf("%d", obsConfig.Port)
+		cfg.OBSPassword = obsConfig.Password
 	}
 
-	cfg.OBSHost = obsConfig.Host
-	cfg.OBSPort = fmt.Sprintf("%d", obsConfig.Port)
-	cfg.OBSPassword = obsConfig.Password
+	// Load tool group preferences
+	toolGroups, err := db.LoadToolGroupConfig(ctx)
+	if err != nil {
+		log.Printf("Warning: failed to load tool group config: %v", err)
+	} else {
+		cfg.ToolGroups = ToolGroupConfig{
+			Core:    toolGroups.Core,
+			Visual:  toolGroups.Visual,
+			Layout:  toolGroups.Layout,
+			Audio:   toolGroups.Audio,
+			Sources: toolGroups.Sources,
+		}
+	}
+
+	// Load webserver configuration
+	webCfg, err := db.LoadWebServerConfig(ctx)
+	if err != nil {
+		log.Printf("Warning: failed to load webserver config: %v", err)
+	} else {
+		cfg.WebServer = WebServerConfig{
+			Enabled: webCfg.Enabled,
+			Host:    webCfg.Host,
+			Port:    webCfg.Port,
+		}
+	}
 
 	log.Printf("Loaded configuration from database: OBS at %s:%s", cfg.OBSHost, cfg.OBSPort)
 	return cfg, nil
@@ -148,6 +277,28 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 
 	if err := db.SaveOBSConfig(ctx, obsConfig); err != nil {
 		return fmt.Errorf("failed to save OBS config: %w", err)
+	}
+
+	// Save tool group preferences
+	toolGroups := storage.ToolGroupConfig{
+		Core:    cfg.ToolGroups.Core,
+		Visual:  cfg.ToolGroups.Visual,
+		Layout:  cfg.ToolGroups.Layout,
+		Audio:   cfg.ToolGroups.Audio,
+		Sources: cfg.ToolGroups.Sources,
+	}
+	if err := db.SaveToolGroupConfig(ctx, toolGroups); err != nil {
+		return fmt.Errorf("failed to save tool group config: %w", err)
+	}
+
+	// Save webserver configuration
+	webCfg := storage.WebServerConfig{
+		Enabled: cfg.WebServer.Enabled,
+		Host:    cfg.WebServer.Host,
+		Port:    cfg.WebServer.Port,
+	}
+	if err := db.SaveWebServerConfig(ctx, webCfg); err != nil {
+		return fmt.Errorf("failed to save webserver config: %w", err)
 	}
 
 	// Mark first run as complete

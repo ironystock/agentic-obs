@@ -6,7 +6,7 @@ This document outlines the architecture, decisions, and implementation roadmap f
 
 **Created:** 2025-12-14
 **Updated:** 2025-12-15
-**Status:** ✅ Phase 4 Complete - 30 Tools, 3 Resources, 10 Prompts
+**Status:** ✅ Phase 5A Complete - 30 Tools, 4 Resources, 10 Prompts (Setup & Config)
 
 ---
 
@@ -478,26 +478,58 @@ CREATE TABLE state (
 - 10 MCP prompts with argument handling
 - All tests passing
 
-**Total Resources:** 3
+**Total Resources:** 4 (scenes, screenshots, screenshot-url, presets)
 **Total Prompts:** 10
 
 ---
 
-### Phase 5: Future Enhancements (Planned)
+### Phase 5A: Setup & Configuration Enhancements ✅ COMPLETE
 
 **Deliverables:**
+- [x] Tool group preferences - Feature-based groupings (Core, Visual, Layout, Audio, Sources)
+- [x] First-run setup prompts for tool groups and webserver
+- [x] Optional webserver configuration (HTTP server can be disabled)
+- [x] Screenshot-URL resource (`obs://screenshot-url/{name}`) - lightweight JSON alternative
+- [x] Conditional tool registration based on user preferences
+- [x] Persistent tool group and webserver configuration in SQLite
+
+**New Resource:** `obs://screenshot-url/{sourceName}` - Returns JSON with HTTP URL instead of binary data
+
+**Success Criteria:**
+- [x] Users can select tool groups during first-run setup
+- [x] Tool registration respects group preferences
+- [x] HTTP server can be disabled via config
+- [x] Screenshot-URL resource returns JSON with URL
+- [x] All preferences persist across restarts
+
+---
+
+### Phase 5B-D: Future Enhancements (Planned)
+
+**Phase 5B - Web Frontend:**
+- [ ] Dashboard for monitoring and configuration
+- [ ] API endpoints for status, history, screenshots
+- [ ] Configuration management via web interface
+
+**Phase 5C - TUI App:**
+- [ ] Terminal interface using Bubbletea
+- [ ] Mirror web frontend functionality
+
+**Phase 5D - Scene Design:**
+- [ ] Source creation tools (text, image, color, browser, media)
+- [ ] Layout control tools (transform, bounds, crop, order)
+- [ ] Advanced tools (duplicate, lock, list input kinds)
+
+**Phase 6 - Advanced:**
 - [ ] Automation rules and macros (event-triggered actions)
 - [ ] Multi-instance OBS support
 - [ ] Additional resource types (sources, filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in)
-- [ ] Interactive setup (TUI + Web)
-- [ ] Health monitoring endpoints
-- [ ] Performance metrics
 
 **Success Criteria:**
-- Supports multiple OBS instances
-- Additional resource types with notifications
-- Production-ready stability
+- Web dashboard provides full server visibility
+- TUI offers command-line management
+- AI can programmatically design OBS scenes
 
 ---
 
@@ -664,11 +696,12 @@ CREATE TABLE state (
 
 ---
 
-**Document Version:** 1.4
+**Document Version:** 1.5
 **Last Updated:** 2025-12-15
-**Next Review:** Before Phase 5 planning
+**Next Review:** Before Phase 5B planning
 
 **Changelog:**
+- v1.5 (2025-12-15): Phase 5A complete - Tool group preferences, optional webserver, screenshot-url resource, first-run setup
 - v1.4 (2025-12-15): Phase 4 complete - MCP resources (screenshots, presets), 10 MCP prompts, comprehensive tests
 - v1.3 (2025-12-15): Phase 3 complete - agentic screenshot sources, HTTP server, background capture manager
 - v1.2 (2025-12-15): Phase 2 complete - scene presets, testing infrastructure, 26 tools
