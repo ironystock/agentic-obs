@@ -8,8 +8,9 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
-- **Scene Management**: List, switch, and manage OBS scenes
-- **Recording Control**: Start, stop, and check recording status
+- **Scene Management**: List, switch, create, and remove OBS scenes
+- **Scene Presets**: Save and restore source visibility configurations
+- **Recording Control**: Start, stop, pause, resume, and monitor recording
 - **Streaming Control**: Start, stop, and monitor streaming
 - **Source Management**: List and control source visibility
 - **Audio Control**: Manage input mute and volume levels
@@ -137,13 +138,25 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 | `toggle_source_visibility` | Show/hide a source in a scene |
 | `get_source_settings` | Get source configuration |
 
-### Audio Control (3 tools)
+### Audio Control (4 tools)
 
 | Tool | Description |
 |------|-------------|
 | `get_input_mute` | Check if audio input is muted |
 | `toggle_input_mute` | Toggle audio input mute state |
 | `set_input_volume` | Set audio input volume (dB or multiplier) |
+| `get_input_volume` | Get current volume level (dB and multiplier) |
+
+### Scene Presets (6 tools)
+
+| Tool | Description |
+|------|-------------|
+| `save_scene_preset` | Save current scene source states as a named preset |
+| `list_scene_presets` | List all saved presets, optionally filter by scene |
+| `get_preset_details` | Get detailed information about a specific preset |
+| `apply_scene_preset` | Apply a saved preset to restore source visibility |
+| `rename_scene_preset` | Rename an existing preset |
+| `delete_scene_preset` | Delete a saved preset |
 
 ### Status & Monitoring (1 tool)
 
@@ -151,7 +164,7 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 |------|-------------|
 | `get_obs_status` | Get overall OBS status and connection info |
 
-**Total: 19 tools**
+**Total: 26 tools**
 
 ## Development
 
@@ -211,11 +224,11 @@ Configuration is stored in SQLite (`agentic-obs.db`) and includes:
 
 ## Future Enhancements
 
+- Agentic screenshot sources (AI visual monitoring)
+- Automation rules and macros
 - Multi-instance OBS support
 - Interactive setup UI (TUI and web)
 - Real-time event notifications
-- Advanced preset and macro system
-- Performance monitoring and analytics
 
 ## Contributing
 

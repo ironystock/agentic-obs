@@ -106,7 +106,7 @@ Configuration & Presets
 
 ### Design Decisions
 
-1. **Storage Strategy (Moderate)**: SQLite stores connection config and user-defined scene/source presets. Future expansion will include comprehensive state caching and analytics.
+1. **Storage Strategy (Moderate)**: SQLite stores connection config and scene presets (source visibility states). Scene presets enable save/restore of source configurations.
 
 2. **SQLite Driver**: Using `modernc.org/sqlite` (pure Go) for simplified cross-compilation and single-user performance requirements.
 
@@ -138,17 +138,18 @@ Configuration & Presets
 - `resources/read` - Get detailed scene configuration
 - `resources/subscribe` - Subscribe to scene change notifications (future)
 
-### MCP Tools Implemented
+### MCP Tools Implemented (26 tools)
 
 Core tools for OBS control:
-- **Scene Management**: `set_current_scene`, `create_scene`, `remove_scene`
-- **Recording**: `start_recording`, `stop_recording`, `get_recording_status`
+- **Scene Management**: `list_scenes`, `set_current_scene`, `create_scene`, `remove_scene`
+- **Recording**: `start_recording`, `stop_recording`, `get_recording_status`, `pause_recording`, `resume_recording`
 - **Streaming**: `start_streaming`, `stop_streaming`, `get_streaming_status`
 - **Sources**: `list_sources`, `toggle_source_visibility`, `get_source_settings`
-- **Audio**: `get_input_mute`, `toggle_input_mute`, `set_input_volume`
+- **Audio**: `get_input_mute`, `toggle_input_mute`, `set_input_volume`, `get_input_volume`
+- **Scene Presets**: `save_scene_preset`, `list_scene_presets`, `get_preset_details`, `apply_scene_preset`, `rename_scene_preset`, `delete_scene_preset`
 - **Status**: `get_obs_status` (overall OBS connection and state)
 
-**Note:** Scene listing moved from tools to resources (`resources/list`), enabling notification support.
+**Note:** Scenes are also exposed as MCP resources (`resources/list`), enabling notification support.
 
 ## Important Context for AI Assistants
 
@@ -162,7 +163,7 @@ Core tools for OBS control:
 
 ### Project Phases
 
-**Phase 1 (Current Baseline):**
+**Phase 1 (Complete):**
 - Basic MCP server with stdio transport
 - Scenes exposed as MCP resources with notifications
 - OBS event monitoring and notification dispatch
@@ -171,13 +172,17 @@ Core tools for OBS control:
 - Persistent OBS connection with auto-reconnect
 - Auto-detection of OBS connection
 
-**Future Enhancements (Post-Baseline):**
+**Phase 2 (Complete):**
+- Scene preset management (save/restore source visibility states)
+- 7 new tools: scene presets (6) + get_input_volume
+- Comprehensive test coverage with mock OBS client
+
+**Future Enhancements:**
+- Agentic screenshot sources (AI visual monitoring)
 - Multi-instance OBS support (requires architecture refactor)
-- Comprehensive state caching and analytics
 - Additional resource types (sources, filters, transitions)
+- Automation rules and macros
 - Interactive setup (TUI and web interface)
-- Advanced preset management
-- Performance monitoring
 
 ### Testing
 
@@ -215,14 +220,13 @@ go mod tidy
 ### Areas Needing Attention
 
 **TODO - Future Enhancements:**
+- [ ] **Agentic Screenshot Sources** (Phase C): Enable AI to "see" stream via periodic screenshot capture with HTTP serving
+- [ ] Automation rules and macros (Phase D): Event-triggered actions and multi-step sequences
 - [ ] Multi-target OBS support (architecture decision needed)
 - [ ] Interactive installation UX (TUI + Web)
-- [ ] Comprehensive state caching (expand from current moderate approach)
-- [ ] Advanced preset/macro system
 - [ ] Health check and monitoring endpoints
 - [ ] Additional resource types (sources, filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in to notifications)
-- [ ] **Agentic Screenshot Sources**: Design strategy for creating "screenshot capture" sources that can be programmatically added to user scenes, enabling periodic scene screenshots on a configurable cadence for monitoring, archiving, or analysis purposes
 
 ### Future Research Topics
 
@@ -240,7 +244,7 @@ go mod tidy
 
 ---
 
-**Last Updated:** 2025-12-14
+**Last Updated:** 2025-12-15
 **Go Version:** 1.25.5
 **MCP SDK Version:** 1.1.0
 **goobs Version:** 1.5.6
