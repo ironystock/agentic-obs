@@ -67,6 +67,28 @@ type SavePresetInput struct {
 	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the OBS scene to capture state from"`
 }
 
+// CreateScreenshotSourceInput is the input for creating a screenshot source
+type CreateScreenshotSourceInput struct {
+	Name        string `json:"name" jsonschema:"required,description=Unique name for this screenshot source"`
+	SourceName  string `json:"source_name" jsonschema:"required,description=OBS scene or source name to capture"`
+	CadenceMs   int    `json:"cadence_ms,omitempty" jsonschema:"description=Capture interval in milliseconds (default: 5000)"`
+	ImageFormat string `json:"image_format,omitempty" jsonschema:"description=Image format: png or jpg (default: png)"`
+	ImageWidth  int    `json:"image_width,omitempty" jsonschema:"description=Optional resize width (0 = original)"`
+	ImageHeight int    `json:"image_height,omitempty" jsonschema:"description=Optional resize height (0 = original)"`
+	Quality     int    `json:"quality,omitempty" jsonschema:"description=Compression quality 0-100 (default: 80)"`
+}
+
+// ScreenshotSourceNameInput is the input for screenshot source operations by name
+type ScreenshotSourceNameInput struct {
+	Name string `json:"name" jsonschema:"required,description=Name of the screenshot source"`
+}
+
+// ConfigureScreenshotCadenceInput is the input for updating screenshot cadence
+type ConfigureScreenshotCadenceInput struct {
+	Name      string `json:"name" jsonschema:"required,description=Name of the screenshot source"`
+	CadenceMs int    `json:"cadence_ms" jsonschema:"required,description=New capture interval in milliseconds"`
+}
+
 // registerToolHandlers registers all MCP tool handlers with the server
 func (s *Server) registerToolHandlers() {
 	// Scene management tools
@@ -282,6 +304,39 @@ func (s *Server) registerToolHandlers() {
 			Description: "Get the current volume level of an audio input (returns dB and multiplier values)",
 		},
 		s.handleGetInputVolume,
+	)
+
+	// Screenshot source tools
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "create_screenshot_source",
+			Description: "Create a periodic screenshot capture source for visual monitoring of OBS scenes",
+		},
+		s.handleCreateScreenshotSource,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "remove_screenshot_source",
+			Description: "Stop and remove a screenshot capture source",
+		},
+		s.handleRemoveScreenshotSource,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "list_screenshot_sources",
+			Description: "List all configured screenshot sources with their status and HTTP URLs",
+		},
+		s.handleListScreenshotSources,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "configure_screenshot_cadence",
+			Description: "Update the capture interval for a screenshot source",
+		},
+		s.handleConfigureScreenshotCadence,
 	)
 
 	log.Println("Tool handlers registered successfully")
@@ -713,5 +768,161 @@ func (s *Server) handleApplyScenePreset(ctx context.Context, request *mcpsdk.Cal
 		"scene_name":    preset.SceneName,
 		"applied_count": len(obsStates),
 		"message":       fmt.Sprintf("Successfully applied preset '%s' to scene '%s'", input.PresetName, preset.SceneName),
+	}, nil
+}
+
+// Screenshot source tool handlers
+
+// handleCreateScreenshotSource creates a new periodic screenshot capture source.
+// Returns the source details including the HTTP URL where screenshots can be accessed.
+func (s *Server) handleCreateScreenshotSource(ctx context.Context, request *mcpsdk.CallToolRequest, input CreateScreenshotSourceInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Creating screenshot source '%s' for OBS source '%s'", input.Name, input.SourceName)
+
+	// Set defaults
+	if input.CadenceMs <= 0 {
+		input.CadenceMs = 5000
+	}
+	if input.ImageFormat == "" {
+		input.ImageFormat = "png"
+	}
+	if input.Quality <= 0 {
+		input.Quality = 80
+	}
+
+	// Create the source in storage
+	source := storage.ScreenshotSource{
+		Name:        input.Name,
+		SourceName:  input.SourceName,
+		CadenceMs:   input.CadenceMs,
+		ImageFormat: input.ImageFormat,
+		ImageWidth:  input.ImageWidth,
+		ImageHeight: input.ImageHeight,
+		Quality:     input.Quality,
+		Enabled:     true,
+	}
+
+	id, err := s.storage.CreateScreenshotSource(ctx, source)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create screenshot source: %w", err)
+	}
+
+	// Retrieve the full source with defaults applied
+	createdSource, err := s.storage.GetScreenshotSource(ctx, id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to retrieve created source: %w", err)
+	}
+
+	// Start the capture worker
+	if err := s.screenshotMgr.AddSource(createdSource); err != nil {
+		// Log but don't fail - source is created, worker can be started later
+		log.Printf("Warning: failed to start capture worker: %v", err)
+	}
+
+	// Get the HTTP URL for this source
+	screenshotURL := s.httpServer.GetScreenshotURL(input.Name)
+
+	return nil, map[string]interface{}{
+		"id":           id,
+		"name":         input.Name,
+		"source_name":  input.SourceName,
+		"cadence_ms":   input.CadenceMs,
+		"image_format": input.ImageFormat,
+		"quality":      input.Quality,
+		"url":          screenshotURL,
+		"message":      fmt.Sprintf("Successfully created screenshot source '%s'. Access at: %s", input.Name, screenshotURL),
+	}, nil
+}
+
+// handleRemoveScreenshotSource stops and removes a screenshot capture source.
+func (s *Server) handleRemoveScreenshotSource(ctx context.Context, request *mcpsdk.CallToolRequest, input ScreenshotSourceNameInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Removing screenshot source: %s", input.Name)
+
+	// Get the source to find its ID
+	source, err := s.storage.GetScreenshotSourceByName(ctx, input.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find screenshot source: %w", err)
+	}
+
+	// Stop the capture worker
+	if err := s.screenshotMgr.RemoveSource(source.ID); err != nil {
+		log.Printf("Warning: failed to stop capture worker: %v", err)
+	}
+
+	// Delete from storage (cascades to delete screenshots)
+	if err := s.storage.DeleteScreenshotSource(ctx, source.ID); err != nil {
+		return nil, nil, fmt.Errorf("failed to delete screenshot source: %w", err)
+	}
+
+	return nil, SimpleResult{
+		Message: fmt.Sprintf("Successfully removed screenshot source '%s'", input.Name),
+	}, nil
+}
+
+// handleListScreenshotSources lists all configured screenshot sources with their status and URLs.
+func (s *Server) handleListScreenshotSources(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	log.Println("Listing screenshot sources")
+
+	sources, err := s.storage.ListScreenshotSources(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list screenshot sources: %w", err)
+	}
+
+	result := make([]map[string]interface{}, len(sources))
+	for i, src := range sources {
+		// Get screenshot count for this source
+		count, _ := s.storage.CountScreenshots(ctx, src.ID)
+
+		result[i] = map[string]interface{}{
+			"id":               src.ID,
+			"name":             src.Name,
+			"source_name":      src.SourceName,
+			"cadence_ms":       src.CadenceMs,
+			"image_format":     src.ImageFormat,
+			"quality":          src.Quality,
+			"enabled":          src.Enabled,
+			"url":              s.httpServer.GetScreenshotURL(src.Name),
+			"screenshot_count": count,
+			"created_at":       src.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+	}
+
+	return nil, map[string]interface{}{
+		"sources": result,
+		"count":   len(sources),
+	}, nil
+}
+
+// handleConfigureScreenshotCadence updates the capture interval for a screenshot source.
+func (s *Server) handleConfigureScreenshotCadence(ctx context.Context, request *mcpsdk.CallToolRequest, input ConfigureScreenshotCadenceInput) (*mcpsdk.CallToolResult, any, error) {
+	log.Printf("Updating cadence for screenshot source '%s' to %dms", input.Name, input.CadenceMs)
+
+	if input.CadenceMs <= 0 {
+		return nil, nil, fmt.Errorf("cadence_ms must be greater than 0")
+	}
+
+	// Get the source
+	source, err := s.storage.GetScreenshotSourceByName(ctx, input.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find screenshot source: %w", err)
+	}
+
+	// Update in storage
+	source.CadenceMs = input.CadenceMs
+	if err := s.storage.UpdateScreenshotSource(ctx, *source); err != nil {
+		return nil, nil, fmt.Errorf("failed to update screenshot source: %w", err)
+	}
+
+	// Update the running worker's cadence
+	if err := s.screenshotMgr.UpdateCadence(source.ID, input.CadenceMs); err != nil {
+		// Try to restart the source with updated settings
+		if err := s.screenshotMgr.UpdateSource(source); err != nil {
+			log.Printf("Warning: failed to update capture worker cadence: %v", err)
+		}
+	}
+
+	return nil, map[string]interface{}{
+		"name":       input.Name,
+		"cadence_ms": input.CadenceMs,
+		"message":    fmt.Sprintf("Successfully updated cadence for '%s' to %dms", input.Name, input.CadenceMs),
 	}, nil
 }

@@ -158,13 +158,22 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 | `rename_scene_preset` | Rename an existing preset |
 | `delete_scene_preset` | Delete a saved preset |
 
+### Screenshot Sources (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `create_screenshot_source` | Create a periodic screenshot capture source for AI visual monitoring |
+| `remove_screenshot_source` | Stop and remove a screenshot capture source |
+| `list_screenshot_sources` | List all configured sources with status and HTTP URLs |
+| `configure_screenshot_cadence` | Update the capture interval for a screenshot source |
+
 ### Status & Monitoring (1 tool)
 
 | Tool | Description |
 |------|-------------|
 | `get_obs_status` | Get overall OBS status and connection info |
 
-**Total: 26 tools**
+**Total: 30 tools**
 
 ## Development
 

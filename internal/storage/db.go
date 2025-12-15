@@ -120,6 +120,35 @@ func (db *DB) migrate(ctx context.Context) error {
 
 		// Migration 7: Create index on scene_presets.scene_name for filtering
 		`CREATE INDEX IF NOT EXISTS idx_scene_presets_scene_name ON scene_presets(scene_name)`,
+
+		// Migration 8: Create screenshot_sources table for periodic capture configuration
+		`CREATE TABLE IF NOT EXISTS screenshot_sources (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL,
+			source_name TEXT NOT NULL,
+			cadence_ms INTEGER DEFAULT 5000,
+			image_format TEXT DEFAULT 'png',
+			image_width INTEGER,
+			image_height INTEGER,
+			quality INTEGER DEFAULT 80,
+			enabled INTEGER DEFAULT 1,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+
+		// Migration 9: Create screenshots table for captured images
+		`CREATE TABLE IF NOT EXISTS screenshots (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source_id INTEGER NOT NULL,
+			image_data TEXT NOT NULL,
+			mime_type TEXT NOT NULL,
+			captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			size_bytes INTEGER,
+			FOREIGN KEY (source_id) REFERENCES screenshot_sources(id) ON DELETE CASCADE
+		)`,
+
+		// Migration 10: Create index for fast latest screenshot lookup
+		`CREATE INDEX IF NOT EXISTS idx_screenshots_source_captured ON screenshots(source_id, captured_at DESC)`,
 	}
 
 	// Execute each migration in a transaction

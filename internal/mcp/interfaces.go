@@ -53,6 +53,10 @@ type OBSClient interface {
 	CaptureSceneState(sceneName string) ([]obs.SourceState, error)
 	ApplyScenePreset(sceneName string, sources []obs.SourceState) error
 
+	// Screenshot operations
+	TakeSourceScreenshot(opts obs.ScreenshotOptions) (string, error)
+	CreateBrowserSource(sceneName, sourceName string, settings obs.BrowserSourceSettings) (int, error)
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }
