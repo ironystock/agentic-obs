@@ -26,9 +26,9 @@ type ScreenshotSource struct {
 // Screenshot represents a captured screenshot image.
 type Screenshot struct {
 	ID         int64     `json:"id"`
-	SourceID   int64     `json:"source_id"`   // FK to ScreenshotSource
-	ImageData  string    `json:"image_data"`  // Base64-encoded image data
-	MimeType   string    `json:"mime_type"`   // "image/png" or "image/jpeg"
+	SourceID   int64     `json:"source_id"`  // FK to ScreenshotSource
+	ImageData  string    `json:"image_data"` // Base64-encoded image data
+	MimeType   string    `json:"mime_type"`  // "image/png" or "image/jpeg"
 	CapturedAt time.Time `json:"captured_at"`
 	SizeBytes  int       `json:"size_bytes"`
 }

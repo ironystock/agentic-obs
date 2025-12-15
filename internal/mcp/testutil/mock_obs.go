@@ -34,24 +34,24 @@ type MockOBSClient struct {
 	streaming bool
 
 	// Error injection for testing error paths
-	ErrorOnConnect           error
-	ErrorOnGetSceneList      error
-	ErrorOnSetCurrentScene   error
-	ErrorOnCreateScene       error
-	ErrorOnRemoveScene       error
-	ErrorOnStartRecording    error
-	ErrorOnStopRecording     error
-	ErrorOnPauseRecording    error
-	ErrorOnResumeRecording   error
-	ErrorOnStartStreaming    error
-	ErrorOnStopStreaming     error
-	ErrorOnListSources       error
-	ErrorOnGetSourceSettings error
-	ErrorOnToggleVisibility  error
-	ErrorOnGetInputMute      error
-	ErrorOnToggleInputMute   error
-	ErrorOnSetInputVolume    error
-	ErrorOnGetInputVolume    error
+	ErrorOnConnect             error
+	ErrorOnGetSceneList        error
+	ErrorOnSetCurrentScene     error
+	ErrorOnCreateScene         error
+	ErrorOnRemoveScene         error
+	ErrorOnStartRecording      error
+	ErrorOnStopRecording       error
+	ErrorOnPauseRecording      error
+	ErrorOnResumeRecording     error
+	ErrorOnStartStreaming      error
+	ErrorOnStopStreaming       error
+	ErrorOnListSources         error
+	ErrorOnGetSourceSettings   error
+	ErrorOnToggleVisibility    error
+	ErrorOnGetInputMute        error
+	ErrorOnToggleInputMute     error
+	ErrorOnSetInputVolume      error
+	ErrorOnGetInputVolume      error
 	ErrorOnGetOBSStatus        error
 	ErrorOnCaptureSceneState   error
 	ErrorOnApplyScenePreset    error

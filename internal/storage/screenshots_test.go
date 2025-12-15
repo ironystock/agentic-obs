@@ -73,7 +73,7 @@ func TestCreateScreenshotSource(t *testing.T) {
 
 		got, err := db.GetScreenshotSource(ctx, id)
 		require.NoError(t, err)
-		assert.Equal(t, 5000, got.CadenceMs)   // Default
+		assert.Equal(t, 5000, got.CadenceMs)    // Default
 		assert.Equal(t, "png", got.ImageFormat) // Default
 		assert.Equal(t, 80, got.Quality)        // Default
 	})
