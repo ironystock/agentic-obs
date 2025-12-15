@@ -5,8 +5,8 @@
 This document outlines the architecture, decisions, and implementation roadmap for the **agentic-obs** MCP server - a Go-based bridge between AI assistants and OBS Studio.
 
 **Created:** 2025-12-14
-**Updated:** 2025-12-14
-**Status:** ✅ Phase 1 Complete - All 19 Tools Implemented
+**Updated:** 2025-12-15
+**Status:** ✅ Phase 3 Complete - All 30 Tools Implemented
 
 ---
 
@@ -78,17 +78,26 @@ agentic-obs/
 │   ├── mcp/
 │   │   ├── server.go         # MCP server lifecycle
 │   │   ├── tools.go          # Tool definitions & handlers
-│   │   └── resources.go      # Resource handlers (scenes as resources)
+│   │   ├── resources.go      # Resource handlers (scenes as resources)
+│   │   ├── interfaces.go     # OBSClient interface for testing
+│   │   └── testutil/         # Mock implementations for testing
 │   │
 │   ├── obs/
 │   │   ├── client.go         # WebSocket client wrapper
 │   │   ├── commands.go       # OBS operation implementations
 │   │   └── events.go         # Event handling and notification dispatch
 │   │
-│   └── storage/
-│       ├── db.go             # Database setup & migrations
-│       ├── scenes.go         # Scene preset persistence
-│       └── state.go          # Config & state management
+│   ├── storage/
+│   │   ├── db.go             # Database setup & migrations
+│   │   ├── scenes.go         # Scene preset persistence
+│   │   ├── screenshots.go    # Screenshot source & image persistence
+│   │   └── state.go          # Config & state management
+│   │
+│   ├── http/
+│   │   └── server.go         # HTTP server for screenshot serving
+│   │
+│   └── screenshot/
+│       └── manager.go        # Background screenshot capture manager
 │
 └── scripts/
     └── setup.sh              # Dev environment helpers
@@ -383,52 +392,72 @@ CREATE TABLE state (
 - [x] Resource notification dispatch
 - [x] SQLite storage layer
 - [x] OBS client wrapper with event handling
-- [x] Core tools implemented (P0: 10 tools)
-- [x] **P1 tools implemented (9 additional tools)**
+- [x] Core tools implemented (19 tools)
 - [x] Auto-detection setup flow
 - [x] Error handling with context
-- [x] **Comprehensive documentation (QUICKSTART, TOOLS.md, examples/)**
-- [x] **Natural language prompt examples**
 
-**Success Criteria:** ✅ All Met
-- ✅ MCP server responds to tool calls and resource requests via stdio
-- ✅ Successfully connects to OBS Studio
-- ✅ Scenes exposed as resources with `resources/list` and `resources/read`
-- ✅ Notifications sent when scenes change
-- ✅ Can switch scenes, start/stop recording via tools
-- ✅ Config persists between runs
-- ✅ **19 total tools operational (Scene, Recording, Streaming, Source, Audio, Status)**
+**Tools Implemented (19):**
+- Scene Management: `list_scenes`, `set_current_scene`, `create_scene`, `remove_scene`
+- Recording: `start_recording`, `stop_recording`, `get_recording_status`, `pause_recording`, `resume_recording`
+- Streaming: `start_streaming`, `stop_streaming`, `get_streaming_status`
+- Sources: `list_sources`, `toggle_source_visibility`, `get_source_settings`
+- Audio: `get_input_mute`, `toggle_input_mute`, `set_input_volume`
+- Status: `get_obs_status`
 
 ---
 
-### Phase 2: Enhancement (Partially Complete)
+### Phase 2: Scene Presets & Testing ✅ COMPLETE
 
-**Status:** P1 Tools Complete ✅, Other Items Future
+**Status:** ✅ Completed 2025-12-15
 
 **Deliverables:**
-- [x] **Additional tools (P1: sources, audio) - COMPLETE**
-- [ ] Scene preset management
-- [ ] Interactive setup (TUI + Web)
-- [ ] Comprehensive error handling
-- [ ] Unit and integration tests
-- [ ] Performance optimization
+- [x] Scene preset management (save/restore source visibility states)
+- [x] 7 new tools: scene presets (6) + `get_input_volume`
+- [x] OBSClient interface for dependency injection
+- [x] Mock OBS client for testing
+- [x] Comprehensive test coverage for storage layer
+- [x] MCP tool handler tests
 
-**Success Criteria:**
-- ✅ All P1 tools implemented (19 total)
-- ✅ First-run experience is smooth (auto-detection working)
-- [ ] Test coverage >70%
+**Tools Added (7):**
+- Scene Presets: `save_scene_preset`, `list_scene_presets`, `get_preset_details`, `apply_scene_preset`, `rename_scene_preset`, `delete_scene_preset`
+- Audio: `get_input_volume`
+
+**Total Tools:** 26
 
 ---
 
-### Phase 3: Advanced Features (Future)
+### Phase 3: Agentic Screenshot Sources ✅ COMPLETE
+
+**Status:** ✅ Completed 2025-12-15
 
 **Deliverables:**
+- [x] Screenshot source management (periodic capture from OBS sources)
+- [x] 4 new tools for screenshot control
+- [x] HTTP server for serving screenshots at `http://localhost:8765/screenshot/{name}`
+- [x] Background capture manager with configurable cadence
+- [x] SQLite storage for screenshot sources and images
+- [x] Automatic cleanup (keeps latest 10 screenshots per source)
+- [x] Security hardening (path traversal prevention, generic error messages)
+
+**Tools Added (4):**
+- `create_screenshot_source` - Create periodic screenshot capture
+- `remove_screenshot_source` - Stop and remove a screenshot source
+- `list_screenshot_sources` - List all sources with status and URLs
+- `configure_screenshot_cadence` - Update capture interval
+
+**Total Tools:** 30
+
+---
+
+### Phase 4: Future Enhancements (Planned)
+
+**Deliverables:**
+- [ ] Automation rules and macros (event-triggered actions)
 - [ ] Multi-instance OBS support
-- [ ] Additional resource types (sources, filters, transitions, audio)
+- [ ] Additional resource types (sources, filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in)
-- [ ] State caching and analytics
-- [ ] Advanced preset/macro system
-- [ ] Health monitoring
+- [ ] Interactive setup (TUI + Web)
+- [ ] Health monitoring endpoints
 - [ ] Performance metrics
 
 **Success Criteria:**
@@ -522,20 +551,31 @@ CREATE TABLE state (
 
 ## Success Metrics
 
-### Phase 1
+### Phase 1 ✅
 - [x] Project structure created
 - [x] Dependencies configured
-- [ ] Server responds to MCP tool calls and resource requests
-- [ ] Successfully connects to OBS
-- [ ] Scenes exposed as resources
-- [ ] Notifications working for scene changes
-- [ ] Core tools (P0) functional
+- [x] Server responds to MCP tool calls and resource requests
+- [x] Successfully connects to OBS
+- [x] Scenes exposed as resources
+- [x] Notifications working for scene changes
+- [x] Core tools (19) functional
+
+### Phase 2 ✅
+- [x] Scene preset management (6 tools)
+- [x] Testing infrastructure (interfaces, mocks)
+- [x] Storage layer test coverage
+
+### Phase 3 ✅
+- [x] Screenshot source management (4 tools)
+- [x] HTTP server for image serving
+- [x] Background capture manager
+- [x] Security review passed
 
 ### Long-term
-- Multi-instance support
-- Production deployment examples
-- Community contributions
-- Documentation completeness
+- [ ] Multi-instance support
+- [ ] Production deployment examples
+- [ ] Community contributions
+- [ ] Documentation completeness
 
 ---
 
@@ -574,13 +614,21 @@ CREATE TABLE state (
 | 2025-12-14 | Resource notifications in Phase 1 | Critical for keeping clients synchronized with OBS |
 | 2025-12-14 | SQLite password storage | Acceptable for local, single-user deployment |
 | 2025-12-14 | Auto-detect setup with fallback | Best balance of convenience and flexibility |
+| 2025-12-15 | OBSClient interface for testing | Enables mock injection without running OBS |
+| 2025-12-15 | Scene presets store visibility states | Minimal but useful; covers common "show/hide sources" workflow |
+| 2025-12-15 | HTTP server for screenshots | Browser sources can fetch images; simpler than MCP binary resources |
+| 2025-12-15 | Background capture workers | Per-source goroutines with configurable cadence |
+| 2025-12-15 | Keep 10 screenshots per source | Balance between history and storage; ~13-26MB per source |
+| 2025-12-15 | Path traversal validation | Security hardening for HTTP endpoint source names |
 
 ---
 
-**Document Version:** 1.1
-**Last Updated:** 2025-12-14
-**Next Review:** After Phase 1 completion
+**Document Version:** 1.3
+**Last Updated:** 2025-12-15
+**Next Review:** Before Phase 4 planning
 
 **Changelog:**
+- v1.3 (2025-12-15): Phase 3 complete - agentic screenshot sources, HTTP server, background capture manager
+- v1.2 (2025-12-15): Phase 2 complete - scene presets, testing infrastructure, 26 tools
 - v1.1 (2025-12-14): Added scenes-as-resources architecture, MCP notifications, resource implementation patterns
 - v1.0 (2025-12-14): Initial project plan with baseline architecture
