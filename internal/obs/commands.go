@@ -6,6 +6,7 @@ import (
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/sceneitems"
 	"github.com/andreykaipov/goobs/api/requests/scenes"
+	"github.com/andreykaipov/goobs/api/requests/sources"
 	"github.com/andreykaipov/goobs/api/typedefs"
 )
 
@@ -576,4 +577,105 @@ func (c *Client) ApplyScenePreset(sceneName string, sources []SourceState) error
 	}
 
 	return nil
+}
+
+// ScreenshotOptions configures screenshot capture settings.
+type ScreenshotOptions struct {
+	SourceName string // Name of the source or scene to capture
+	Format     string // Image format: "png" or "jpg" (default: "png")
+	Width      int    // Optional resize width (0 = original)
+	Height     int    // Optional resize height (0 = original)
+	Quality    int    // Compression quality 0-100 (default: -1 = library default)
+}
+
+// TakeSourceScreenshot captures a screenshot of the specified source or scene.
+// Returns the Base64-encoded image data with data URI prefix (e.g., "data:image/png;base64,...").
+func (c *Client) TakeSourceScreenshot(opts ScreenshotOptions) (string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return "", err
+	}
+
+	// Set defaults
+	imageFormat := opts.Format
+	if imageFormat == "" {
+		imageFormat = "png"
+	}
+
+	// Build parameters
+	params := &sources.GetSourceScreenshotParams{
+		SourceName:  &opts.SourceName,
+		ImageFormat: &imageFormat,
+	}
+
+	// Optional width/height
+	if opts.Width > 0 {
+		width := float64(opts.Width)
+		params.ImageWidth = &width
+	}
+	if opts.Height > 0 {
+		height := float64(opts.Height)
+		params.ImageHeight = &height
+	}
+
+	// Optional quality (for JPEG)
+	if opts.Quality >= 0 && opts.Quality <= 100 {
+		quality := float64(opts.Quality)
+		params.ImageCompressionQuality = &quality
+	}
+
+	resp, err := client.Sources.GetSourceScreenshot(params)
+	if err != nil {
+		return "", fmt.Errorf("failed to capture screenshot of '%s': %w", opts.SourceName, err)
+	}
+
+	return resp.ImageData, nil
+}
+
+// BrowserSourceSettings holds configuration for creating a browser source.
+type BrowserSourceSettings struct {
+	URL         string // URL to display
+	Width       int    // Width in pixels
+	Height      int    // Height in pixels
+	RefreshRate int    // Page refresh rate in seconds (0 = no refresh)
+	CSS         string // Custom CSS to inject
+}
+
+// CreateBrowserSource creates a new browser source in the specified scene.
+// Returns the scene item ID of the created source.
+func (c *Client) CreateBrowserSource(sceneName, sourceName string, settings BrowserSourceSettings) (int, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return 0, err
+	}
+
+	// Build input settings
+	inputSettings := map[string]interface{}{
+		"url":    settings.URL,
+		"width":  settings.Width,
+		"height": settings.Height,
+	}
+
+	if settings.RefreshRate > 0 {
+		inputSettings["refresh_rate"] = settings.RefreshRate
+	}
+	if settings.CSS != "" {
+		inputSettings["css"] = settings.CSS
+	}
+
+	// Create the browser source
+	enabled := true
+	inputKind := "browser_source"
+	resp, err := client.Inputs.CreateInput(&inputs.CreateInputParams{
+		SceneName:        &sceneName,
+		InputName:        &sourceName,
+		InputKind:        &inputKind,
+		InputSettings:    inputSettings,
+		SceneItemEnabled: &enabled,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to create browser source '%s' in scene '%s': %w", sourceName, sceneName, err)
+	}
+
+	return int(resp.SceneItemId), nil
 }

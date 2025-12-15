@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"log"
 
+	agenthttp "github.com/ironystock/agentic-obs/internal/http"
 	"github.com/ironystock/agentic-obs/internal/obs"
+	"github.com/ironystock/agentic-obs/internal/screenshot"
 	"github.com/ironystock/agentic-obs/internal/storage"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Server represents the MCP server instance for OBS control
 type Server struct {
-	mcpServer *mcpsdk.Server
-	obsClient OBSClient
-	storage   *storage.DB
-	ctx       context.Context
-	cancel    context.CancelFunc
+	mcpServer     *mcpsdk.Server
+	obsClient     OBSClient
+	storage       *storage.DB
+	screenshotMgr *screenshot.Manager
+	httpServer    *agenthttp.Server
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // ServerConfig holds configuration for server initialization
@@ -27,6 +31,8 @@ type ServerConfig struct {
 	OBSPort       string
 	OBSPassword   string
 	DBPath        string
+	HTTPHost      string // HTTP server host for screenshot serving (default: localhost)
+	HTTPPort      int    // HTTP server port for screenshot serving (default: 8765)
 }
 
 // NewServer creates a new MCP server instance
@@ -59,6 +65,20 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	s.obsClient = obsClient
 
+	// Initialize HTTP server for screenshot serving
+	httpCfg := agenthttp.DefaultConfig()
+	if config.HTTPHost != "" {
+		httpCfg.Host = config.HTTPHost
+	}
+	if config.HTTPPort != 0 {
+		httpCfg.Port = config.HTTPPort
+	}
+	s.httpServer = agenthttp.NewServer(db, httpCfg)
+
+	// Initialize screenshot manager
+	screenshotCfg := screenshot.DefaultConfig()
+	s.screenshotMgr = screenshot.NewManager(obsClient, db, screenshotCfg)
+
 	// Create MCP server
 	mcpServer := mcpsdk.NewServer(
 		&mcpsdk.Implementation{
@@ -79,14 +99,26 @@ func NewServer(config ServerConfig) (*Server, error) {
 	return s, nil
 }
 
-// Start establishes OBS connection
+// Start establishes OBS connection and starts background services
 func (s *Server) Start() error {
 	// Connect to OBS
 	if err := s.obsClient.Connect(); err != nil {
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
-
 	log.Println("Connected to OBS successfully")
+
+	// Start HTTP server for screenshot serving
+	if err := s.httpServer.Start(); err != nil {
+		return fmt.Errorf("failed to start HTTP server: %w", err)
+	}
+	log.Printf("HTTP server started at %s", s.httpServer.GetAddr())
+
+	// Start screenshot manager
+	if err := s.screenshotMgr.Start(s.ctx); err != nil {
+		return fmt.Errorf("failed to start screenshot manager: %w", err)
+	}
+	log.Printf("Screenshot manager started with %d workers", s.screenshotMgr.GetWorkerCount())
+
 	return nil
 }
 
@@ -109,6 +141,21 @@ func (s *Server) Stop() error {
 
 	// Cancel context to stop all operations
 	s.cancel()
+
+	// Stop screenshot manager first (depends on OBS connection)
+	if s.screenshotMgr != nil {
+		s.screenshotMgr.Stop()
+		log.Println("Screenshot manager stopped")
+	}
+
+	// Stop HTTP server
+	if s.httpServer != nil {
+		if err := s.httpServer.Stop(context.Background()); err != nil {
+			log.Printf("Warning: error stopping HTTP server: %v", err)
+		} else {
+			log.Println("HTTP server stopped")
+		}
+	}
 
 	// Disconnect from OBS
 	if err := s.obsClient.Disconnect(); err != nil {
@@ -168,4 +215,14 @@ func (s *Server) SetOBSClient(client OBSClient) {
 // GetStorage returns the storage instance (for internal use)
 func (s *Server) GetStorage() *storage.DB {
 	return s.storage
+}
+
+// GetScreenshotManager returns the screenshot manager instance (for internal use)
+func (s *Server) GetScreenshotManager() *screenshot.Manager {
+	return s.screenshotMgr
+}
+
+// GetHTTPServer returns the HTTP server instance (for internal use)
+func (s *Server) GetHTTPServer() *agenthttp.Server {
+	return s.httpServer
 }

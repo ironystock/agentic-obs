@@ -52,9 +52,14 @@ type MockOBSClient struct {
 	ErrorOnToggleInputMute   error
 	ErrorOnSetInputVolume    error
 	ErrorOnGetInputVolume    error
-	ErrorOnGetOBSStatus      error
-	ErrorOnCaptureSceneState error
-	ErrorOnApplyScenePreset  error
+	ErrorOnGetOBSStatus        error
+	ErrorOnCaptureSceneState   error
+	ErrorOnApplyScenePreset    error
+	ErrorOnTakeScreenshot      error
+	ErrorOnCreateBrowserSource error
+
+	// Screenshot mock data
+	mockScreenshotData string // Base64 PNG data to return
 }
 
 // NewMockOBSClient creates a new mock OBS client with default test data.
@@ -770,4 +775,97 @@ func (m *MockOBSClient) ApplyScenePreset(sceneName string, sources []obs.SourceS
 	}
 
 	return nil
+}
+
+// TakeSourceScreenshot simulates taking a screenshot of a source.
+func (m *MockOBSClient) TakeSourceScreenshot(opts obs.ScreenshotOptions) (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnTakeScreenshot != nil {
+		return "", m.ErrorOnTakeScreenshot
+	}
+
+	if !m.connected {
+		return "", fmt.Errorf("not connected to OBS")
+	}
+
+	// Return mock screenshot data if set, otherwise return a minimal valid base64 PNG
+	if m.mockScreenshotData != "" {
+		return m.mockScreenshotData, nil
+	}
+
+	// Return a minimal 1x1 transparent PNG as base64
+	// This is a valid PNG that can be used in tests
+	return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", nil
+}
+
+// CreateBrowserSource simulates creating a browser source in a scene.
+func (m *MockOBSClient) CreateBrowserSource(sceneName, sourceName string, settings obs.BrowserSourceSettings) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnCreateBrowserSource != nil {
+		return 0, m.ErrorOnCreateBrowserSource
+	}
+
+	if !m.connected {
+		return 0, fmt.Errorf("not connected to OBS")
+	}
+
+	// Check if scene exists
+	found := false
+	for _, s := range m.scenes {
+		if s == sceneName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return 0, fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	// Generate a mock scene item ID
+	newID := 100 // Start from 100 to avoid conflicts with existing mock IDs
+	if items, exists := m.sceneItems[sceneName]; exists {
+		for _, item := range items {
+			if item.ID >= newID {
+				newID = item.ID + 1
+			}
+		}
+	}
+
+	// Add the browser source to the scene
+	newSource := obs.SceneSource{
+		ID:      newID,
+		Name:    sourceName,
+		Type:    "browser_source",
+		Enabled: true,
+		Visible: true,
+	}
+
+	if m.sceneItems == nil {
+		m.sceneItems = make(map[string][]obs.SceneSource)
+	}
+	m.sceneItems[sceneName] = append(m.sceneItems[sceneName], newSource)
+
+	// Also add to sourceSettings for consistency
+	if m.sourceSettings == nil {
+		m.sourceSettings = make(map[string]map[string]interface{})
+	}
+	m.sourceSettings[sourceName] = map[string]interface{}{
+		"url":    settings.URL,
+		"width":  settings.Width,
+		"height": settings.Height,
+		"css":    settings.CSS,
+	}
+
+	return newID, nil
+}
+
+// SetMockScreenshotData sets the screenshot data to return from TakeSourceScreenshot.
+func (m *MockOBSClient) SetMockScreenshotData(data string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.mockScreenshotData = data
 }

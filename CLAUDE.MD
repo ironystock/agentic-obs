@@ -23,15 +23,21 @@ agentic-obs/
 │   ├── mcp/
 │   │   ├── server.go      # MCP server initialization and lifecycle
 │   │   ├── tools.go       # MCP tool registration and handlers
-│   │   └── resources.go   # MCP resource handlers (scenes as resources)
+│   │   ├── resources.go   # MCP resource handlers (scenes as resources)
+│   │   └── interfaces.go  # OBSClient interface for testing
 │   ├── obs/
 │   │   ├── client.go      # OBS WebSocket client wrapper
 │   │   ├── commands.go    # OBS command implementations
 │   │   └── events.go      # OBS event handling and notification dispatch
-│   └── storage/
-│       ├── db.go          # SQLite database setup and migrations
-│       ├── scenes.go      # Scene preset persistence
-│       └── state.go       # Configuration and state management
+│   ├── storage/
+│   │   ├── db.go          # SQLite database setup and migrations
+│   │   ├── scenes.go      # Scene preset persistence
+│   │   ├── screenshots.go # Screenshot source and image persistence
+│   │   └── state.go       # Configuration and state management
+│   ├── http/
+│   │   └── server.go      # HTTP server for screenshot image serving
+│   └── screenshot/
+│       └── manager.go     # Background screenshot capture manager
 └── scripts/
     └── setup.sh           # Development setup helpers
 ```
@@ -138,7 +144,7 @@ Configuration & Presets
 - `resources/read` - Get detailed scene configuration
 - `resources/subscribe` - Subscribe to scene change notifications (future)
 
-### MCP Tools Implemented (26 tools)
+### MCP Tools Implemented (30 tools)
 
 Core tools for OBS control:
 - **Scene Management**: `list_scenes`, `set_current_scene`, `create_scene`, `remove_scene`
@@ -147,6 +153,7 @@ Core tools for OBS control:
 - **Sources**: `list_sources`, `toggle_source_visibility`, `get_source_settings`
 - **Audio**: `get_input_mute`, `toggle_input_mute`, `set_input_volume`, `get_input_volume`
 - **Scene Presets**: `save_scene_preset`, `list_scene_presets`, `get_preset_details`, `apply_scene_preset`, `rename_scene_preset`, `delete_scene_preset`
+- **Screenshot Sources**: `create_screenshot_source`, `remove_screenshot_source`, `list_screenshot_sources`, `configure_screenshot_cadence`
 - **Status**: `get_obs_status` (overall OBS connection and state)
 
 **Note:** Scenes are also exposed as MCP resources (`resources/list`), enabling notification support.
@@ -177,8 +184,14 @@ Core tools for OBS control:
 - 7 new tools: scene presets (6) + get_input_volume
 - Comprehensive test coverage with mock OBS client
 
+**Phase 3 (Complete):**
+- Agentic screenshot sources for AI visual monitoring
+- 4 new tools: `create_screenshot_source`, `remove_screenshot_source`, `list_screenshot_sources`, `configure_screenshot_cadence`
+- HTTP server for serving screenshots at `http://localhost:8765/screenshot/{name}`
+- Background capture manager with configurable cadence
+- Automatic cleanup to keep storage bounded
+
 **Future Enhancements:**
-- Agentic screenshot sources (AI visual monitoring)
 - Multi-instance OBS support (requires architecture refactor)
 - Additional resource types (sources, filters, transitions)
 - Automation rules and macros
