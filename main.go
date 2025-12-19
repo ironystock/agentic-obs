@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/ironystock/agentic-obs/config"
 	"github.com/ironystock/agentic-obs/internal/mcp"
 	"github.com/ironystock/agentic-obs/internal/storage"
+	"github.com/ironystock/agentic-obs/internal/tui"
 )
 
 const (
@@ -20,6 +22,18 @@ const (
 )
 
 func main() {
+	// Parse command-line flags
+	tuiMode := flag.Bool("tui", false, "Run in TUI dashboard mode instead of MCP server mode")
+	flag.BoolVar(tuiMode, "t", false, "Run in TUI dashboard mode (shorthand)")
+	showHelp := flag.Bool("help", false, "Show usage information")
+	flag.BoolVar(showHelp, "h", false, "Show usage information (shorthand)")
+	flag.Parse()
+
+	if *showHelp {
+		printUsage()
+		os.Exit(0)
+	}
+
 	// Set up logging with timestamps and source location
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	log.Printf("========================================")
@@ -43,6 +57,15 @@ func main() {
 
 	log.Printf("Configuration loaded: %s", cfg)
 
+	// Check if TUI mode is requested
+	if *tuiMode {
+		log.Println("Starting TUI dashboard mode...")
+		if err := runTUIMode(ctx, cfg); err != nil {
+			log.Fatalf("TUI error: %v", err)
+		}
+		return
+	}
+
 	// Step 2: Load or detect OBS configuration
 	log.Println("[2/5] Checking OBS connection configuration...")
 
@@ -64,6 +87,7 @@ func main() {
 			Layout:  cfg.ToolGroups.Layout,
 			Audio:   cfg.ToolGroups.Audio,
 			Sources: cfg.ToolGroups.Sources,
+			Design:  cfg.ToolGroups.Design,
 		},
 	}
 
@@ -277,11 +301,29 @@ func recordSuccessfulConnection(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
+// runTUIMode starts the terminal user interface dashboard
+func runTUIMode(ctx context.Context, cfg *config.Config) error {
+	// Initialize storage
+	db, err := storage.New(ctx, storage.Config{Path: cfg.DBPath})
+	if err != nil {
+		return fmt.Errorf("failed to initialize storage: %w", err)
+	}
+	defer db.Close()
+
+	// Create and run TUI
+	app := tui.New(db, cfg, appName, appVersion)
+	return app.Run()
+}
+
 // printUsage prints usage information
 func printUsage() {
-	fmt.Fprintf(os.Stderr, `Usage: %s
+	fmt.Fprintf(os.Stderr, `Usage: %s [OPTIONS]
 
 An MCP server that provides AI assistants with programmatic control over OBS Studio.
+
+Options:
+  -t, --tui     Run in TUI dashboard mode instead of MCP server mode
+  -h, --help    Show this help message
 
 Environment Variables:
   OBS_HOST      OBS WebSocket host (default: localhost)
@@ -290,8 +332,11 @@ Environment Variables:
   DB_PATH       Database file path (default: ~/.agentic-obs/db.sqlite)
 
 Examples:
-  # Run with defaults
+  # Run MCP server (default mode)
   %s
+
+  # Run TUI dashboard
+  %s --tui
 
   # Run with custom OBS host and port
   OBS_HOST=192.168.1.100 OBS_PORT=4456 %s
@@ -300,5 +345,5 @@ Examples:
   OBS_PASSWORD=mysecret %s
 
 For more information, see: https://github.com/ironystock/agentic-obs
-`, appName, appName, appName, appName)
+`, appName, appName, appName, appName, appName)
 }

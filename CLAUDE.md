@@ -12,7 +12,7 @@ This file provides context about the project for AI assistants like Claude Code.
 
 ```
 agentic-obs/
-├── main.go                 # Entry point, stdio MCP server initialization
+├── main.go                 # Entry point, stdio MCP server or TUI dashboard
 ├── go.mod                  # Go module definition
 ├── go.sum                  # Dependency checksums
 ├── CLAUDE.MD              # This file - AI assistant context
@@ -22,12 +22,12 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/
 │   │   ├── server.go      # MCP server initialization and lifecycle
-│   │   ├── tools.go       # MCP tool registration and handlers
+│   │   ├── tools.go       # MCP tool registration and handlers (44 tools)
 │   │   ├── resources.go   # MCP resource handlers (scenes as resources)
 │   │   └── interfaces.go  # OBSClient interface for testing
 │   ├── obs/
 │   │   ├── client.go      # OBS WebSocket client wrapper
-│   │   ├── commands.go    # OBS command implementations
+│   │   ├── commands.go    # OBS command implementations (including scene design)
 │   │   └── events.go      # OBS event handling and notification dispatch
 │   ├── storage/
 │   │   ├── db.go          # SQLite database setup and migrations
@@ -36,8 +36,10 @@ agentic-obs/
 │   │   └── state.go       # Configuration and state management
 │   ├── http/
 │   │   └── server.go      # HTTP server for screenshot image serving
-│   └── screenshot/
-│       └── manager.go     # Background screenshot capture manager
+│   ├── screenshot/
+│   │   └── manager.go     # Background screenshot capture manager
+│   └── tui/
+│       └── app.go         # Terminal UI dashboard (bubbletea)
 └── scripts/
     └── setup.sh           # Development setup helpers
 ```
@@ -48,6 +50,8 @@ agentic-obs/
 - **MCP Go SDK v1.1.0** - `github.com/modelcontextprotocol/go-sdk`
 - **goobs v1.5.6** - `github.com/andreykaipov/goobs` (OBS WebSocket 5.5.6 client)
 - **modernc.org/sqlite** - Pure Go SQLite driver (CGo-free)
+- **bubbletea** - `github.com/charmbracelet/bubbletea` (TUI framework)
+- **lipgloss** - `github.com/charmbracelet/lipgloss` (TUI styling)
 - **stdio transport** - MCP communication over standard input/output
 
 ## Development Setup
@@ -84,11 +88,16 @@ go build -o agentic-obs main.go
 ### Running the Project
 
 ```bash
-# Run via go install (if $GOPATH/bin is in PATH)
+# Run MCP server mode (default)
 agentic-obs
+
+# Run TUI dashboard mode
+agentic-obs --tui
+agentic-obs -t
 
 # Run directly from source
 go run main.go
+go run main.go --tui
 
 # Build and run
 go build && ./agentic-obs
@@ -104,13 +113,18 @@ go install
 MCP Client (Claude/AI Agent)
     ↕ stdio (JSON-RPC)
 MCP Server (this project)
-    ├─ Tools (30 total)
+    ├─ Tools (44 total, 6 tool groups)
     ├─ Resources (scenes, screenshots, presets)
     ├─ Prompts (10 workflows)
     ↕ WebSocket (port 4455)
 OBS Studio (obs-websocket)
     ↕ SQLite (local)
 Configuration & Presets
+
+TUI Dashboard (--tui mode)
+    ├─ Status view (OBS connection, server info)
+    ├─ Config view (settings display)
+    └─ History view (action log)
 ```
 
 ### Design Decisions
@@ -160,19 +174,32 @@ The server exposes three types of MCP resources for client access:
 - `resources/read` - Get detailed resource content (JSON or binary)
 - `resources/subscribe` - Subscribe to resource change notifications (future)
 
-### MCP Tools Implemented (30 tools)
+### MCP Tools Implemented (44 tools in 6 groups)
 
-Core tools for OBS control:
+**Core Tools (13)** - Scene management, recording, streaming, status:
 - **Scene Management**: `list_scenes`, `set_current_scene`, `create_scene`, `remove_scene`
 - **Recording**: `start_recording`, `stop_recording`, `get_recording_status`, `pause_recording`, `resume_recording`
 - **Streaming**: `start_streaming`, `stop_streaming`, `get_streaming_status`
-- **Sources**: `list_sources`, `toggle_source_visibility`, `get_source_settings`
-- **Audio**: `get_input_mute`, `toggle_input_mute`, `set_input_volume`, `get_input_volume`
-- **Scene Presets**: `save_scene_preset`, `list_scene_presets`, `get_preset_details`, `apply_scene_preset`, `rename_scene_preset`, `delete_scene_preset`
-- **Screenshot Sources**: `create_screenshot_source`, `remove_screenshot_source`, `list_screenshot_sources`, `configure_screenshot_cadence`
-- **Status**: `get_obs_status` (overall OBS connection and state)
+- **Status**: `get_obs_status`
 
-**Note:** Scenes are also exposed as MCP resources (`resources/list`), enabling notification support.
+**Sources Tools (3)** - Source information and visibility:
+- `list_sources`, `toggle_source_visibility`, `get_source_settings`
+
+**Audio Tools (4)** - Audio input control:
+- `get_input_mute`, `toggle_input_mute`, `set_input_volume`, `get_input_volume`
+
+**Layout Tools (6)** - Scene presets:
+- `save_scene_preset`, `list_scene_presets`, `get_preset_details`, `apply_scene_preset`, `rename_scene_preset`, `delete_scene_preset`
+
+**Visual Tools (4)** - Screenshot sources:
+- `create_screenshot_source`, `remove_screenshot_source`, `list_screenshot_sources`, `configure_screenshot_cadence`
+
+**Design Tools (14)** - Agentic scene design and source manipulation:
+- **Source Creation**: `create_text_source`, `create_image_source`, `create_color_source`, `create_browser_source`, `create_media_source`
+- **Layout Control**: `set_source_transform`, `get_source_transform`, `set_source_crop`, `set_source_bounds`, `set_source_order`
+- **Advanced**: `set_source_locked`, `duplicate_source`, `remove_source`, `list_input_kinds`
+
+**Note:** Scenes are also exposed as MCP resources (`resources/list`), enabling notification support. Tool groups can be enabled/disabled in configuration.
 
 ### MCP Prompts Implemented (10 prompts)
 
@@ -238,11 +265,32 @@ Pre-built prompts for common OBS workflows and tasks:
 - Resource URIs: `obs://scene/{name}`, `obs://screenshot/{name}`, `obs://preset/{name}`
 - Workflow prompts for streaming, recording, diagnostics, and management
 
+**Phase 5A (Complete):**
+- Tool groups with enable/disable configuration (6 groups: Core, Visual, Layout, Audio, Sources, Design)
+- Optional HTTP server (can be disabled in config)
+- Screenshot URL resource type (`obs://screenshot-url/{name}`)
+
+**Phase 6.1 (Complete):**
+- Web dashboard at `http://localhost:8765/` with status, config, and history views
+- REST API endpoints for status, actions, and configuration
+- Action history tracking in database
+
+**Phase 6.2 (Complete):**
+- TUI dashboard mode (`--tui` flag)
+- Status, Config, and History views using bubbletea/lipgloss
+- Tab navigation with keyboard shortcuts
+- Auto-refresh and scrollable history
+
+**Phase 6.3 (Complete):**
+- Agentic scene design with 14 new Design tools
+- Source creation: text, image, color, browser, media sources
+- Layout control: transform, crop, bounds, z-order
+- Advanced: lock, duplicate, remove sources, list input kinds
+
 **Future Enhancements:**
 - Multi-instance OBS support (requires architecture refactor)
-- Additional resource types (sources, filters, transitions)
+- Additional resource types (filters, transitions)
 - Automation rules and macros
-- Interactive setup (TUI and web interface)
 - Resource subscriptions (explicit client opt-in to notifications)
 
 ### Testing
@@ -283,11 +331,13 @@ go mod tidy
 **TODO - Future Enhancements:**
 - [x] **Agentic Screenshot Sources** (Phase 3): Enable AI to "see" stream via periodic screenshot capture with HTTP serving ✓
 - [x] **MCP Resources & Prompts** (Phase 4): Expand resources and add workflow prompts ✓
-- [ ] Automation rules and macros (Phase 5): Event-triggered actions and multi-step sequences
+- [x] **Tool Groups & Optional Web Server** (Phase 5A): Configurable tool groups, optional HTTP ✓
+- [x] **Web Dashboard** (Phase 6.1): Web-based status, config, and history views ✓
+- [x] **TUI Dashboard** (Phase 6.2): Terminal-based dashboard with `--tui` flag ✓
+- [x] **Agentic Scene Design** (Phase 6.3): AI can create and manipulate sources ✓
+- [ ] Automation rules and macros: Event-triggered actions and multi-step sequences
 - [ ] Multi-target OBS support (architecture decision needed)
-- [ ] Interactive installation UX (TUI + Web)
-- [ ] Health check and monitoring endpoints
-- [ ] Additional resource types (sources, filters, transitions, audio inputs)
+- [ ] Additional resource types (filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in to notifications)
 
 ### Future Research Topics
@@ -306,7 +356,8 @@ go mod tidy
 
 ---
 
-**Last Updated:** 2025-12-15
+**Last Updated:** 2025-12-18
 **Go Version:** 1.25.5
 **MCP SDK Version:** 1.1.0
 **goobs Version:** 1.5.6
+**bubbletea Version:** 1.3.3

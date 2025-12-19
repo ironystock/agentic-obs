@@ -29,6 +29,7 @@ const (
 	StateKeyToolsLayout  = "tools_enabled_layout"  // Layout management tools (scene presets)
 	StateKeyToolsAudio   = "tools_enabled_audio"   // Audio control tools
 	StateKeyToolsSources = "tools_enabled_sources" // Source management tools
+	StateKeyToolsDesign  = "tools_enabled_design"  // Scene design tools (source creation, transforms)
 )
 
 // Webserver configuration keys
@@ -313,6 +314,7 @@ type ToolGroupConfig struct {
 	Layout  bool // Layout management tools (scene presets)
 	Audio   bool // Audio control tools
 	Sources bool // Source management tools
+	Design  bool // Scene design tools (source creation, transforms)
 }
 
 // DefaultToolGroupConfig returns tool group config with all groups enabled.
@@ -323,6 +325,7 @@ func DefaultToolGroupConfig() ToolGroupConfig {
 		Layout:  true,
 		Audio:   true,
 		Sources: true,
+		Design:  true,
 	}
 }
 
@@ -349,6 +352,9 @@ func (db *DB) SaveToolGroupConfig(ctx context.Context, cfg ToolGroupConfig) erro
 	}
 	if err := db.SetState(ctx, StateKeyToolsSources, boolToStr(cfg.Sources)); err != nil {
 		return fmt.Errorf("failed to save sources tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsDesign, boolToStr(cfg.Design)); err != nil {
+		return fmt.Errorf("failed to save design tools preference: %w", err)
 	}
 
 	return nil
@@ -378,6 +384,9 @@ func (db *DB) LoadToolGroupConfig(ctx context.Context) (ToolGroupConfig, error) 
 	}
 	if val, err := db.GetState(ctx, StateKeyToolsSources); err == nil {
 		cfg.Sources = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsDesign); err == nil {
+		cfg.Design = strToBool(val)
 	}
 
 	return cfg, nil

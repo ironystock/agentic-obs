@@ -649,6 +649,26 @@ type BrowserSourceSettings struct {
 	CSS         string // Custom CSS to inject
 }
 
+// SceneItemTransform represents the transform properties of a scene item.
+type SceneItemTransform struct {
+	PositionX    float64 `json:"position_x"`
+	PositionY    float64 `json:"position_y"`
+	ScaleX       float64 `json:"scale_x"`
+	ScaleY       float64 `json:"scale_y"`
+	Rotation     float64 `json:"rotation"`
+	Width        float64 `json:"width"`
+	Height       float64 `json:"height"`
+	SourceWidth  float64 `json:"source_width"`
+	SourceHeight float64 `json:"source_height"`
+	BoundsType   string  `json:"bounds_type"`
+	BoundsWidth  float64 `json:"bounds_width"`
+	BoundsHeight float64 `json:"bounds_height"`
+	CropTop      int     `json:"crop_top"`
+	CropBottom   int     `json:"crop_bottom"`
+	CropLeft     int     `json:"crop_left"`
+	CropRight    int     `json:"crop_right"`
+}
+
 // CreateBrowserSource creates a new browser source in the specified scene.
 // Returns the scene item ID of the created source.
 func (c *Client) CreateBrowserSource(sceneName, sourceName string, settings BrowserSourceSettings) (int, error) {
@@ -686,4 +706,213 @@ func (c *Client) CreateBrowserSource(sceneName, sourceName string, settings Brow
 	}
 
 	return int(resp.SceneItemId), nil
+}
+
+// CreateInput creates a new input source in the specified scene.
+// Returns the scene item ID of the created source.
+func (c *Client) CreateInput(sceneName, sourceName, inputKind string, settings map[string]interface{}) (int, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return 0, err
+	}
+
+	enabled := true
+	resp, err := client.Inputs.CreateInput(&inputs.CreateInputParams{
+		SceneName:        &sceneName,
+		InputName:        &sourceName,
+		InputKind:        &inputKind,
+		InputSettings:    settings,
+		SceneItemEnabled: &enabled,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to create input '%s' of type '%s' in scene '%s': %w", sourceName, inputKind, sceneName, err)
+	}
+
+	return int(resp.SceneItemId), nil
+}
+
+// GetSceneItemTransform retrieves the transform properties of a scene item.
+func (c *Client) GetSceneItemTransform(sceneName string, sceneItemID int) (*SceneItemTransform, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.SceneItems.GetSceneItemTransform(&sceneitems.GetSceneItemTransformParams{
+		SceneName:   &sceneName,
+		SceneItemId: &sceneItemID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get transform for item %d in scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	t := resp.SceneItemTransform
+	return &SceneItemTransform{
+		PositionX:    t.PositionX,
+		PositionY:    t.PositionY,
+		ScaleX:       t.ScaleX,
+		ScaleY:       t.ScaleY,
+		Rotation:     t.Rotation,
+		Width:        t.Width,
+		Height:       t.Height,
+		SourceWidth:  t.SourceWidth,
+		SourceHeight: t.SourceHeight,
+		BoundsType:   t.BoundsType,
+		BoundsWidth:  t.BoundsWidth,
+		BoundsHeight: t.BoundsHeight,
+		CropTop:      int(t.CropTop),
+		CropBottom:   int(t.CropBottom),
+		CropLeft:     int(t.CropLeft),
+		CropRight:    int(t.CropRight),
+	}, nil
+}
+
+// SetSceneItemTransform sets the transform properties of a scene item.
+func (c *Client) SetSceneItemTransform(sceneName string, sceneItemID int, transform *SceneItemTransform) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	// Build transform struct
+	t := &typedefs.SceneItemTransform{
+		PositionX:    transform.PositionX,
+		PositionY:    transform.PositionY,
+		ScaleX:       transform.ScaleX,
+		ScaleY:       transform.ScaleY,
+		Rotation:     transform.Rotation,
+		BoundsType:   transform.BoundsType,
+		BoundsWidth:  transform.BoundsWidth,
+		BoundsHeight: transform.BoundsHeight,
+		CropTop:      float64(transform.CropTop),
+		CropBottom:   float64(transform.CropBottom),
+		CropLeft:     float64(transform.CropLeft),
+		CropRight:    float64(transform.CropRight),
+	}
+
+	_, err = client.SceneItems.SetSceneItemTransform(&sceneitems.SetSceneItemTransformParams{
+		SceneName:          &sceneName,
+		SceneItemId:        &sceneItemID,
+		SceneItemTransform: t,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set transform for item %d in scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	return nil
+}
+
+// SetSceneItemIndex sets the z-order index of a scene item.
+func (c *Client) SetSceneItemIndex(sceneName string, sceneItemID int, index int) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.SceneItems.SetSceneItemIndex(&sceneitems.SetSceneItemIndexParams{
+		SceneName:      &sceneName,
+		SceneItemId:    &sceneItemID,
+		SceneItemIndex: &index,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set index for item %d in scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	return nil
+}
+
+// SetSceneItemLocked sets the locked state of a scene item.
+func (c *Client) SetSceneItemLocked(sceneName string, sceneItemID int, locked bool) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.SceneItems.SetSceneItemLocked(&sceneitems.SetSceneItemLockedParams{
+		SceneName:       &sceneName,
+		SceneItemId:     &sceneItemID,
+		SceneItemLocked: &locked,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set locked state for item %d in scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	return nil
+}
+
+// GetSceneItemLocked gets the locked state of a scene item.
+func (c *Client) GetSceneItemLocked(sceneName string, sceneItemID int) (bool, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := client.SceneItems.GetSceneItemLocked(&sceneitems.GetSceneItemLockedParams{
+		SceneName:   &sceneName,
+		SceneItemId: &sceneItemID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to get locked state for item %d in scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	return resp.SceneItemLocked, nil
+}
+
+// DuplicateSceneItem duplicates a scene item within the same scene or to another scene.
+// Returns the scene item ID of the duplicated item.
+func (c *Client) DuplicateSceneItem(sceneName string, sceneItemID int, destScene string) (int, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return 0, err
+	}
+
+	params := &sceneitems.DuplicateSceneItemParams{
+		SceneName:   &sceneName,
+		SceneItemId: &sceneItemID,
+	}
+
+	// If destination scene is specified and different, set it
+	if destScene != "" && destScene != sceneName {
+		params.DestinationSceneName = &destScene
+	}
+
+	resp, err := client.SceneItems.DuplicateSceneItem(params)
+	if err != nil {
+		return 0, fmt.Errorf("failed to duplicate item %d from scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	return int(resp.SceneItemId), nil
+}
+
+// RemoveSceneItem removes a scene item from a scene.
+func (c *Client) RemoveSceneItem(sceneName string, sceneItemID int) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.SceneItems.RemoveSceneItem(&sceneitems.RemoveSceneItemParams{
+		SceneName:   &sceneName,
+		SceneItemId: &sceneItemID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove item %d from scene '%s': %w", sceneItemID, sceneName, err)
+	}
+
+	return nil
+}
+
+// GetInputKindList returns a list of available input kinds (source types).
+func (c *Client) GetInputKindList() ([]string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Inputs.GetInputKindList(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get input kind list: %w", err)
+	}
+
+	return resp.InputKinds, nil
 }

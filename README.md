@@ -8,7 +8,7 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
-- **30 MCP Tools**: Comprehensive control over OBS Studio operations
+- **44 MCP Tools**: Comprehensive control over OBS Studio operations in 6 tool groups
 - **Scene Management**: List, switch, create, and remove OBS scenes
 - **Scene Presets**: Save and restore source visibility configurations
 - **Recording Control**: Start, stop, pause, resume, and monitor recording
@@ -16,9 +16,12 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 - **Source Management**: List and control source visibility
 - **Audio Control**: Manage input mute and volume levels
 - **Screenshot Sources**: AI visual monitoring with periodic image capture
+- **Agentic Scene Design**: Create and manipulate sources (text, image, color, browser, media)
 - **Status Monitoring**: Query OBS connection and operational status
 - **3 MCP Resources**: Scenes, screenshots, and presets exposed as resources
 - **10 MCP Prompts**: Pre-built workflows for common tasks and diagnostics
+- **TUI Dashboard**: Terminal interface for status, config, and history (`--tui` flag)
+- **Web Dashboard**: Browser-based dashboard at `http://localhost:8765/`
 
 ## Prerequisites
 
@@ -63,15 +66,29 @@ go build -o agentic-obs main.go
 ### Running the Server
 
 ```bash
-# If installed via go install (ensure $GOPATH/bin is in your PATH)
+# MCP server mode (default) - if installed via go install
 agentic-obs
+
+# TUI dashboard mode - terminal interface for monitoring
+agentic-obs --tui
+agentic-obs -t
 
 # Or run directly from source
 go run main.go
+go run main.go --tui
 
 # Or use a built binary
 ./agentic-obs
 ```
+
+### TUI Dashboard
+
+The TUI dashboard provides a terminal-based interface with three views:
+- **Status**: OBS connection status, server info, statistics
+- **Config**: Current configuration settings
+- **History**: Action history log with scrolling
+
+Navigate with `1/2/3` keys or Tab, press `q` to quit.
 
 On first run, the server will:
 1. Auto-detect OBS on `localhost:4455`
@@ -177,7 +194,40 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 |------|-------------|
 | `get_obs_status` | Get overall OBS status and connection info |
 
-**Total: 30 tools**
+### Scene Design (14 tools)
+
+Enable AI to create and manipulate OBS sources programmatically.
+
+#### Source Creation
+
+| Tool | Description |
+|------|-------------|
+| `create_text_source` | Create a text/label source with customizable font and color |
+| `create_image_source` | Create an image source from a file path |
+| `create_color_source` | Create a solid color source |
+| `create_browser_source` | Create a browser source for web content |
+| `create_media_source` | Create a media/video source from a file |
+
+#### Layout Control
+
+| Tool | Description |
+|------|-------------|
+| `set_source_transform` | Set position, scale, and rotation of a source |
+| `get_source_transform` | Get current transform properties |
+| `set_source_crop` | Set crop values for a source |
+| `set_source_bounds` | Set bounds type and size for a source |
+| `set_source_order` | Set z-order index (front-to-back ordering) |
+
+#### Advanced
+
+| Tool | Description |
+|------|-------------|
+| `set_source_locked` | Lock/unlock a source to prevent changes |
+| `duplicate_source` | Duplicate a source within or across scenes |
+| `remove_source` | Remove a source from a scene |
+| `list_input_kinds` | List all available input source types |
+
+**Total: 44 tools in 6 groups** (Core, Sources, Audio, Layout, Visual, Design)
 
 ## MCP Resources
 
@@ -219,14 +269,15 @@ Prompts combine multiple tools into cohesive workflows with best practices built
 
 ```
 agentic-obs/
-├── main.go                 # Entry point
+├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation
+│   ├── mcp/               # MCP server implementation (44 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
-│   ├── http/              # HTTP server for screenshots
-│   └── screenshot/        # Background capture manager
+│   ├── http/              # HTTP server for screenshots and dashboard
+│   ├── screenshot/        # Background capture manager
+│   └── tui/               # Terminal UI dashboard
 └── scripts/               # Development helpers
 ```
 
@@ -275,8 +326,8 @@ Configuration is stored in SQLite (`agentic-obs.db`) and includes:
 
 - Automation rules and macros
 - Multi-instance OBS support
-- Interactive setup UI (TUI and web)
 - Real-time event notifications
+- Additional resource types (filters, transitions)
 
 ## Contributing
 
@@ -298,3 +349,4 @@ Contributions are welcome! Please open an issue or submit a pull request.
 - Go 1.25.5
 - MCP Go SDK v1.1.0
 - goobs v1.5.6
+- bubbletea/lipgloss (TUI)
