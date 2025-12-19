@@ -141,29 +141,56 @@ resources/subscribe { uri: "obs://audio/Microphone" }
 
 ---
 
-## Backlog Items
+## Feature Backlog (FB Items)
 
-### Documentation & Developer Experience
+Tracked features with unique identifiers for reference.
 
-- [ ] **FB-15:** Extract mcpui-go as standalone library
+### Completed
+
+| ID | Name | Description | Completed |
+|----|------|-------------|-----------|
+| FB-2 | Help Tool | MCP help tool with 6 topics + per-tool help | Phase 7 |
+| FB-9 | Claude Skills | 4 skill packages (streaming-assistant, scene-designer, audio-engineer, preset-manager) | Phase 7 |
+| FB-10 | Additional Prompts | 3 new prompts (scene-designer, source-management, visual-setup) | Phase 7 |
+| FB-11 | MCP Completions | Autocomplete for prompts/resources with 5s TTL caching | Phase 7 |
+| FB-12 | MCP-UI Go SDK | Protocol implementation (SEP-1865) | Phase 8 |
+| FB-13 | MCP-UI Integration | Rich UI resources for agentic-obs (4 phases) | Phase 8 |
+| FB-15 | SDK Extraction | mcpui-go as standalone package v0.1.0 | Post-Phase 8 |
+
+### Active Backlog
+
+| ID | Name | Priority | Complexity | Dependencies | Description |
+|----|------|----------|------------|--------------|-------------|
+| FB-17 | Config Sync | High | Medium | - | Env vars, version management, validation |
+| FB-16 | Skills Completion | Medium | Low | - | Missing SKILL.md files for audio-engineer, preset-manager |
+| FB-18 | Build System | Medium | Medium | FB-17 | Makefile, goreleaser, version injection |
+| FB-14 | Brand & Design | Medium | Medium | UX-SPEC | Visual identity implementation (blocked by UX-SPEC.md) |
+| FB-1 | Embedded Docs | Medium | Low-Med | - | Docs in HTTP/TUI via go:embed |
+| FB-3 | Elucidation | High | High | FB-2 ✅ | Intent disambiguation framework |
+| FB-4 | SDK Migration | Medium | Medium | - | Process for tracking go-sdk updates |
+| FB-5 | Static Website | Low | Medium | FB-14 | Project documentation site |
+| FB-6 | Network API | Low | High | - | Non-localhost HTTP exposure |
+| FB-7 | Multi-Instance | Medium | Very High | - | Multiple OBS support |
+| FB-8 | Remote Hosted | Low | Very High | FB-6, FB-7 | Cloud-hosted server |
+
+### Other Backlog Items
+
+**Documentation & Developer Experience:**
 - [ ] API documentation generation (godoc)
 - [ ] Integration test suite with mock OBS
 - [ ] Example Claude Code skills showcase
 
-### Performance & Reliability
-
+**Performance & Reliability:**
 - [ ] Connection health metrics
 - [ ] Screenshot capture performance profiling
 - [ ] Memory usage optimization for long-running servers
 
-### Security Hardening
-
+**Security Hardening:**
 - [ ] Optional password encryption (SQLCipher)
 - [ ] API authentication for web UI
 - [ ] Rate limiting on HTTP endpoints
 
-### Platform Support
-
+**Platform Support:**
 - [ ] Docker containerization
 - [ ] Windows service installation guide
 - [ ] macOS launchd integration
