@@ -3,70 +3,117 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 )
 
-// StatusProvider interface for getting OBS status data.
-// This allows the HTTP server to fetch status without direct OBS dependency.
+// StatusProvider defines the interface for retrieving OBS status data.
+//
+// This interface decouples the HTTP server from direct OBS dependencies,
+// allowing the UI layer to fetch current state without knowing about the
+// underlying MCP server or OBS WebSocket connection.
+//
+// The MCP server implements this interface to provide real-time OBS data
+// to the web UI endpoints (/ui/status, /ui/scenes, /ui/audio, /ui/screenshots).
+//
+// Flow: HTTP Request → StatusProvider → MCP Server → OBS WebSocket → OBS Studio
 type StatusProvider interface {
-	// GetStatus returns the current OBS status as a JSON-serializable struct.
+	// GetStatus returns the current OBS connection and streaming/recording state.
+	// Returns a map containing: connected, recording, streaming, currentScene, obsVersion.
 	GetStatus() (any, error)
-	// GetScenes returns a list of scenes.
+
+	// GetScenes returns all available OBS scenes with their current state.
+	// Each scene includes name, index, source count, and whether it's currently active.
 	GetScenes() ([]SceneInfo, error)
-	// GetAudioInputs returns a list of audio inputs with their current state.
+
+	// GetAudioInputs returns all audio inputs with volume and mute state.
+	// Only inputs that support volume control are included.
 	GetAudioInputs() ([]AudioInputInfo, error)
-	// GetScreenshotSources returns a list of screenshot sources.
+
+	// GetScreenshotSources returns configured screenshot capture sources.
+	// These are agentic monitoring sources, not OBS sources directly.
 	GetScreenshotSources() ([]ScreenshotSourceInfo, error)
 }
 
-// ActionExecutor interface for executing UI actions.
-// This allows the UI to trigger tool calls on the MCP server.
+// ActionExecutor defines the interface for executing UI-triggered actions.
+//
+// This interface allows the web UI to trigger OBS operations through the
+// MCP server without direct access to the OBS WebSocket connection.
+// Actions are executed synchronously and return errors on failure.
+//
+// The MCP server implements this interface to handle POST requests to
+// /ui/action, which are sent by JavaScript in the embedded UI templates.
+//
+// Flow: UI Click → POST /ui/action → ActionExecutor → MCP Server → OBS WebSocket → OBS Studio
 type ActionExecutor interface {
-	// SetCurrentScene switches to the specified scene.
+	// SetCurrentScene switches OBS to the specified scene.
+	// Returns an error if the scene doesn't exist or OBS is disconnected.
 	SetCurrentScene(sceneName string) error
-	// ToggleInputMute toggles mute state for an audio input.
+
+	// ToggleInputMute toggles the mute state for an audio input.
+	// Returns an error if the input doesn't exist or doesn't support muting.
 	ToggleInputMute(inputName string) error
-	// SetInputVolume sets the volume for an audio input.
+
+	// SetInputVolume sets the volume for an audio input in decibels.
+	// volumeDb should be in the range -100 (mute) to 0 (full volume).
+	// Returns an error if the input doesn't exist or doesn't support volume.
 	SetInputVolume(inputName string, volumeDb float64) error
-	// TakeSceneThumbnail captures a thumbnail of the specified scene.
+
+	// TakeSceneThumbnail captures a thumbnail image of the specified scene.
+	// Returns the image data, MIME type (e.g., "image/jpeg"), and any error.
+	// Used by /ui/scene-thumbnail/{sceneName} endpoint.
 	TakeSceneThumbnail(sceneName string) ([]byte, string, error)
 }
 
-// SceneInfo represents a scene for UI display.
+// SceneInfo represents an OBS scene for UI display.
+// Used by the scene preview grid to show available scenes with thumbnails.
 type SceneInfo struct {
-	Name         string `json:"name"`
-	Index        int    `json:"index"`
-	IsCurrent    bool   `json:"isCurrent"`
-	SourceCount  int    `json:"sourceCount"`
-	ThumbnailURL string `json:"thumbnailUrl,omitempty"`
+	Name         string `json:"name"`                   // Scene name as shown in OBS
+	Index        int    `json:"index"`                  // Zero-based index in scene list
+	IsCurrent    bool   `json:"isCurrent"`              // True if this is the active program scene
+	SourceCount  int    `json:"sourceCount"`            // Number of sources in the scene
+	ThumbnailURL string `json:"thumbnailUrl,omitempty"` // URL to fetch scene thumbnail image
 }
 
-// AudioInputInfo represents an audio input for UI display.
+// AudioInputInfo represents an audio input for the mixer UI.
+// Includes both linear multiplier and dB values for flexible display.
 type AudioInputInfo struct {
-	Name          string  `json:"name"`
-	Volume        float64 `json:"volume"`        // 0.0-1.0
-	VolumePercent float64 `json:"volumePercent"` // 0-100 for slider
-	VolumeDB      float64 `json:"volumeDb"`      // in dB
-	IsMuted       bool    `json:"isMuted"`
-	InputKind     string  `json:"inputKind"`
+	Name          string  `json:"name"`          // Input name as shown in OBS
+	Volume        float64 `json:"volume"`        // Volume multiplier (0.0-1.0, can exceed 1.0 for gain)
+	VolumePercent float64 `json:"volumePercent"` // Logarithmic slider position (0-100)
+	VolumeDB      float64 `json:"volumeDb"`      // Volume in decibels (-inf to 0, typically -60 to 0)
+	IsMuted       bool    `json:"isMuted"`       // True if input is muted
+	InputKind     string  `json:"inputKind"`     // OBS input type (e.g., "wasapi_input_capture")
 }
 
-// ScreenshotSourceInfo represents a screenshot source for UI display.
+// ScreenshotSourceInfo represents a configured screenshot monitoring source.
+// These are agentic-obs specific sources for AI visual monitoring, not OBS sources.
 type ScreenshotSourceInfo struct {
-	Name        string `json:"name"`
-	SourceName  string `json:"sourceName"`
-	CadenceMs   int    `json:"cadenceMs"`
-	ImageURL    string `json:"imageUrl"`
-	LastCapture string `json:"lastCapture"`
+	Name        string `json:"name"`        // User-defined name for this monitoring source
+	SourceName  string `json:"sourceName"`  // OBS source being captured
+	CadenceMs   int    `json:"cadenceMs"`   // Capture interval in milliseconds
+	ImageURL    string `json:"imageUrl"`    // URL to fetch latest screenshot
+	LastCapture string `json:"lastCapture"` // Timestamp of most recent capture
 }
 
-// UIHandlers provides HTTP handlers for MCP-UI resources.
+// UIHandlers provides HTTP handlers for the MCP-UI web interface.
+//
+// UIHandlers serves embedded HTML templates that display OBS status,
+// scene previews, audio mixer controls, and screenshot galleries.
+// Each handler fetches data through StatusProvider and executes
+// user actions through ActionExecutor.
+//
+// Endpoints:
+//   - GET /ui/status - Status dashboard with connection info
+//   - GET /ui/scenes - Scene grid with thumbnails and switching
+//   - GET /ui/audio - Audio mixer with volume sliders and mute buttons
+//   - GET /ui/screenshots - Screenshot gallery for monitoring sources
+//   - GET /ui/scene-thumbnail/{name} - Scene thumbnail image
+//   - POST /ui/action - Execute UI-triggered actions (scene switch, mute, volume)
 type UIHandlers struct {
 	statusProvider StatusProvider
 	actionExecutor ActionExecutor
-	baseURL        string
+	baseURL        string // Base URL for constructing absolute URLs in templates
 }
 
 // NewUIHandlers creates a new UIHandlers instance.
@@ -108,7 +155,7 @@ func (h *UIHandlers) HandleUIStatus(w http.ResponseWriter, r *http.Request) {
 		"BaseURL": h.baseURL,
 	}
 
-	h.renderTemplate(w, statusDashboardTemplate, data)
+	h.renderTemplate(w, templateStatusDashboard, data)
 }
 
 // HandleUIScenes serves the scene preview UI.
@@ -131,7 +178,7 @@ func (h *UIHandlers) HandleUIScenes(w http.ResponseWriter, r *http.Request) {
 		"BaseURL": h.baseURL,
 	}
 
-	h.renderTemplate(w, scenePreviewTemplate, data)
+	h.renderTemplate(w, templateScenePreview, data)
 }
 
 // HandleUIAudio serves the audio mixer UI.
@@ -152,7 +199,7 @@ func (h *UIHandlers) HandleUIAudio(w http.ResponseWriter, r *http.Request) {
 		"BaseURL": h.baseURL,
 	}
 
-	h.renderTemplate(w, audioMixerTemplate, data)
+	h.renderTemplate(w, templateAudioMixer, data)
 }
 
 // HandleUIScreenshots serves the screenshot gallery UI.
@@ -173,7 +220,7 @@ func (h *UIHandlers) HandleUIScreenshots(w http.ResponseWriter, r *http.Request)
 		"BaseURL": h.baseURL,
 	}
 
-	h.renderTemplate(w, screenshotGalleryTemplate, data)
+	h.renderTemplate(w, templateScreenshotGallery, data)
 }
 
 // HandleSceneThumbnail serves a thumbnail image for a scene.
@@ -335,17 +382,21 @@ func (h *UIHandlers) sendActionResponse(w http.ResponseWriter, messageID string,
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *UIHandlers) renderTemplate(w http.ResponseWriter, tmpl string, data any) {
-	t, err := template.New("ui").Parse(tmpl)
+func (h *UIHandlers) renderTemplate(w http.ResponseWriter, templateName string, data map[string]any) {
+	tmpl, err := getTemplate(templateName)
 	if err != nil {
+		log.Printf("Template load error for %s: %v", templateName, err)
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		return
 	}
 
+	// Inject shared CSS into template data
+	data["SharedCSS"] = getSharedCSS()
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := t.Execute(w, data); err != nil {
+	if err := tmpl.Execute(w, data); err != nil {
 		// Headers already sent, just log
-		fmt.Printf("Template execution error: %v\n", err)
+		log.Printf("Template execution error for %s: %v", templateName, err)
 	}
 }
 
@@ -358,7 +409,7 @@ func (h *UIHandlers) renderError(w http.ResponseWriter, message string, err erro
 	data := map[string]any{
 		"Error": errMsg,
 	}
-	h.renderTemplate(w, errorTemplate, data)
+	h.renderTemplate(w, templateError, data)
 }
 
 func (h *UIHandlers) jsonError(w http.ResponseWriter, message string, code int) {
@@ -366,1160 +417,3 @@ func (h *UIHandlers) jsonError(w http.ResponseWriter, message string, code int) 
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
-
-// CSS shared across all UI templates - matches existing dashboard theme
-const sharedCSS = `
-:root {
-    --bg-primary: #1a1a2e;
-    --bg-secondary: #16213e;
-    --bg-card: #0f3460;
-    --text-primary: #eaeaea;
-    --text-secondary: #a0a0a0;
-    --accent: #e94560;
-    --accent-hover: #ff6b6b;
-    --success: #4ecca3;
-    --warning: #ffc107;
-    --error: #ff6b6b;
-    --border: #2a2a4a;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    line-height: 1.6;
-    padding: 20px;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-h1 {
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    color: var(--text-primary);
-}
-
-h1 .accent {
-    color: var(--accent);
-}
-
-.card {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-}
-
-.card h2 {
-    font-size: 1rem;
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-}
-
-.status-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.status-item:last-child {
-    border-bottom: none;
-}
-
-.status-label {
-    color: var(--text-secondary);
-}
-
-.status-value {
-    font-weight: 500;
-}
-
-.status-value.success {
-    color: var(--success);
-}
-
-.status-value.error {
-    color: var(--error);
-}
-
-.status-value.warning {
-    color: var(--warning);
-}
-
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.875rem;
-}
-
-.badge.online {
-    background: rgba(78, 204, 163, 0.15);
-    color: var(--success);
-}
-
-.badge.offline {
-    background: rgba(255, 107, 107, 0.15);
-    color: var(--error);
-}
-
-.badge .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-}
-
-.btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    transition: background 0.2s;
-}
-
-.btn:hover {
-    background: var(--accent-hover);
-}
-
-.btn.secondary {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-}
-
-.btn.secondary:hover {
-    background: var(--border);
-}
-
-.scene-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-}
-
-.scene-card {
-    background: var(--bg-card);
-    border-radius: 8px;
-    padding: 15px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 2px solid transparent;
-}
-
-.scene-card:hover {
-    border-color: var(--accent);
-}
-
-.scene-card.active {
-    border-color: var(--success);
-    background: rgba(78, 204, 163, 0.1);
-}
-
-.scene-card .name {
-    font-weight: 500;
-    margin-bottom: 5px;
-}
-
-.scene-card .index {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-}
-
-.slider-container {
-    padding: 15px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.slider-container:last-child {
-    border-bottom: none;
-}
-
-.slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.slider-name {
-    font-weight: 500;
-}
-
-.slider-value {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-}
-
-input[type="range"] {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: var(--bg-card);
-    -webkit-appearance: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-}
-
-.mute-btn {
-    padding: 6px 12px;
-    font-size: 0.75rem;
-}
-
-.mute-btn.muted {
-    background: var(--error);
-}
-
-.screenshot-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.screenshot-card {
-    background: var(--bg-card);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.screenshot-card img {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-    background: var(--bg-primary);
-}
-
-.screenshot-card .info {
-    padding: 15px;
-}
-
-.screenshot-card .name {
-    font-weight: 500;
-    margin-bottom: 5px;
-}
-
-.screenshot-card .meta {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-}
-
-.error-message {
-    background: rgba(255, 107, 107, 0.1);
-    border: 1px solid var(--error);
-    color: var(--error);
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-}
-`
-
-// Status Dashboard Template
-var statusDashboardTemplate = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Status Dashboard</title>
-    <style>` + sharedCSS + `</style>
-</head>
-<body>
-    <div class="container">
-        <h1><span class="accent">agentic-obs</span> Status</h1>
-
-        <div class="grid">
-            <div class="card">
-                <h2>Connection</h2>
-                <div class="status-item">
-                    <span class="status-label">OBS WebSocket</span>
-                    <span class="badge online"><span class="dot"></span> Connected</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>Recording</h2>
-                <div class="status-item">
-                    <span class="status-label">Status</span>
-                    <span class="status-value">Idle</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>Streaming</h2>
-                <div class="status-item">
-                    <span class="status-label">Status</span>
-                    <span class="status-value">Offline</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Scenes ({{len .Scenes}})</h2>
-            <div class="scene-grid">
-                {{range .Scenes}}
-                <div class="scene-card {{if .IsCurrent}}active{{end}}" data-scene="{{.Name}}">
-                    <div class="name">{{.Name}}</div>
-                    <div class="index">Scene #{{.Index}}</div>
-                </div>
-                {{else}}
-                <p style="color: var(--text-secondary);">No scenes available</p>
-                {{end}}
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // UIAction helper for scene switching
-        document.querySelectorAll('.scene-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const sceneName = card.dataset.scene;
-                if (!sceneName) return;
-
-                // Send UIAction to parent
-                const action = {
-                    type: 'tool',
-                    messageId: 'scene-' + Date.now(),
-                    payload: {
-                        toolName: 'set_current_scene',
-                        params: { scene_name: sceneName }
-                    }
-                };
-
-                // Post to action endpoint
-                fetch('{{.BaseURL}}/ui/action', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(action)
-                }).then(() => {
-                    // Refresh to show updated state
-                    location.reload();
-                });
-            });
-        });
-    </script>
-</body>
-</html>`
-
-// Scene Preview Template
-var scenePreviewTemplate = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scene Preview</title>
-    <style>` + sharedCSS + `
-        .scene-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-
-        .scene-card:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-
-        .scene-card.active {
-            border-color: var(--success);
-        }
-
-        .scene-card.active .current-badge {
-            display: inline-block;
-        }
-
-        .scene-thumbnail {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
-            background: var(--bg-primary);
-        }
-
-        .scene-info {
-            padding: 12px;
-        }
-
-        .scene-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-
-        .scene-name {
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .current-badge {
-            display: none;
-            background: var(--success);
-            color: var(--bg-primary);
-            font-size: 0.65rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .scene-meta {
-            display: flex;
-            gap: 12px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .scene-meta span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .keyboard-hint {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin-top: 20px;
-        }
-
-        .keyboard-hint kbd {
-            background: var(--bg-card);
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Scene <span class="accent">Preview</span></h1>
-
-        <div class="card">
-            <h2>Available Scenes ({{len .Scenes}})</h2>
-            <div class="scene-grid">
-                {{range .Scenes}}
-                <div class="scene-card {{if .IsCurrent}}active{{end}}" data-scene="{{.Name}}" tabindex="0">
-                    <img class="scene-thumbnail"
-                         src="{{.ThumbnailURL}}"
-                         alt="{{.Name}}"
-                         loading="lazy"
-                         onerror="this.style.display='none'">
-                    <div class="scene-info">
-                        <div class="scene-header">
-                            <span class="scene-name">{{.Name}}</span>
-                            <span class="current-badge">Live</span>
-                        </div>
-                        <div class="scene-meta">
-                            <span>Scene #{{.Index}}</span>
-                            <span>{{.SourceCount}} sources</span>
-                        </div>
-                    </div>
-                </div>
-                {{else}}
-                <p style="color: var(--text-secondary);">No scenes available</p>
-                {{end}}
-            </div>
-            <div class="keyboard-hint">
-                Press <kbd>1</kbd>-<kbd>9</kbd> to switch scenes, <kbd>Enter</kbd> to select focused
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let isLoading = false;
-
-        function switchScene(sceneName) {
-            if (isLoading) return;
-            isLoading = true;
-
-            // Add loading state to all cards
-            document.querySelectorAll('.scene-card').forEach(c => c.classList.add('loading'));
-
-            fetch('{{.BaseURL}}/ui/action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'tool',
-                    messageId: 'scene-' + Date.now(),
-                    payload: { toolName: 'set_current_scene', params: { scene_name: sceneName } }
-                })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                return response.json();
-            })
-            .then(data => {
-                if (data.payload && data.payload.error) {
-                    alert('Error: ' + data.payload.error.message);
-                    isLoading = false;
-                    document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('loading'));
-                } else {
-                    location.reload();
-                }
-            })
-            .catch(err => {
-                console.error('Scene switch failed:', err);
-                alert('Failed to switch scene: ' + err.message);
-                isLoading = false;
-                document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('loading'));
-            });
-        }
-
-        // Click handling
-        document.querySelectorAll('.scene-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const sceneName = card.dataset.scene;
-                if (sceneName) switchScene(sceneName);
-            });
-        });
-
-        // Keyboard handling
-        document.addEventListener('keydown', (e) => {
-            // Number keys 1-9 for quick switch
-            if (e.key >= '1' && e.key <= '9') {
-                const index = parseInt(e.key) - 1;
-                const cards = document.querySelectorAll('.scene-card');
-                if (cards[index]) {
-                    const sceneName = cards[index].dataset.scene;
-                    if (sceneName) switchScene(sceneName);
-                }
-            }
-
-            // Enter on focused card
-            if (e.key === 'Enter' && document.activeElement.classList.contains('scene-card')) {
-                const sceneName = document.activeElement.dataset.scene;
-                if (sceneName) switchScene(sceneName);
-            }
-
-            // Arrow key navigation
-            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                const cards = Array.from(document.querySelectorAll('.scene-card'));
-                const current = cards.indexOf(document.activeElement);
-                if (current >= 0) {
-                    const next = e.key === 'ArrowRight' ? current + 1 : current - 1;
-                    if (cards[next]) cards[next].focus();
-                } else if (cards.length > 0) {
-                    cards[0].focus();
-                }
-            }
-        });
-
-        // Auto-refresh thumbnails every 10 seconds
-        setInterval(() => {
-            document.querySelectorAll('.scene-thumbnail').forEach(img => {
-                const url = new URL(img.src, location.href);
-                url.searchParams.set('t', Date.now());
-                img.src = url.toString();
-            });
-        }, 10000);
-    </script>
-</body>
-</html>`
-
-// Audio Mixer Template
-var audioMixerTemplate = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Mixer</title>
-    <style>` + sharedCSS + `
-        .audio-channel {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-
-        .audio-channel:hover {
-            border-color: var(--border);
-        }
-
-        .audio-channel.focused {
-            border-color: var(--accent);
-        }
-
-        .audio-channel.muted {
-            opacity: 0.6;
-        }
-
-        .channel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .channel-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .channel-name {
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        .channel-type {
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
-
-        .channel-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .volume-display {
-            font-family: monospace;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            min-width: 70px;
-            text-align: right;
-        }
-
-        .mute-toggle {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-
-        .mute-toggle:hover {
-            background: var(--border);
-        }
-
-        .mute-toggle.muted {
-            background: var(--error);
-            color: white;
-        }
-
-        .mute-toggle svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .slider-track {
-            position: relative;
-            height: 8px;
-            background: var(--bg-secondary);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .slider-fill {
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            background: linear-gradient(90deg, var(--success) 0%, var(--warning) 70%, var(--error) 100%);
-            border-radius: 4px;
-            transition: width 0.1s;
-        }
-
-        .audio-channel.muted .slider-fill {
-            background: var(--text-secondary);
-        }
-
-        .volume-slider {
-            width: 100%;
-            height: 8px;
-            -webkit-appearance: none;
-            background: transparent;
-            position: relative;
-            z-index: 1;
-            margin-top: -8px;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--text-primary);
-            cursor: pointer;
-            border: 2px solid var(--bg-card);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
-        }
-
-        .volume-slider::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        .volume-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--text-primary);
-            cursor: pointer;
-            border: 2px solid var(--bg-card);
-        }
-
-        .db-markers {
-            position: relative;
-            height: 1.2em;
-            margin-top: 4px;
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-        }
-
-        .db-markers span {
-            position: absolute;
-            transform: translateX(-50%);
-        }
-
-        /* Logarithmic scale positions: 10^(dB/30) * 100 */
-        .db-markers span:nth-child(1) { left: 0%; transform: translateX(0); }      /* -∞ at 0% */
-        .db-markers span:nth-child(2) { left: 25.1%; }   /* -18dB at 25.1% */
-        .db-markers span:nth-child(3) { left: 50.1%; }   /* -9dB at 50.1% */
-        .db-markers span:nth-child(4) { left: 79.4%; }   /* -3dB at 79.4% */
-        .db-markers span:nth-child(5) { left: 100%; transform: translateX(-100%); } /* 0dB at 100% */
-
-        .keyboard-hint {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin-top: 20px;
-        }
-
-        .keyboard-hint kbd {
-            background: var(--bg-card);
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-        }
-
-        .refresh-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .refresh-indicator.visible {
-            opacity: 1;
-        }
-
-        .no-inputs {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-
-        .no-inputs svg {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Audio <span class="accent">Mixer</span></h1>
-
-        <div class="card">
-            <h2>Audio Inputs ({{len .Inputs}})</h2>
-            {{if .Inputs}}
-            {{range $i, $input := .Inputs}}
-            <div class="audio-channel {{if .IsMuted}}muted{{end}}"
-                 data-input="{{.Name}}"
-                 data-index="{{$i}}"
-                 tabindex="0">
-                <div class="channel-header">
-                    <div class="channel-info">
-                        <span class="channel-name">{{.Name}}</span>
-                        <span class="channel-type">{{.InputKind}}</span>
-                    </div>
-                    <div class="channel-controls">
-                        <span class="volume-display">{{printf "%.1f" .VolumeDB}} dB</span>
-                        <button class="mute-toggle {{if .IsMuted}}muted{{end}}"
-                                onclick="toggleMute('{{.Name}}')"
-                                title="{{if .IsMuted}}Unmute{{else}}Mute{{end}} (M)">
-                            {{if .IsMuted}}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                                <line x1="23" y1="9" x2="17" y2="15"/>
-                                <line x1="17" y1="9" x2="23" y2="15"/>
-                            </svg>
-                            {{else}}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                            </svg>
-                            {{end}}
-                        </button>
-                    </div>
-                </div>
-                <div class="slider-track">
-                    <div class="slider-fill" style="width: {{printf "%.0f" .VolumePercent}}%"></div>
-                </div>
-                <input type="range"
-                       class="volume-slider"
-                       min="0" max="100"
-                       value="{{printf "%.0f" .VolumePercent}}"
-                       data-input="{{.Name}}"
-                       oninput="updateSlider(this, false)"
-                       onchange="updateSlider(this, true); setVolume('{{.Name}}', this.value)">
-                <div class="db-markers">
-                    <span>-∞</span>
-                    <span>-18</span>
-                    <span>-9</span>
-                    <span>-3</span>
-                    <span>0 dB</span>
-                </div>
-            </div>
-            {{end}}
-            {{else}}
-            <div class="no-inputs">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                    <line x1="23" y1="9" x2="17" y2="15"/>
-                    <line x1="17" y1="9" x2="23" y2="15"/>
-                </svg>
-                <p>No audio inputs available</p>
-                <p style="font-size: 0.8rem; margin-top: 8px;">Connect to OBS to see audio sources</p>
-            </div>
-            {{end}}
-        </div>
-
-        <div class="keyboard-hint">
-            <kbd>↑</kbd><kbd>↓</kbd> Navigate | <kbd>←</kbd><kbd>→</kbd> Adjust Volume | <kbd>M</kbd> Mute/Unmute | <kbd>0</kbd> Reset
-        </div>
-    </div>
-
-    <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
-
-    <script>
-        let focusedIndex = 0;
-        const channels = document.querySelectorAll('.audio-channel');
-
-        // Snap dB value to 0.5 increments
-        function snapToHalfDb(db) {
-            return Math.round(db * 2) / 2;
-        }
-
-        // Logarithmic audio fader curve
-        // Attempt to match perceptual loudness: slider position ≈ perceived volume
-        // Uses: slider = 10^(dB/30) * 100, giving roughly:
-        //   0dB=100%, -3dB≈79%, -10dB≈46%, -20dB≈22%, -30dB=10%, -60dB≈1%
-        function sliderToDb(value) {
-            if (value <= 0) return -100; // Mute
-            if (value >= 100) return 0;
-            // dB = 30 * log10(value/100)
-            const db = 30 * Math.log10(value / 100);
-            return snapToHalfDb(db);
-        }
-
-        // Convert dB to slider value (0-100) using logarithmic curve
-        function dbToSlider(db) {
-            if (db <= -60) return 0;
-            if (db >= 0) return 100;
-            // slider = 10^(dB/30) * 100
-            return Math.pow(10, db / 30) * 100;
-        }
-
-        function updateSlider(slider, snap = false) {
-            const channel = slider.closest('.audio-channel');
-            const fill = channel.querySelector('.slider-fill');
-            const display = channel.querySelector('.volume-display');
-            let value = parseFloat(slider.value);
-
-            // Snap to 0.5dB increments
-            if (snap && value > 0) {
-                const db = sliderToDb(value);
-                value = dbToSlider(db);
-                slider.value = value;
-            }
-
-            fill.style.width = value + '%';
-            const db = value === 0 ? '-∞' : sliderToDb(value).toFixed(1);
-            display.textContent = db + ' dB';
-        }
-
-        function toggleMute(inputName) {
-            showRefreshIndicator();
-            fetch('{{.BaseURL}}/ui/action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'tool',
-                    messageId: 'mute-' + Date.now(),
-                    payload: { toolName: 'toggle_input_mute', params: { input_name: inputName } }
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.payload && data.payload.error) {
-                    alert('Error: ' + data.payload.error.message);
-                    hideRefreshIndicator();
-                } else {
-                    refreshAudioState();
-                }
-            })
-            .catch(() => hideRefreshIndicator());
-        }
-
-        function setVolume(inputName, value) {
-            const db = sliderToDb(value);
-            fetch('{{.BaseURL}}/ui/action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'tool',
-                    messageId: 'vol-' + Date.now(),
-                    payload: { toolName: 'set_input_volume', params: { input_name: inputName, volume_db: db } }
-                })
-            });
-        }
-
-        function showRefreshIndicator() {
-            document.getElementById('refreshIndicator').classList.add('visible');
-        }
-
-        function hideRefreshIndicator() {
-            document.getElementById('refreshIndicator').classList.remove('visible');
-        }
-
-        function refreshAudioState() {
-            location.reload();
-        }
-
-        function setFocus(index) {
-            if (index < 0) index = channels.length - 1;
-            if (index >= channels.length) index = 0;
-            focusedIndex = index;
-
-            channels.forEach((ch, i) => {
-                ch.classList.toggle('focused', i === index);
-            });
-            channels[index].focus();
-        }
-
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (channels.length === 0) return;
-
-            const focusedChannel = channels[focusedIndex];
-            const slider = focusedChannel?.querySelector('.volume-slider');
-            const inputName = focusedChannel?.dataset.input;
-
-            switch (e.key) {
-                case 'ArrowUp':
-                    e.preventDefault();
-                    setFocus(focusedIndex - 1);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    setFocus(focusedIndex + 1);
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    if (slider) {
-                        // Decrease by 0.5dB
-                        const currentDb = sliderToDb(slider.value);
-                        const newDb = Math.max(-60, currentDb - 0.5);
-                        slider.value = dbToSlider(newDb);
-                        updateSlider(slider, true);
-                        setVolume(inputName, slider.value);
-                    }
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    if (slider) {
-                        // Increase by 0.5dB
-                        const currentDb = sliderToDb(slider.value);
-                        const newDb = Math.min(0, currentDb + 0.5);
-                        slider.value = dbToSlider(newDb);
-                        updateSlider(slider, true);
-                        setVolume(inputName, slider.value);
-                    }
-                    break;
-                case 'm':
-                case 'M':
-                    e.preventDefault();
-                    if (inputName) toggleMute(inputName);
-                    break;
-                case '0':
-                    e.preventDefault();
-                    if (slider) {
-                        slider.value = 100; // 0 dB (unity gain)
-                        updateSlider(slider, true);
-                        setVolume(inputName, slider.value);
-                    }
-                    break;
-            }
-        });
-
-        // Click to focus channel
-        channels.forEach((channel, index) => {
-            channel.addEventListener('click', (e) => {
-                if (!e.target.closest('.mute-toggle')) {
-                    setFocus(index);
-                }
-            });
-            channel.addEventListener('focus', () => {
-                focusedIndex = index;
-                channels.forEach((ch, i) => ch.classList.toggle('focused', i === index));
-            });
-        });
-
-        // Auto-refresh audio state every 3 seconds
-        setInterval(() => {
-            fetch('{{.BaseURL}}/ui/audio')
-                .then(response => response.text())
-                .then(html => {
-                    // Only refresh if no slider is being dragged
-                    if (!document.querySelector('.volume-slider:active')) {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const newChannels = doc.querySelectorAll('.audio-channel');
-
-                        newChannels.forEach(newChannel => {
-                            const inputName = newChannel.dataset.input;
-                            const oldChannel = document.querySelector('[data-input="' + inputName + '"]');
-                            if (oldChannel) {
-                                // Update mute state
-                                const wasMuted = oldChannel.classList.contains('muted');
-                                const isMuted = newChannel.classList.contains('muted');
-                                if (wasMuted !== isMuted) {
-                                    oldChannel.classList.toggle('muted', isMuted);
-                                    const btn = oldChannel.querySelector('.mute-toggle');
-                                    btn.classList.toggle('muted', isMuted);
-                                    btn.innerHTML = newChannel.querySelector('.mute-toggle').innerHTML;
-                                }
-
-                                // Update volume display (but not slider if user isn't touching it)
-                                const newDisplay = newChannel.querySelector('.volume-display').textContent;
-                                oldChannel.querySelector('.volume-display').textContent = newDisplay;
-                            }
-                        });
-                    }
-                });
-        }, 3000);
-
-        // Initial focus
-        if (channels.length > 0) setFocus(0);
-    </script>
-</body>
-</html>`
-
-// Screenshot Gallery Template
-var screenshotGalleryTemplate = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Screenshot Gallery</title>
-    <style>` + sharedCSS + `</style>
-</head>
-<body>
-    <div class="container">
-        <h1>Screenshot <span class="accent">Gallery</span></h1>
-
-        <div class="screenshot-grid">
-            {{range .Sources}}
-            <div class="screenshot-card">
-                <img src="{{.ImageURL}}" alt="{{.Name}}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22180%22><rect fill=%22%231a1a2e%22 width=%22300%22 height=%22180%22/><text fill=%22%23666%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22>No Image</text></svg>'">
-                <div class="info">
-                    <div class="name">{{.Name}}</div>
-                    <div class="meta">Source: {{.SourceName}} | Cadence: {{.CadenceMs}}ms</div>
-                    <div class="meta">Last: {{.LastCapture}}</div>
-                </div>
-            </div>
-            {{else}}
-            <p style="color: var(--text-secondary);">No screenshot sources configured</p>
-            {{end}}
-        </div>
-    </div>
-
-    <script>
-        // Auto-refresh images every 5 seconds
-        setInterval(() => {
-            document.querySelectorAll('.screenshot-card img').forEach(img => {
-                const url = new URL(img.src, location.href);
-                url.searchParams.set('t', Date.now());
-                img.src = url.toString();
-            });
-        }, 5000);
-    </script>
-</body>
-</html>`
-
-// Error Template
-var errorTemplate = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error</title>
-    <style>` + sharedCSS + `</style>
-</head>
-<body>
-    <div class="container">
-        <h1><span class="accent">Error</span></h1>
-        <div class="error-message">
-            {{.Error}}
-        </div>
-    </div>
-</body>
-</html>`

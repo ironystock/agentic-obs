@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	agenthttp "github.com/ironystock/agentic-obs/internal/http"
@@ -14,16 +15,74 @@ import (
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// thumbnailCacheEntry holds a cached thumbnail with expiration
+type thumbnailCacheEntry struct {
+	imageData []byte
+	mimeType  string
+	expiresAt time.Time
+}
+
+// thumbnailCache provides thread-safe caching for scene thumbnails
+type thumbnailCache struct {
+	mu      sync.RWMutex
+	entries map[string]*thumbnailCacheEntry
+	ttl     time.Duration
+}
+
+func newThumbnailCache(ttl time.Duration) *thumbnailCache {
+	return &thumbnailCache{
+		entries: make(map[string]*thumbnailCacheEntry),
+		ttl:     ttl,
+	}
+}
+
+func (c *thumbnailCache) get(sceneName string) ([]byte, string, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	entry, exists := c.entries[sceneName]
+	if !exists || time.Now().After(entry.expiresAt) {
+		return nil, "", false
+	}
+	return entry.imageData, entry.mimeType, true
+}
+
+func (c *thumbnailCache) set(sceneName string, imageData []byte, mimeType string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.entries[sceneName] = &thumbnailCacheEntry{
+		imageData: imageData,
+		mimeType:  mimeType,
+		expiresAt: time.Now().Add(c.ttl),
+	}
+}
+
+// invalidate removes a specific scene from cache (e.g., when scene changes)
+func (c *thumbnailCache) invalidate(sceneName string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entries, sceneName)
+}
+
+// clear removes all cached thumbnails
+func (c *thumbnailCache) clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries = make(map[string]*thumbnailCacheEntry)
+}
+
 // Server represents the MCP server instance for OBS control
 type Server struct {
-	mcpServer     *mcpsdk.Server
-	obsClient     OBSClient
-	storage       *storage.DB
-	screenshotMgr *screenshot.Manager
-	httpServer    *agenthttp.Server
-	toolGroups    ToolGroupConfig
-	ctx           context.Context
-	cancel        context.CancelFunc
+	mcpServer      *mcpsdk.Server
+	obsClient      OBSClient
+	storage        *storage.DB
+	screenshotMgr  *screenshot.Manager
+	httpServer     *agenthttp.Server
+	toolGroups     ToolGroupConfig
+	thumbnailCache *thumbnailCache
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 // ServerConfig holds configuration for server initialization
@@ -67,9 +126,10 @@ func NewServer(config ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Server{
-		ctx:        ctx,
-		cancel:     cancel,
-		toolGroups: config.ToolGroups,
+		ctx:            ctx,
+		cancel:         cancel,
+		toolGroups:     config.ToolGroups,
+		thumbnailCache: newThumbnailCache(5 * time.Second), // 5-second TTL for thumbnails
 	}
 
 	// Initialize storage
@@ -104,7 +164,10 @@ func NewServer(config ServerConfig) (*Server, error) {
 		}
 		s.httpServer = agenthttp.NewServer(db, httpCfg)
 		// Set MCP server as status provider for UI endpoints
-		s.httpServer.SetStatusProvider(s)
+		if err := s.httpServer.SetStatusProvider(s); err != nil {
+			cancel()
+			return nil, fmt.Errorf("failed to set status provider: %w", err)
+		}
 	}
 
 	// Initialize screenshot manager (works without HTTP server for MCP resource access)
@@ -267,6 +330,12 @@ func (s *Server) handleOBSEventNotification(eventType obs.EventType, data map[st
 		// Resource list changed - clients should re-list resources
 		// The MCP SDK handles this automatically when resources are added/removed dynamically
 		log.Printf("Scene list changed for event: %s", eventType)
+
+		// Clear entire thumbnail cache when scene list changes
+		if s.thumbnailCache != nil {
+			s.thumbnailCache.clear()
+			log.Printf("Thumbnail cache cleared due to scene list change")
+		}
 	}
 
 	// Check if specific resource updated (scene changed)
@@ -277,6 +346,12 @@ func (s *Server) handleOBSEventNotification(eventType obs.EventType, data map[st
 				log.Printf("Error sending resource updated notification: %v", err)
 			} else {
 				log.Printf("Sent resource updated notification for scene: %s", sceneName)
+			}
+
+			// Invalidate thumbnail cache for the changed scene
+			if s.thumbnailCache != nil {
+				s.thumbnailCache.invalidate(sceneName)
+				log.Printf("Thumbnail cache invalidated for scene: %s", sceneName)
 			}
 		}
 	}

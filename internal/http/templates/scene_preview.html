@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Preview</title>
+    <style>
+{{.SharedCSS}}
+
+.scene-card {
+    background: var(--bg-card);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.scene-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.scene-card.active {
+    border-color: var(--success);
+}
+
+.scene-card.active .current-badge {
+    display: inline-block;
+}
+
+.scene-thumbnail {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    background: var(--bg-primary);
+}
+
+.scene-info {
+    padding: 12px;
+}
+
+.scene-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.scene-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.current-badge {
+    display: none;
+    background: var(--success);
+    color: var(--bg-primary);
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.scene-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.scene-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.keyboard-hint {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 20px;
+}
+
+.keyboard-hint kbd {
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Scene <span class="accent">Preview</span></h1>
+
+        <div class="card">
+            <h2>Available Scenes ({{len .Scenes}})</h2>
+            <div class="scene-grid">
+                {{range .Scenes}}
+                <div class="scene-card {{if .IsCurrent}}active{{end}}" data-scene="{{.Name}}" tabindex="0">
+                    <img class="scene-thumbnail"
+                         src="{{.ThumbnailURL}}"
+                         alt="{{.Name}}"
+                         loading="lazy"
+                         onerror="this.style.display='none'">
+                    <div class="scene-info">
+                        <div class="scene-header">
+                            <span class="scene-name">{{.Name}}</span>
+                            <span class="current-badge">Live</span>
+                        </div>
+                        <div class="scene-meta">
+                            <span>Scene #{{.Index}}</span>
+                            <span>{{.SourceCount}} sources</span>
+                        </div>
+                    </div>
+                </div>
+                {{else}}
+                <p style="color: var(--text-secondary);">No scenes available</p>
+                {{end}}
+            </div>
+            <div class="keyboard-hint">
+                Press <kbd>1</kbd>-<kbd>9</kbd> to switch scenes, <kbd>Enter</kbd> to select focused
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoading = false;
+
+        function switchScene(sceneName) {
+            if (isLoading) return;
+            isLoading = true;
+
+            // Add loading state to all cards
+            document.querySelectorAll('.scene-card').forEach(c => c.classList.add('loading'));
+
+            fetch('{{.BaseURL}}/ui/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'tool',
+                    messageId: 'scene-' + Date.now(),
+                    payload: { toolName: 'set_current_scene', params: { scene_name: sceneName } }
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.payload && data.payload.error) {
+                    alert('Error: ' + data.payload.error.message);
+                    isLoading = false;
+                    document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('loading'));
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(err => {
+                console.error('Scene switch failed:', err);
+                alert('Failed to switch scene: ' + err.message);
+                isLoading = false;
+                document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('loading'));
+            });
+        }
+
+        // Click handling
+        document.querySelectorAll('.scene-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const sceneName = card.dataset.scene;
+                if (sceneName) switchScene(sceneName);
+            });
+        });
+
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            // Number keys 1-9 for quick switch
+            if (e.key >= '1' && e.key <= '9') {
+                const index = parseInt(e.key) - 1;
+                const cards = document.querySelectorAll('.scene-card');
+                if (cards[index]) {
+                    const sceneName = cards[index].dataset.scene;
+                    if (sceneName) switchScene(sceneName);
+                }
+            }
+
+            // Enter on focused card
+            if (e.key === 'Enter' && document.activeElement.classList.contains('scene-card')) {
+                const sceneName = document.activeElement.dataset.scene;
+                if (sceneName) switchScene(sceneName);
+            }
+
+            // Arrow key navigation
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                const cards = Array.from(document.querySelectorAll('.scene-card'));
+                const current = cards.indexOf(document.activeElement);
+                if (current >= 0) {
+                    const next = e.key === 'ArrowRight' ? current + 1 : current - 1;
+                    if (cards[next]) cards[next].focus();
+                } else if (cards.length > 0) {
+                    cards[0].focus();
+                }
+            }
+        });
+
+        // Auto-refresh thumbnails every 10 seconds
+        setInterval(() => {
+            document.querySelectorAll('.scene-thumbnail').forEach(img => {
+                const url = new URL(img.src, location.href);
+                url.searchParams.set('t', Date.now());
+                img.src = url.toString();
+            });
+        }, 10000);
+    </script>
+</body>
+</html>

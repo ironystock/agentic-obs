@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net/url"
 	"strings"
 
 	agenthttp "github.com/ironystock/agentic-obs/internal/http"
@@ -68,10 +69,10 @@ func (s *Server) GetScenes() ([]agenthttp.SceneInfo, error) {
 			sourceCount = len(scene.Sources)
 		}
 
-		// Build thumbnail URL
+		// Build thumbnail URL (encode scene name for URL safety)
 		thumbnailURL := ""
 		if baseURL != "" {
-			thumbnailURL = baseURL + "/ui/scene-thumbnail/" + name
+			thumbnailURL = baseURL + "/ui/scene-thumbnail/" + url.PathEscape(name)
 		}
 
 		result[i] = agenthttp.SceneInfo{
@@ -150,9 +151,10 @@ func (s *Server) GetScreenshotSources() ([]agenthttp.ScreenshotSourceInfo, error
 
 	result := make([]agenthttp.ScreenshotSourceInfo, len(sources))
 	for i, source := range sources {
+		// Build image URL (encode source name for URL safety)
 		imageURL := ""
 		if baseURL != "" {
-			imageURL = baseURL + "/screenshot/" + source.Name
+			imageURL = baseURL + "/screenshot/" + url.PathEscape(source.Name)
 		}
 
 		lastCapture := "Never"
@@ -200,10 +202,22 @@ func (s *Server) SetInputVolume(inputName string, volumeDb float64) error {
 }
 
 // TakeSceneThumbnail captures a thumbnail of the specified scene.
+// Uses caching to reduce OBS API calls for frequently accessed scenes.
 func (s *Server) TakeSceneThumbnail(sceneName string) ([]byte, string, error) {
 	if !s.obsClient.IsConnected() {
 		return nil, "", fmt.Errorf("OBS not connected")
 	}
+
+	// Check cache first
+	if s.thumbnailCache != nil {
+		if imageData, mimeType, ok := s.thumbnailCache.get(sceneName); ok {
+			log.Printf("[Thumbnail] Cache hit for scene: %s", sceneName)
+			return imageData, mimeType, nil
+		}
+	}
+
+	// Cache miss - capture new thumbnail
+	log.Printf("[Thumbnail] Cache miss for scene: %s, capturing...", sceneName)
 
 	// Take screenshot of the scene
 	opts := obs.ScreenshotOptions{
@@ -235,6 +249,11 @@ func (s *Server) TakeSceneThumbnail(sceneName string) ([]byte, string, error) {
 	imageData, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Store in cache
+	if s.thumbnailCache != nil {
+		s.thumbnailCache.set(sceneName, imageData, mimeType)
 	}
 
 	return imageData, mimeType, nil

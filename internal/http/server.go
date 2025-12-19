@@ -110,8 +110,17 @@ func NewServer(db *storage.DB, cfg Config) *Server {
 
 // SetStatusProvider configures the status provider for MCP-UI endpoints.
 // This must be called before Start() to enable UI routes.
-func (s *Server) SetStatusProvider(provider StatusProvider) {
+// Returns an error if the server is already running.
+func (s *Server) SetStatusProvider(provider StatusProvider) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.running {
+		return fmt.Errorf("cannot set status provider: server already running")
+	}
+
 	s.statusProvider = provider
+	return nil
 }
 
 // setupRoutes configures all HTTP routes.
