@@ -123,7 +123,7 @@ func TestHandleUIStatus(t *testing.T) {
 			name:   "shows empty scenes when scenes fail",
 			method: http.MethodGet,
 			provider: &mockStatusProvider{
-				status: map[string]any{"connected": true},
+				status:    map[string]any{"connected": true},
 				scenesErr: errors.New("scenes error"),
 			},
 			wantStatus:   http.StatusOK,
@@ -442,9 +442,9 @@ func TestUIHandlersContentType(t *testing.T) {
 	handlers := NewUIHandlers(provider, "http://localhost:8765")
 
 	tests := []struct {
-		name        string
-		handler     func(http.ResponseWriter, *http.Request)
-		wantType    string
+		name     string
+		handler  func(http.ResponseWriter, *http.Request)
+		wantType string
 	}{
 		{
 			name:     "status returns HTML",
@@ -500,13 +500,13 @@ func TestSetActionExecutor(t *testing.T) {
 
 func TestHandleSceneThumbnail(t *testing.T) {
 	tests := []struct {
-		name           string
-		method         string
-		path           string
-		executor       *mockActionExecutor
-		wantStatus     int
-		wantType       string
-		wantContains   string
+		name         string
+		method       string
+		path         string
+		executor     *mockActionExecutor
+		wantStatus   int
+		wantType     string
+		wantContains string
 	}{
 		{
 			name:       "returns thumbnail image",
@@ -517,12 +517,12 @@ func TestHandleSceneThumbnail(t *testing.T) {
 			wantType:   "image/png",
 		},
 		{
-			name:       "returns SVG placeholder when no executor",
-			method:     http.MethodGet,
-			path:       "/ui/scene-thumbnail/Gaming",
-			executor:   nil,
-			wantStatus: http.StatusOK,
-			wantType:   "image/svg+xml",
+			name:         "returns SVG placeholder when no executor",
+			method:       http.MethodGet,
+			path:         "/ui/scene-thumbnail/Gaming",
+			executor:     nil,
+			wantStatus:   http.StatusOK,
+			wantType:     "image/svg+xml",
 			wantContains: "Gaming",
 		},
 		{
@@ -574,61 +574,61 @@ func TestHandleSceneThumbnail(t *testing.T) {
 
 func TestHandleUIActionWithExecutor(t *testing.T) {
 	tests := []struct {
-		name         string
-		body         string
-		executor     *mockActionExecutor
-		wantStatus   int
-		wantType     string
-		wantSuccess  bool
-		wantError    bool
+		name        string
+		body        string
+		executor    *mockActionExecutor
+		wantStatus  int
+		wantType    string
+		wantSuccess bool
+		wantError   bool
 	}{
 		{
-			name: "executes set_current_scene successfully",
-			body: `{"type":"tool","messageId":"msg-1","payload":{"toolName":"set_current_scene","params":{"scene_name":"Gaming"}}}`,
-			executor: &mockActionExecutor{},
-			wantStatus: http.StatusOK,
-			wantType:   "ui-message-response",
+			name:        "executes set_current_scene successfully",
+			body:        `{"type":"tool","messageId":"msg-1","payload":{"toolName":"set_current_scene","params":{"scene_name":"Gaming"}}}`,
+			executor:    &mockActionExecutor{},
+			wantStatus:  http.StatusOK,
+			wantType:    "ui-message-response",
 			wantSuccess: true,
 		},
 		{
-			name: "returns error when set_current_scene fails",
-			body: `{"type":"tool","messageId":"msg-2","payload":{"toolName":"set_current_scene","params":{"scene_name":"Invalid"}}}`,
-			executor: &mockActionExecutor{setSceneErr: errors.New("scene not found")},
+			name:       "returns error when set_current_scene fails",
+			body:       `{"type":"tool","messageId":"msg-2","payload":{"toolName":"set_current_scene","params":{"scene_name":"Invalid"}}}`,
+			executor:   &mockActionExecutor{setSceneErr: errors.New("scene not found")},
 			wantStatus: http.StatusOK,
 			wantType:   "ui-message-response",
-			wantError: true,
+			wantError:  true,
 		},
 		{
-			name: "executes toggle_input_mute successfully",
-			body: `{"type":"tool","messageId":"msg-3","payload":{"toolName":"toggle_input_mute","params":{"input_name":"Mic"}}}`,
-			executor: &mockActionExecutor{},
-			wantStatus: http.StatusOK,
-			wantType:   "ui-message-response",
+			name:        "executes toggle_input_mute successfully",
+			body:        `{"type":"tool","messageId":"msg-3","payload":{"toolName":"toggle_input_mute","params":{"input_name":"Mic"}}}`,
+			executor:    &mockActionExecutor{},
+			wantStatus:  http.StatusOK,
+			wantType:    "ui-message-response",
 			wantSuccess: true,
 		},
 		{
-			name: "executes set_input_volume successfully",
-			body: `{"type":"tool","messageId":"msg-4","payload":{"toolName":"set_input_volume","params":{"input_name":"Mic","volume_db":-10.0}}}`,
-			executor: &mockActionExecutor{},
-			wantStatus: http.StatusOK,
-			wantType:   "ui-message-response",
+			name:        "executes set_input_volume successfully",
+			body:        `{"type":"tool","messageId":"msg-4","payload":{"toolName":"set_input_volume","params":{"input_name":"Mic","volume_db":-10.0}}}`,
+			executor:    &mockActionExecutor{},
+			wantStatus:  http.StatusOK,
+			wantType:    "ui-message-response",
 			wantSuccess: true,
 		},
 		{
-			name: "returns error for unsupported tool",
-			body: `{"type":"tool","messageId":"msg-5","payload":{"toolName":"unknown_tool","params":{}}}`,
-			executor: &mockActionExecutor{},
+			name:       "returns error for unsupported tool",
+			body:       `{"type":"tool","messageId":"msg-5","payload":{"toolName":"unknown_tool","params":{}}}`,
+			executor:   &mockActionExecutor{},
 			wantStatus: http.StatusOK,
 			wantType:   "ui-message-response",
-			wantError: true,
+			wantError:  true,
 		},
 		{
-			name: "returns error for missing parameters",
-			body: `{"type":"tool","messageId":"msg-6","payload":{"toolName":"set_current_scene","params":{}}}`,
-			executor: &mockActionExecutor{},
+			name:       "returns error for missing parameters",
+			body:       `{"type":"tool","messageId":"msg-6","payload":{"toolName":"set_current_scene","params":{}}}`,
+			executor:   &mockActionExecutor{},
 			wantStatus: http.StatusOK,
 			wantType:   "ui-message-response",
-			wantError: true,
+			wantError:  true,
 		},
 	}
 
