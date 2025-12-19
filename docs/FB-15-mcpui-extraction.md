@@ -1,14 +1,22 @@
-# FB-15: mcpui-go Extraction & Documentation
+# FB-15: mcpui-go Extraction & Documentation ✅ COMPLETE
 
 **Priority**: Low
 **Complexity**: Low-Medium
-**Dependencies**: FB-12 ✅, FB-13 (integration battle-testing)
+**Dependencies**: FB-12 ✅, FB-13 ✅
+**Status**: ✅ Complete (2025-12-19)
 
 ## Description
 Extract `pkg/mcpui/` to standalone repository `github.com/ironystock/mcpui-go` with full documentation and examples following the official MCP Go SDK patterns.
 
-## Current State
-- Core SDK complete in `pkg/mcpui/` (84.7% test coverage)
+## Result
+- **Repository**: https://github.com/ironystock/mcpui-go
+- **Test Coverage**: 77.7%
+- **Documentation**: 6 doc files + README + CONTRIBUTING
+- **Examples**: 5 runnable programs
+- **agentic-obs**: Updated to use external module
+
+## Original State (before extraction)
+- Core SDK was in `pkg/mcpui/` (84.7% test coverage)
 - 12 source files, ~3,000 lines of code
 - `example_test.go` with 13 runnable examples
 - `doc.go` with package documentation

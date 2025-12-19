@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Architecture Decision Records (ADRs)
 - docs-maintainer agent for documentation consistency
 
+### Changed
+- **FB-15: mcpui-go extraction** - Extracted `pkg/mcpui/` to standalone module
+  - New repository: [github.com/ironystock/mcpui-go](https://github.com/ironystock/mcpui-go)
+  - Go SDK for MCP-UI protocol with 77.7% test coverage
+  - 6 documentation files, 5 runnable examples
+  - agentic-obs now depends on external module
+
 ---
 
 ## [0.7.0] - 2025-12-18
