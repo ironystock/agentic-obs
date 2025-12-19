@@ -219,10 +219,29 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Process web_server updates
 	if ws, ok := updates["web_server"].(map[string]interface{}); ok {
+		host := getString(ws, "host", "localhost")
+		port := getInt(ws, "port", 8765)
+
+		// Validate host - only allow safe local addresses
+		if !isValidHost(host) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid host: must be localhost, 127.0.0.1, or 0.0.0.0",
+			})
+			return
+		}
+
+		// Validate port range (1024-65535 to avoid privileged ports)
+		if port < 1024 || port > 65535 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid port: must be between 1024 and 65535",
+			})
+			return
+		}
+
 		config := storage.WebServerConfig{
 			Enabled: getBool(ws, "enabled", true),
-			Host:    getString(ws, "host", "localhost"),
-			Port:    getInt(ws, "port", 8765),
+			Host:    host,
+			Port:    port,
 		}
 		if err := s.storage.SaveWebServerConfig(r.Context(), config); err != nil {
 			log.Printf("Failed to save web server config: %v", err)
@@ -266,4 +285,15 @@ func getInt(m map[string]interface{}, key string, defaultVal int) int {
 		return int(v)
 	}
 	return defaultVal
+}
+
+// isValidHost checks if the host is a safe local address.
+// Only localhost, 127.0.0.1, and 0.0.0.0 are allowed for security.
+func isValidHost(host string) bool {
+	switch host {
+	case "localhost", "127.0.0.1", "0.0.0.0":
+		return true
+	default:
+		return false
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -418,6 +419,78 @@ func TestHandleAPIConfig(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
+	t.Run("POST rejects invalid host", func(t *testing.T) {
+		s, cleanup := testServer(t)
+		defer cleanup()
+
+		// Test various invalid hosts
+		invalidHosts := []string{"192.168.1.1", "10.0.0.1", "example.com", "0.0.0.1"}
+		for _, host := range invalidHosts {
+			body := `{"web_server": {"host": "` + host + `", "port": 8765}}`
+			req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			s.handleAPIConfig(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code, "host %s should be rejected", host)
+
+			var response map[string]string
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Contains(t, response["error"], "Invalid host")
+		}
+	})
+
+	t.Run("POST rejects invalid port", func(t *testing.T) {
+		s, cleanup := testServer(t)
+		defer cleanup()
+
+		// Test ports outside valid range
+		invalidPorts := []int{0, 80, 443, 1023, 65536, 70000}
+		for _, port := range invalidPorts {
+			body := `{"web_server": {"host": "localhost", "port": ` + strconv.Itoa(port) + `}}`
+			req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			s.handleAPIConfig(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code, "port %d should be rejected", port)
+
+			var response map[string]string
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Contains(t, response["error"], "Invalid port")
+		}
+	})
+
+	t.Run("POST accepts valid host and port", func(t *testing.T) {
+		s, cleanup := testServer(t)
+		defer cleanup()
+
+		// Test valid combinations
+		validConfigs := []struct {
+			host string
+			port int
+		}{
+			{"localhost", 8765},
+			{"127.0.0.1", 1024},
+			{"0.0.0.0", 65535},
+			{"localhost", 9000},
+		}
+		for _, cfg := range validConfigs {
+			body := `{"web_server": {"host": "` + cfg.host + `", "port": ` + strconv.Itoa(cfg.port) + `}}`
+			req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			s.handleAPIConfig(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code, "host=%s port=%d should be accepted", cfg.host, cfg.port)
+		}
+	})
+
 	t.Run("rejects unsupported methods", func(t *testing.T) {
 		s, cleanup := testServer(t)
 		defer cleanup()
@@ -493,5 +566,30 @@ func TestWriteJSON(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Equal(t, "value", response["key"])
+	})
+}
+
+func TestIsValidHost(t *testing.T) {
+	t.Run("accepts valid hosts", func(t *testing.T) {
+		validHosts := []string{"localhost", "127.0.0.1", "0.0.0.0"}
+		for _, host := range validHosts {
+			assert.True(t, isValidHost(host), "host %s should be valid", host)
+		}
+	})
+
+	t.Run("rejects invalid hosts", func(t *testing.T) {
+		invalidHosts := []string{
+			"192.168.1.1",  // Private IP
+			"10.0.0.1",     // Private IP
+			"8.8.8.8",      // Public IP
+			"example.com",  // Domain
+			"0.0.0.1",      // Invalid loopback
+			"",             // Empty
+			"LOCALHOST",    // Case sensitive
+			"127.0.0.2",    // Not standard loopback
+		}
+		for _, host := range invalidHosts {
+			assert.False(t, isValidHost(host), "host %s should be invalid", host)
+		}
 	})
 }
