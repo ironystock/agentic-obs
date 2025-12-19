@@ -1025,3 +1025,770 @@ func TestPresetWorkflow(t *testing.T) {
 		}
 	})
 }
+
+// ============================================================================
+// Scene Design Tool Tests (Phase 6.3)
+// ============================================================================
+
+// Test source creation tools
+
+func TestHandleCreateTextSource(t *testing.T) {
+	t.Run("creates text source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateTextSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "My Text",
+			Text:       "Hello World",
+			FontName:   "Arial",
+			FontSize:   48,
+			Color:      0xFFFFFFFF, // White
+		}
+		_, result, err := server.handleCreateTextSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "My Text", resultMap["source_name"])
+		assert.NotNil(t, resultMap["scene_item_id"])
+	})
+
+	t.Run("creates text source with defaults", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateTextSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Default Text",
+			Text:       "Test",
+		}
+		_, result, err := server.handleCreateTextSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateTextSourceInput{
+			SceneName:  "NonExistent",
+			SourceName: "Text",
+			Text:       "Test",
+		}
+		_, _, err := server.handleCreateTextSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		input := CreateTextSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Text",
+			Text:       "Test",
+		}
+		_, _, err := server.handleCreateTextSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleCreateImageSource(t *testing.T) {
+	t.Run("creates image source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateImageSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "My Image",
+			FilePath:   "/path/to/image.png",
+		}
+		_, result, err := server.handleCreateImageSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "My Image", resultMap["source_name"])
+		assert.NotNil(t, resultMap["scene_item_id"])
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateImageSourceInput{
+			SceneName:  "NonExistent",
+			SourceName: "Image",
+			FilePath:   "/path/to/image.png",
+		}
+		_, _, err := server.handleCreateImageSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleCreateColorSource(t *testing.T) {
+	t.Run("creates color source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateColorSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Red Background",
+			Color:      0xFF0000FF, // Red in ABGR
+			Width:      1920,
+			Height:     1080,
+		}
+		_, result, err := server.handleCreateColorSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Red Background", resultMap["source_name"])
+	})
+
+	t.Run("creates color source with default dimensions", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateColorSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Default Color",
+			Color:      0xFF00FF00, // Green
+		}
+		_, result, err := server.handleCreateColorSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateColorSourceInput{
+			SceneName:  "NonExistent",
+			SourceName: "Color",
+			Color:      0xFF0000FF,
+		}
+		_, _, err := server.handleCreateColorSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleCreateBrowserSource(t *testing.T) {
+	t.Run("creates browser source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateBrowserSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Web Page",
+			URL:        "https://example.com",
+			Width:      1280,
+			Height:     720,
+			FPS:        60,
+		}
+		_, result, err := server.handleCreateBrowserSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Web Page", resultMap["source_name"])
+	})
+
+	t.Run("creates browser source with defaults", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateBrowserSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Default Browser",
+			URL:        "https://example.com",
+		}
+		_, result, err := server.handleCreateBrowserSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateBrowserSourceInput{
+			SceneName:  "NonExistent",
+			SourceName: "Browser",
+			URL:        "https://example.com",
+		}
+		_, _, err := server.handleCreateBrowserSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleCreateMediaSource(t *testing.T) {
+	t.Run("creates media source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateMediaSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "Video Clip",
+			FilePath:   "/path/to/video.mp4",
+			Loop:       true,
+		}
+		_, result, err := server.handleCreateMediaSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Video Clip", resultMap["source_name"])
+	})
+
+	t.Run("creates media source without loop", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateMediaSourceInput{
+			SceneName:  "Scene 1",
+			SourceName: "One-Time Video",
+			FilePath:   "/path/to/video.mp4",
+			Loop:       false,
+		}
+		_, result, err := server.handleCreateMediaSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := CreateMediaSourceInput{
+			SceneName:  "NonExistent",
+			SourceName: "Media",
+			FilePath:   "/path/to/video.mp4",
+		}
+		_, _, err := server.handleCreateMediaSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+// Test transform tools
+
+func TestHandleSetSourceTransform(t *testing.T) {
+	t.Run("sets transform successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		x := 100.0
+		y := 200.0
+		scaleX := 1.5
+		scaleY := 1.5
+		rotation := 45.0
+
+		input := SetSourceTransformInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1, // Webcam in mock
+			X:           &x,
+			Y:           &y,
+			ScaleX:      &scaleX,
+			ScaleY:      &scaleY,
+			Rotation:    &rotation,
+		}
+		_, result, err := server.handleSetSourceTransform(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "transform")
+	})
+
+	t.Run("sets partial transform", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		x := 50.0
+
+		input := SetSourceTransformInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+			X:           &x,
+		}
+		_, result, err := server.handleSetSourceTransform(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		x := 100.0
+		input := SetSourceTransformInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+			X:           &x,
+		}
+		_, _, err := server.handleSetSourceTransform(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		x := 100.0
+		input := SetSourceTransformInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+			X:           &x,
+		}
+		_, _, err := server.handleSetSourceTransform(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleGetSourceTransform(t *testing.T) {
+	t.Run("gets transform successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := GetSourceTransformInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1, // Webcam in mock
+		}
+		_, result, err := server.handleGetSourceTransform(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap, "x")
+		assert.Contains(t, resultMap, "y")
+		assert.Contains(t, resultMap, "scale_x")
+		assert.Contains(t, resultMap, "scale_y")
+		assert.Contains(t, resultMap, "rotation")
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := GetSourceTransformInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+		}
+		_, _, err := server.handleGetSourceTransform(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := GetSourceTransformInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+		}
+		_, _, err := server.handleGetSourceTransform(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleSetSourceCrop(t *testing.T) {
+	t.Run("sets crop successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceCropInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+			CropTop:     10,
+			CropBottom:  20,
+			CropLeft:    30,
+			CropRight:   40,
+		}
+		_, result, err := server.handleSetSourceCrop(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "crop")
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceCropInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+			CropTop:     10,
+		}
+		_, _, err := server.handleSetSourceCrop(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceCropInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+			CropTop:     10,
+		}
+		_, _, err := server.handleSetSourceCrop(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleSetSourceBounds(t *testing.T) {
+	t.Run("sets bounds successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceBoundsInput{
+			SceneName:    "Scene 1",
+			SceneItemID:  1,
+			BoundsType:   "OBS_BOUNDS_SCALE_INNER",
+			BoundsWidth:  1280,
+			BoundsHeight: 720,
+		}
+		_, result, err := server.handleSetSourceBounds(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "bounds")
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceBoundsInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+			BoundsType:  "OBS_BOUNDS_STRETCH",
+		}
+		_, _, err := server.handleSetSourceBounds(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceBoundsInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+			BoundsType:  "OBS_BOUNDS_STRETCH",
+		}
+		_, _, err := server.handleSetSourceBounds(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+// Test source management tools
+
+func TestHandleSetSourceOrder(t *testing.T) {
+	t.Run("sets order successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceOrderInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+			Index:       0,
+		}
+		_, result, err := server.handleSetSourceOrder(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "order")
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceOrderInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+			Index:       0,
+		}
+		_, _, err := server.handleSetSourceOrder(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceOrderInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+			Index:       0,
+		}
+		_, _, err := server.handleSetSourceOrder(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleSetSourceLocked(t *testing.T) {
+	t.Run("locks source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceLockedInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+			Locked:      true,
+		}
+		_, result, err := server.handleSetSourceLocked(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "locked")
+	})
+
+	t.Run("unlocks source successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceLockedInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+			Locked:      false,
+		}
+		_, result, err := server.handleSetSourceLocked(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "unlocked")
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceLockedInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+			Locked:      true,
+		}
+		_, _, err := server.handleSetSourceLocked(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := SetSourceLockedInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+			Locked:      true,
+		}
+		_, _, err := server.handleSetSourceLocked(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleDuplicateSource(t *testing.T) {
+	t.Run("duplicates to same scene successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := DuplicateSourceInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+		}
+		_, result, err := server.handleDuplicateSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.NotNil(t, resultMap["new_scene_item_id"])
+		assert.Equal(t, "Scene 1", resultMap["dest_scene"])
+	})
+
+	t.Run("duplicates to different scene successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := DuplicateSourceInput{
+			SceneName:     "Scene 1",
+			SceneItemID:   1,
+			DestSceneName: "Gaming",
+		}
+		_, result, err := server.handleDuplicateSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.NotNil(t, resultMap["new_scene_item_id"])
+		assert.Equal(t, "Gaming", resultMap["dest_scene"])
+	})
+
+	t.Run("returns error for non-existent source scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := DuplicateSourceInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+		}
+		_, _, err := server.handleDuplicateSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := DuplicateSourceInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+		}
+		_, _, err := server.handleDuplicateSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent destination scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := DuplicateSourceInput{
+			SceneName:     "Scene 1",
+			SceneItemID:   1,
+			DestSceneName: "NonExistent",
+		}
+		_, _, err := server.handleDuplicateSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleRemoveSource(t *testing.T) {
+	t.Run("removes source successfully", func(t *testing.T) {
+		server, mock := testServer(t)
+
+		// First verify the item exists
+		scene, _ := mock.GetSceneByName("Scene 1")
+		initialCount := len(scene.Sources)
+
+		input := RemoveSourceInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 1,
+		}
+		_, result, err := server.handleRemoveSource(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap["message"], "removed")
+
+		// Verify the item was removed
+		scene, _ = mock.GetSceneByName("Scene 1")
+		assert.Equal(t, initialCount-1, len(scene.Sources))
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := RemoveSourceInput{
+			SceneName:   "NonExistent",
+			SceneItemID: 1,
+		}
+		_, _, err := server.handleRemoveSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error for non-existent scene item", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := RemoveSourceInput{
+			SceneName:   "Scene 1",
+			SceneItemID: 999,
+		}
+		_, _, err := server.handleRemoveSource(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+}
+
+func TestHandleListInputKinds(t *testing.T) {
+	t.Run("lists input kinds successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		_, result, err := server.handleListInputKinds(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap, "input_kinds")
+		assert.Contains(t, resultMap, "count")
+
+		kinds := resultMap["input_kinds"].([]string)
+		assert.Greater(t, len(kinds), 0)
+		// Verify some expected input kinds from mock
+		assert.Contains(t, kinds, "browser_source")
+		assert.Contains(t, kinds, "image_source")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleListInputKinds(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
