@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/ironystock/agentic-obs/internal/obs"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -13,9 +14,10 @@ import (
 
 // Resource URI prefixes for MCP resource identification
 const (
-	SceneURIPrefix      = "obs://scene/"
-	ScreenshotURIPrefix = "obs://screenshot/"
-	PresetURIPrefix     = "obs://preset/"
+	SceneURIPrefix         = "obs://scene/"
+	ScreenshotURIPrefix    = "obs://screenshot/"
+	ScreenshotURLURIPrefix = "obs://screenshot-url/"
+	PresetURIPrefix        = "obs://preset/"
 )
 
 // SceneDetails contains detailed information about a scene
@@ -29,6 +31,8 @@ type SceneDetails struct {
 
 // registerResourceHandlers registers all resource handlers with the MCP server
 func (s *Server) registerResourceHandlers() {
+	resourceCount := 0
+
 	// Register scenes as resources with a URI template
 	// This allows accessing scenes at obs://scene/{sceneName}
 	s.mcpServer.AddResourceTemplate(
@@ -40,6 +44,7 @@ func (s *Server) registerResourceHandlers() {
 		},
 		s.handleResourceRead,
 	)
+	resourceCount++
 
 	// Register screenshot sources as resources with a URI template
 	// This allows accessing screenshots at obs://screenshot/{sourceName}
@@ -52,6 +57,23 @@ func (s *Server) registerResourceHandlers() {
 		},
 		s.handleScreenshotResourceRead,
 	)
+	resourceCount++
+
+	// Register screenshot URL resource (only if HTTP server is enabled)
+	// This provides a lightweight JSON alternative to binary screenshots
+	if s.httpServer != nil {
+		s.mcpServer.AddResourceTemplate(
+			&mcpsdk.ResourceTemplate{
+				URITemplate: "obs://screenshot-url/{sourceName}",
+				Name:        "Screenshot URL",
+				Description: "Get HTTP URL for accessing screenshot (lightweight alternative to binary)",
+				MIMEType:    "application/json",
+			},
+			s.handleScreenshotURLResourceRead,
+		)
+		resourceCount++
+		log.Println("Screenshot URL resource registered (HTTP server enabled)")
+	}
 
 	// Register scene presets as resources with a URI template
 	// This allows accessing presets at obs://preset/{presetName}
@@ -64,8 +86,9 @@ func (s *Server) registerResourceHandlers() {
 		},
 		s.handlePresetResourceRead,
 	)
+	resourceCount++
 
-	log.Println("Resource handlers registered successfully")
+	log.Printf("Resource handlers registered successfully (%d resources)", resourceCount)
 }
 
 // handleResourceRead returns detailed information about a specific scene
@@ -266,4 +289,73 @@ func extractPresetNameFromURI(uri string) (string, error) {
 		return "", fmt.Errorf("URI must start with %s", PresetURIPrefix)
 	}
 	return uri[len(PresetURIPrefix):], nil
+}
+
+// handleScreenshotURLResourceRead returns JSON with the HTTP URL for a screenshot source
+// This is a lightweight alternative to returning the binary screenshot data directly
+func (s *Server) handleScreenshotURLResourceRead(ctx context.Context, request *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+	uri := request.Params.URI
+	log.Printf("Handling screenshot URL resource read request for URI: %s", uri)
+
+	// Extract screenshot source name from URI (format: obs://screenshot-url/{sourceName})
+	sourceName, err := extractScreenshotURLNameFromURI(uri)
+	if err != nil {
+		return nil, fmt.Errorf("invalid screenshot-url resource URI: %w", err)
+	}
+
+	// Verify the screenshot source exists
+	source, err := s.storage.GetScreenshotSourceByName(ctx, sourceName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get screenshot source: %w", err)
+	}
+
+	// Get latest screenshot for capture timestamp
+	screenshot, err := s.storage.GetLatestScreenshot(ctx, source.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest screenshot: %w", err)
+	}
+
+	// Defensive nil check - resource should only be registered when httpServer is enabled
+	if s.httpServer == nil {
+		return nil, fmt.Errorf("HTTP server not available for screenshot URLs")
+	}
+
+	// Build JSON response with URL and metadata
+	urlData := map[string]interface{}{
+		"url":         s.httpServer.GetScreenshotURL(sourceName),
+		"source":      sourceName,
+		"captured_at": screenshot.CapturedAt.Format(time.RFC3339),
+		"format":      source.ImageFormat,
+		"mime_type":   screenshot.MimeType,
+	}
+
+	jsonData, err := json.MarshalIndent(urlData, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal screenshot URL data: %w", err)
+	}
+
+	result := &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{
+			{
+				URI:      uri,
+				MIMEType: "application/json",
+				Text:     string(jsonData),
+			},
+		},
+	}
+
+	log.Printf("Returning screenshot URL for source: %s", sourceName)
+	return result, nil
+}
+
+// extractScreenshotURLNameFromURI extracts the screenshot source name from a screenshot-url resource URI
+// Expected format: obs://screenshot-url/{sourceName}
+func extractScreenshotURLNameFromURI(uri string) (string, error) {
+	if len(uri) <= len(ScreenshotURLURIPrefix) {
+		return "", fmt.Errorf("URI too short")
+	}
+	if uri[:len(ScreenshotURLURIPrefix)] != ScreenshotURLURIPrefix {
+		return "", fmt.Errorf("URI must start with %s", ScreenshotURLURIPrefix)
+	}
+	return uri[len(ScreenshotURLURIPrefix):], nil
 }

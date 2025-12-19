@@ -89,257 +89,285 @@ type ConfigureScreenshotCadenceInput struct {
 	CadenceMs int    `json:"cadence_ms" jsonschema:"required,description=New capture interval in milliseconds"`
 }
 
-// registerToolHandlers registers all MCP tool handlers with the server
+// registerToolHandlers registers MCP tool handlers based on enabled tool groups
 func (s *Server) registerToolHandlers() {
-	// Scene management tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "set_current_scene",
-			Description: "Switch to a different scene in OBS",
-		},
-		s.handleSetCurrentScene,
-	)
+	toolCount := 0
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "create_scene",
-			Description: "Create a new scene in OBS",
-		},
-		s.handleCreateScene,
-	)
+	// Core tools: Scene management, Recording, Streaming, Status
+	if s.toolGroups.Core {
+		// Scene management tools
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "set_current_scene",
+				Description: "Switch to a different scene in OBS",
+			},
+			s.handleSetCurrentScene,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "remove_scene",
-			Description: "Remove a scene from OBS",
-		},
-		s.handleRemoveScene,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "create_scene",
+				Description: "Create a new scene in OBS",
+			},
+			s.handleCreateScene,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "list_scenes",
-			Description: "List all available scenes in OBS and identify the current scene",
-		},
-		s.handleListScenes,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "remove_scene",
+				Description: "Remove a scene from OBS",
+			},
+			s.handleRemoveScene,
+		)
 
-	// Recording tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "start_recording",
-			Description: "Start recording in OBS",
-		},
-		s.handleStartRecording,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_scenes",
+				Description: "List all available scenes in OBS and identify the current scene",
+			},
+			s.handleListScenes,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "stop_recording",
-			Description: "Stop the current recording in OBS",
-		},
-		s.handleStopRecording,
-	)
+		// Recording tools
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "start_recording",
+				Description: "Start recording in OBS",
+			},
+			s.handleStartRecording,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_recording_status",
-			Description: "Get the current recording status from OBS",
-		},
-		s.handleGetRecordingStatus,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "stop_recording",
+				Description: "Stop the current recording in OBS",
+			},
+			s.handleStopRecording,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "pause_recording",
-			Description: "Pause the current recording in OBS (recording must be active)",
-		},
-		s.handlePauseRecording,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_recording_status",
+				Description: "Get the current recording status from OBS",
+			},
+			s.handleGetRecordingStatus,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "resume_recording",
-			Description: "Resume a paused recording in OBS (recording must be paused)",
-		},
-		s.handleResumeRecording,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "pause_recording",
+				Description: "Pause the current recording in OBS (recording must be active)",
+			},
+			s.handlePauseRecording,
+		)
 
-	// Streaming tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "start_streaming",
-			Description: "Start streaming in OBS",
-		},
-		s.handleStartStreaming,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "resume_recording",
+				Description: "Resume a paused recording in OBS (recording must be paused)",
+			},
+			s.handleResumeRecording,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "stop_streaming",
-			Description: "Stop the current stream in OBS",
-		},
-		s.handleStopStreaming,
-	)
+		// Streaming tools
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "start_streaming",
+				Description: "Start streaming in OBS",
+			},
+			s.handleStartStreaming,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_streaming_status",
-			Description: "Get the current streaming status from OBS",
-		},
-		s.handleGetStreamingStatus,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "stop_streaming",
+				Description: "Stop the current stream in OBS",
+			},
+			s.handleStopStreaming,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_streaming_status",
+				Description: "Get the current streaming status from OBS",
+			},
+			s.handleGetStreamingStatus,
+		)
+
+		// Status tool
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_obs_status",
+				Description: "Get overall OBS status including version, connection state, and active scene",
+			},
+			s.handleGetOBSStatus,
+		)
+
+		toolCount += 13
+		log.Println("Core tools registered (13 tools)")
+	}
 
 	// Source tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "list_sources",
-			Description: "List all input sources (audio and video) available in OBS",
-		},
-		s.handleListSources,
-	)
+	if s.toolGroups.Sources {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_sources",
+				Description: "List all input sources (audio and video) available in OBS",
+			},
+			s.handleListSources,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "toggle_source_visibility",
-			Description: "Toggle the visibility of a source in a specific scene",
-		},
-		s.handleToggleSourceVisibility,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "toggle_source_visibility",
+				Description: "Toggle the visibility of a source in a specific scene",
+			},
+			s.handleToggleSourceVisibility,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_source_settings",
-			Description: "Retrieve configuration settings for a specific source",
-		},
-		s.handleGetSourceSettings,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_source_settings",
+				Description: "Retrieve configuration settings for a specific source",
+			},
+			s.handleGetSourceSettings,
+		)
+
+		toolCount += 3
+		log.Println("Source tools registered (3 tools)")
+	}
 
 	// Audio tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_input_mute",
-			Description: "Check whether an audio input is currently muted",
-		},
-		s.handleGetInputMute,
-	)
+	if s.toolGroups.Audio {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_input_mute",
+				Description: "Check whether an audio input is currently muted",
+			},
+			s.handleGetInputMute,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "toggle_input_mute",
-			Description: "Toggle the mute state of an audio input (muted <-> unmuted)",
-		},
-		s.handleToggleInputMute,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "toggle_input_mute",
+				Description: "Toggle the mute state of an audio input (muted <-> unmuted)",
+			},
+			s.handleToggleInputMute,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "set_input_volume",
-			Description: "Set the volume level of an audio input (supports dB or multiplier format)",
-		},
-		s.handleSetInputVolume,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "set_input_volume",
+				Description: "Set the volume level of an audio input (supports dB or multiplier format)",
+			},
+			s.handleSetInputVolume,
+		)
 
-	// Status tool
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_obs_status",
-			Description: "Get overall OBS status including version, connection state, and active scene",
-		},
-		s.handleGetOBSStatus,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_input_volume",
+				Description: "Get the current volume level of an audio input (returns dB and multiplier values)",
+			},
+			s.handleGetInputVolume,
+		)
 
-	// Scene preset tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "list_scene_presets",
-			Description: "List all saved scene presets, optionally filtered by scene name",
-		},
-		s.handleListScenePresets,
-	)
+		toolCount += 4
+		log.Println("Audio tools registered (4 tools)")
+	}
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_preset_details",
-			Description: "Get detailed information about a specific scene preset including source states",
-		},
-		s.handleGetPresetDetails,
-	)
+	// Layout tools: Scene presets
+	if s.toolGroups.Layout {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_scene_presets",
+				Description: "List all saved scene presets, optionally filtered by scene name",
+			},
+			s.handleListScenePresets,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "delete_scene_preset",
-			Description: "Delete a saved scene preset by name",
-		},
-		s.handleDeleteScenePreset,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_preset_details",
+				Description: "Get detailed information about a specific scene preset including source states",
+			},
+			s.handleGetPresetDetails,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "rename_scene_preset",
-			Description: "Rename an existing scene preset",
-		},
-		s.handleRenameScenePreset,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "delete_scene_preset",
+				Description: "Delete a saved scene preset by name",
+			},
+			s.handleDeleteScenePreset,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "save_scene_preset",
-			Description: "Save the current state of a scene as a named preset",
-		},
-		s.handleSaveScenePreset,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "rename_scene_preset",
+				Description: "Rename an existing scene preset",
+			},
+			s.handleRenameScenePreset,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "apply_scene_preset",
-			Description: "Apply a saved preset to restore source visibility states",
-		},
-		s.handleApplyScenePreset,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "save_scene_preset",
+				Description: "Save the current state of a scene as a named preset",
+			},
+			s.handleSaveScenePreset,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "get_input_volume",
-			Description: "Get the current volume level of an audio input (returns dB and multiplier values)",
-		},
-		s.handleGetInputVolume,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "apply_scene_preset",
+				Description: "Apply a saved preset to restore source visibility states",
+			},
+			s.handleApplyScenePreset,
+		)
 
-	// Screenshot source tools
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "create_screenshot_source",
-			Description: "Create a periodic screenshot capture source for visual monitoring of OBS scenes",
-		},
-		s.handleCreateScreenshotSource,
-	)
+		toolCount += 6
+		log.Println("Layout tools registered (6 tools)")
+	}
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "remove_screenshot_source",
-			Description: "Stop and remove a screenshot capture source",
-		},
-		s.handleRemoveScreenshotSource,
-	)
+	// Visual tools: Screenshot sources
+	if s.toolGroups.Visual {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "create_screenshot_source",
+				Description: "Create a periodic screenshot capture source for visual monitoring of OBS scenes",
+			},
+			s.handleCreateScreenshotSource,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "list_screenshot_sources",
-			Description: "List all configured screenshot sources with their status and HTTP URLs",
-		},
-		s.handleListScreenshotSources,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "remove_screenshot_source",
+				Description: "Stop and remove a screenshot capture source",
+			},
+			s.handleRemoveScreenshotSource,
+		)
 
-	mcpsdk.AddTool(s.mcpServer,
-		&mcpsdk.Tool{
-			Name:        "configure_screenshot_cadence",
-			Description: "Update the capture interval for a screenshot source",
-		},
-		s.handleConfigureScreenshotCadence,
-	)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_screenshot_sources",
+				Description: "List all configured screenshot sources with their status and HTTP URLs",
+			},
+			s.handleListScreenshotSources,
+		)
 
-	log.Println("Tool handlers registered successfully")
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "configure_screenshot_cadence",
+				Description: "Update the capture interval for a screenshot source",
+			},
+			s.handleConfigureScreenshotCadence,
+		)
+
+		toolCount += 4
+		log.Println("Visual tools registered (4 tools)")
+	}
+
+	log.Printf("Tool handlers registered successfully (%d tools total)", toolCount)
 }
 
 // Tool handler implementations

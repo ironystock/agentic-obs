@@ -19,6 +19,7 @@ type Server struct {
 	storage       *storage.DB
 	screenshotMgr *screenshot.Manager
 	httpServer    *agenthttp.Server
+	toolGroups    ToolGroupConfig
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
@@ -33,6 +34,28 @@ type ServerConfig struct {
 	DBPath        string
 	HTTPHost      string // HTTP server host for screenshot serving (default: localhost)
 	HTTPPort      int    // HTTP server port for screenshot serving (default: 8765)
+	HTTPEnabled   bool   // Whether to enable HTTP server (default: true)
+	ToolGroups    ToolGroupConfig
+}
+
+// ToolGroupConfig controls which tool categories are enabled
+type ToolGroupConfig struct {
+	Core    bool // Core OBS tools (scenes, recording, streaming, status)
+	Visual  bool // Visual monitoring tools (screenshots)
+	Layout  bool // Layout management tools (scene presets)
+	Audio   bool // Audio control tools
+	Sources bool // Source management tools
+}
+
+// DefaultToolGroupConfig returns config with all tool groups enabled
+func DefaultToolGroupConfig() ToolGroupConfig {
+	return ToolGroupConfig{
+		Core:    true,
+		Visual:  true,
+		Layout:  true,
+		Audio:   true,
+		Sources: true,
+	}
 }
 
 // NewServer creates a new MCP server instance
@@ -40,8 +63,9 @@ func NewServer(config ServerConfig) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Server{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:        ctx,
+		cancel:     cancel,
+		toolGroups: config.ToolGroups,
 	}
 
 	// Initialize storage
@@ -65,17 +89,19 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	s.obsClient = obsClient
 
-	// Initialize HTTP server for screenshot serving
-	httpCfg := agenthttp.DefaultConfig()
-	if config.HTTPHost != "" {
-		httpCfg.Host = config.HTTPHost
+	// Initialize HTTP server for screenshot serving (if enabled)
+	if config.HTTPEnabled {
+		httpCfg := agenthttp.DefaultConfig()
+		if config.HTTPHost != "" {
+			httpCfg.Host = config.HTTPHost
+		}
+		if config.HTTPPort != 0 {
+			httpCfg.Port = config.HTTPPort
+		}
+		s.httpServer = agenthttp.NewServer(db, httpCfg)
 	}
-	if config.HTTPPort != 0 {
-		httpCfg.Port = config.HTTPPort
-	}
-	s.httpServer = agenthttp.NewServer(db, httpCfg)
 
-	// Initialize screenshot manager
+	// Initialize screenshot manager (works without HTTP server for MCP resource access)
 	screenshotCfg := screenshot.DefaultConfig()
 	s.screenshotMgr = screenshot.NewManager(obsClient, db, screenshotCfg)
 
@@ -92,7 +118,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 	// Register resource handlers
 	s.registerResourceHandlers()
 
-	// Register tool handlers
+	// Register tool handlers (conditional based on tool groups)
 	s.registerToolHandlers()
 
 	// Register prompt handlers
@@ -110,17 +136,23 @@ func (s *Server) Start() error {
 	}
 	log.Println("Connected to OBS successfully")
 
-	// Start HTTP server for screenshot serving
-	if err := s.httpServer.Start(); err != nil {
-		return fmt.Errorf("failed to start HTTP server: %w", err)
+	// Start HTTP server for screenshot serving (if enabled)
+	if s.httpServer != nil {
+		if err := s.httpServer.Start(); err != nil {
+			return fmt.Errorf("failed to start HTTP server: %w", err)
+		}
+		log.Printf("HTTP server started at %s", s.httpServer.GetAddr())
+	} else {
+		log.Println("HTTP server disabled")
 	}
-	log.Printf("HTTP server started at %s", s.httpServer.GetAddr())
 
-	// Start screenshot manager
-	if err := s.screenshotMgr.Start(s.ctx); err != nil {
-		return fmt.Errorf("failed to start screenshot manager: %w", err)
+	// Start screenshot manager (if visual tools enabled)
+	if s.toolGroups.Visual {
+		if err := s.screenshotMgr.Start(s.ctx); err != nil {
+			return fmt.Errorf("failed to start screenshot manager: %w", err)
+		}
+		log.Printf("Screenshot manager started with %d workers", s.screenshotMgr.GetWorkerCount())
 	}
-	log.Printf("Screenshot manager started with %d workers", s.screenshotMgr.GetWorkerCount())
 
 	return nil
 }

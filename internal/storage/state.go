@@ -22,6 +22,22 @@ const (
 	StateKeyAutoReconnect = "auto_reconnect" // Auto-reconnect preference
 )
 
+// Tool group state keys - control which tool categories are enabled
+const (
+	StateKeyToolsCore    = "tools_enabled_core"    // Core OBS tools (scenes, recording, streaming, status)
+	StateKeyToolsVisual  = "tools_enabled_visual"  // Visual monitoring tools (screenshots)
+	StateKeyToolsLayout  = "tools_enabled_layout"  // Layout management tools (scene presets)
+	StateKeyToolsAudio   = "tools_enabled_audio"   // Audio control tools
+	StateKeyToolsSources = "tools_enabled_sources" // Source management tools
+)
+
+// Webserver configuration keys
+const (
+	ConfigKeyWebServerEnabled = "web_server_enabled" // Whether HTTP server is enabled
+	ConfigKeyWebServerHost    = "web_server_host"    // HTTP server host
+	ConfigKeyWebServerPort    = "web_server_port"    // HTTP server port
+)
+
 // Config keys used in the config table
 const (
 	ConfigKeyOBSHost     = "obs_host"     // OBS WebSocket host
@@ -288,4 +304,175 @@ func (db *DB) SetAppVersion(ctx context.Context, version string) error {
 // GetAppVersion retrieves the stored application version.
 func (db *DB) GetAppVersion(ctx context.Context) (string, error) {
 	return db.GetState(ctx, StateKeyAppVersion)
+}
+
+// ToolGroupConfig represents the enabled/disabled state of each tool group.
+type ToolGroupConfig struct {
+	Core    bool // Core OBS tools (scenes, recording, streaming, status)
+	Visual  bool // Visual monitoring tools (screenshots)
+	Layout  bool // Layout management tools (scene presets)
+	Audio   bool // Audio control tools
+	Sources bool // Source management tools
+}
+
+// DefaultToolGroupConfig returns tool group config with all groups enabled.
+func DefaultToolGroupConfig() ToolGroupConfig {
+	return ToolGroupConfig{
+		Core:    true,
+		Visual:  true,
+		Layout:  true,
+		Audio:   true,
+		Sources: true,
+	}
+}
+
+// SaveToolGroupConfig persists tool group preferences to the database.
+func (db *DB) SaveToolGroupConfig(ctx context.Context, cfg ToolGroupConfig) error {
+	boolToStr := func(b bool) string {
+		if b {
+			return "true"
+		}
+		return "false"
+	}
+
+	if err := db.SetState(ctx, StateKeyToolsCore, boolToStr(cfg.Core)); err != nil {
+		return fmt.Errorf("failed to save core tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsVisual, boolToStr(cfg.Visual)); err != nil {
+		return fmt.Errorf("failed to save visual tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsLayout, boolToStr(cfg.Layout)); err != nil {
+		return fmt.Errorf("failed to save layout tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsAudio, boolToStr(cfg.Audio)); err != nil {
+		return fmt.Errorf("failed to save audio tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsSources, boolToStr(cfg.Sources)); err != nil {
+		return fmt.Errorf("failed to save sources tools preference: %w", err)
+	}
+
+	return nil
+}
+
+// LoadToolGroupConfig retrieves tool group preferences from the database.
+// Returns default config (all enabled) if preferences are not set.
+func (db *DB) LoadToolGroupConfig(ctx context.Context) (ToolGroupConfig, error) {
+	cfg := DefaultToolGroupConfig()
+
+	strToBool := func(s string) bool {
+		return s == "true"
+	}
+
+	// Load each preference, keeping default if not set
+	if val, err := db.GetState(ctx, StateKeyToolsCore); err == nil {
+		cfg.Core = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsVisual); err == nil {
+		cfg.Visual = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsLayout); err == nil {
+		cfg.Layout = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsAudio); err == nil {
+		cfg.Audio = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsSources); err == nil {
+		cfg.Sources = strToBool(val)
+	}
+
+	return cfg, nil
+}
+
+// WebServerConfig represents HTTP server configuration.
+type WebServerConfig struct {
+	Enabled bool   // Whether HTTP server is enabled
+	Host    string // HTTP server host (default: localhost)
+	Port    int    // HTTP server port (default: 8765)
+}
+
+// DefaultWebServerConfig returns webserver config with defaults.
+func DefaultWebServerConfig() WebServerConfig {
+	return WebServerConfig{
+		Enabled: true,
+		Host:    "localhost",
+		Port:    8765,
+	}
+}
+
+// SaveWebServerConfig persists webserver configuration to the database.
+func (db *DB) SaveWebServerConfig(ctx context.Context, cfg WebServerConfig) error {
+	return db.Transaction(ctx, func(tx *sql.Tx) error {
+		stmt, err := tx.PrepareContext(ctx, `
+			INSERT INTO config (key, value, updated_at)
+			VALUES (?, ?, CURRENT_TIMESTAMP)
+			ON CONFLICT(key) DO UPDATE SET
+				value = excluded.value,
+				updated_at = CURRENT_TIMESTAMP
+		`)
+		if err != nil {
+			return fmt.Errorf("failed to prepare config upsert: %w", err)
+		}
+		defer stmt.Close()
+
+		enabledStr := "false"
+		if cfg.Enabled {
+			enabledStr = "true"
+		}
+
+		if _, err := stmt.ExecContext(ctx, ConfigKeyWebServerEnabled, enabledStr); err != nil {
+			return fmt.Errorf("failed to save web server enabled: %w", err)
+		}
+		if _, err := stmt.ExecContext(ctx, ConfigKeyWebServerHost, cfg.Host); err != nil {
+			return fmt.Errorf("failed to save web server host: %w", err)
+		}
+		if _, err := stmt.ExecContext(ctx, ConfigKeyWebServerPort, fmt.Sprintf("%d", cfg.Port)); err != nil {
+			return fmt.Errorf("failed to save web server port: %w", err)
+		}
+
+		return nil
+	})
+}
+
+// LoadWebServerConfig retrieves webserver configuration from the database.
+// Returns default config if not set.
+func (db *DB) LoadWebServerConfig(ctx context.Context) (WebServerConfig, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	cfg := DefaultWebServerConfig()
+
+	// Load enabled
+	var enabledStr string
+	err := db.conn.QueryRowContext(ctx,
+		"SELECT value FROM config WHERE key = ?",
+		ConfigKeyWebServerEnabled,
+	).Scan(&enabledStr)
+	if err == nil {
+		cfg.Enabled = enabledStr == "true"
+	}
+
+	// Load host
+	var host string
+	err = db.conn.QueryRowContext(ctx,
+		"SELECT value FROM config WHERE key = ?",
+		ConfigKeyWebServerHost,
+	).Scan(&host)
+	if err == nil && host != "" {
+		cfg.Host = host
+	}
+
+	// Load port
+	var portStr string
+	err = db.conn.QueryRowContext(ctx,
+		"SELECT value FROM config WHERE key = ?",
+		ConfigKeyWebServerPort,
+	).Scan(&portStr)
+	if err == nil {
+		var port int
+		if _, parseErr := fmt.Sscanf(portStr, "%d", &port); parseErr == nil && port > 0 {
+			cfg.Port = port
+		}
+	}
+
+	return cfg, nil
 }

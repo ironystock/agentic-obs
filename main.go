@@ -55,6 +55,16 @@ func main() {
 		OBSPort:       cfg.OBSPort,
 		OBSPassword:   cfg.OBSPassword,
 		DBPath:        cfg.DBPath,
+		HTTPEnabled:   cfg.WebServer.Enabled,
+		HTTPHost:      cfg.WebServer.Host,
+		HTTPPort:      cfg.WebServer.Port,
+		ToolGroups: mcp.ToolGroupConfig{
+			Core:    cfg.ToolGroups.Core,
+			Visual:  cfg.ToolGroups.Visual,
+			Layout:  cfg.ToolGroups.Layout,
+			Audio:   cfg.ToolGroups.Audio,
+			Sources: cfg.ToolGroups.Sources,
+		},
 	}
 
 	server, err := mcp.NewServer(serverConfig)
@@ -117,12 +127,18 @@ func loadConfig(ctx context.Context) (*config.Config, error) {
 	defaultCfg.ServerName = appName
 	defaultCfg.ServerVersion = appVersion
 
+	// Check if this is first run (before loading from storage)
+	isFirstRun, err := checkFirstRun(ctx, defaultCfg.DBPath)
+	if err != nil {
+		log.Printf("Warning: failed to check first run status: %v", err)
+	}
+
 	// Try to load from storage
 	cfg, err := config.LoadFromStorage(ctx, defaultCfg.DBPath)
 	if err != nil {
 		log.Printf("Warning: failed to load config from storage: %v", err)
 		log.Println("Using default configuration")
-		return defaultCfg, nil
+		cfg = defaultCfg
 	}
 
 	// Ensure server name and version are set correctly
@@ -150,12 +166,31 @@ func loadConfig(ctx context.Context) (*config.Config, error) {
 		cfg.DBPath = dbPath
 	}
 
+	// Run first-run setup prompts if this is first run
+	if isFirstRun {
+		log.Println("First run detected - running initial setup...")
+		if err := cfg.PromptFirstRunSetup(); err != nil {
+			log.Printf("Warning: first-run setup failed: %v", err)
+		}
+	}
+
 	// Save configuration if it was loaded from defaults or overridden by environment
 	if err := config.SaveToStorage(ctx, cfg); err != nil {
 		log.Printf("Warning: failed to save configuration: %v", err)
 	}
 
 	return cfg, nil
+}
+
+// checkFirstRun checks if this is the first run of the application
+func checkFirstRun(ctx context.Context, dbPath string) (bool, error) {
+	db, err := storage.New(ctx, storage.Config{Path: dbPath})
+	if err != nil {
+		return true, err // Assume first run if we can't check
+	}
+	defer db.Close()
+
+	return db.IsFirstRun(ctx)
 }
 
 // connectToOBSWithRetry attempts to connect to OBS with retry logic and user prompting
