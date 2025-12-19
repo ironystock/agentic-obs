@@ -2,7 +2,20 @@
 
 Natural language prompts for complete OBS workflows combining scenes, recording, streaming, audio control, and visual monitoring.
 
+**MCP Prompts:** `stream-launch`, `stream-teardown`, `health-check`, `recording-workflow`
+
+**Tools Used (combined workflows):**
+- Scenes: `list_scenes`, `set_current_scene`, `create_scene`
+- Recording: `start_recording`, `stop_recording`, `get_recording_status`
+- Streaming: `start_streaming`, `stop_streaming`, `get_streaming_status`
+- Audio: `toggle_input_mute`, `set_input_volume`, `get_input_mute`
+- Status: `get_obs_status`
+
+---
+
 ## Stream Preparation Workflows
+
+**MCP Prompt:** `stream-launch`
 
 ### Full Stream Setup
 
@@ -29,6 +42,8 @@ Natural language prompts for complete OBS workflows combining scenes, recording,
 - "Pre-live checklist: verify scene is Starting Soon, mic is on at 85%, recording is started, and streaming is ready to begin"
 
 ## Recording Session Workflows
+
+**MCP Prompt:** `recording-workflow`
 
 ### Tutorial Recording Setup
 

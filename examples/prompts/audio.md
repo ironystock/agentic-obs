@@ -2,7 +2,14 @@
 
 Natural language prompts for managing OBS audio through AI assistants.
 
+**MCP Prompts:** `audio-check`
+**Tools Used:** `get_input_mute`, `toggle_input_mute`, `set_input_volume`, `get_input_volume`
+
+---
+
 ## Checking Mute Status
+
+**Tools Used:** `get_input_mute`
 
 ### Basic Mute Checks
 
@@ -28,6 +35,8 @@ Natural language prompts for managing OBS audio through AI assistants.
 - "Verify my mic is on before the stream"
 
 ## Muting Audio Sources
+
+**Tools Used:** `toggle_input_mute`
 
 ### Basic Muting
 

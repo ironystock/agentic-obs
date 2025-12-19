@@ -2,7 +2,13 @@
 
 Natural language prompts for managing OBS scenes through AI assistants.
 
+**MCP Prompts:** `quick-status`, `scene-organizer`
+
+---
+
 ## Listing Scenes
+
+**Tools Used:** `list_scenes`, `get_obs_status`
 
 ### Basic Listing
 
@@ -32,6 +38,8 @@ Natural language prompts for managing OBS scenes through AI assistants.
 
 ## Switching Scenes
 
+**Tools Used:** `set_current_scene`, `list_scenes`
+
 ### Direct Scene Switching
 
 **Switch to a specific scene:**
@@ -59,6 +67,8 @@ Natural language prompts for managing OBS scenes through AI assistants.
 - "Change to my Be Right Back scene and tell me if it worked"
 
 ## Creating Scenes
+
+**Tools Used:** `create_scene`
 
 ### Basic Scene Creation
 
@@ -88,6 +98,8 @@ Natural language prompts for managing OBS scenes through AI assistants.
 - "Make me a set of scenes: Intro, Gaming, Chatting, and Outro"
 
 ## Removing Scenes
+
+**Tools Used:** `remove_scene`, `list_scenes`
 
 ### Basic Scene Removal
 

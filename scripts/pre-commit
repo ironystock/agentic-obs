@@ -1,0 +1,40 @@
+#!/bin/bash
+# Pre-commit hook: Ensure Go code is formatted and passes static analysis
+#
+# Installation:
+#   cp scripts/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# To skip this hook (not recommended), use: git commit --no-verify
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Find files that need formatting
+UNFORMATTED=$(gofmt -l . 2>/dev/null)
+
+if [ -n "$UNFORMATTED" ]; then
+    echo ""
+    echo "❌ Go files need formatting. Run 'gofmt -w .' to fix:"
+    echo ""
+    echo "$UNFORMATTED" | while read -r file; do
+        echo "   $file"
+    done
+    echo ""
+    echo "Quick fix: gofmt -w \$(gofmt -l .)"
+    exit 1
+fi
+echo "✓ gofmt: all files formatted"
+
+# Run go vet for static analysis
+if ! go vet ./... 2>/dev/null; then
+    echo ""
+    echo "❌ go vet found issues. Please fix before committing."
+    exit 1
+fi
+echo "✓ go vet: no issues"
+
+echo ""
+echo "All pre-commit checks passed!"
+exit 0

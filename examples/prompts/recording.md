@@ -2,7 +2,14 @@
 
 Natural language prompts for managing OBS recordings through AI assistants.
 
+**MCP Prompts:** `recording-workflow`
+**Tools Used:** `start_recording`, `stop_recording`, `get_recording_status`, `pause_recording`, `resume_recording`
+
+---
+
 ## Starting Recordings
+
+**Tools Used:** `start_recording`, `get_recording_status`
 
 ### Basic Start Commands
 
@@ -38,6 +45,8 @@ Natural language prompts for managing OBS recordings through AI assistants.
 - "If recording is stopped, please start it"
 
 ## Stopping Recordings
+
+**Tools Used:** `stop_recording`
 
 ### Basic Stop Commands
 
