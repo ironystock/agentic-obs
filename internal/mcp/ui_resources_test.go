@@ -3,7 +3,7 @@ package mcp
 import (
 	"testing"
 
-	"github.com/ironystock/agentic-obs/pkg/mcpui"
+	"github.com/ironystock/mcpui-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
