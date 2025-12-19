@@ -5,6 +5,7 @@
 package mcpui
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -116,13 +117,11 @@ func NewUIResourceContents(uri string, content UIContent) (*UIResourceContents, 
 
 	if wire.Blob != "" {
 		// Decode base64 blob back to bytes
-		var decoded []byte
-		if err := json.Unmarshal([]byte(`"`+wire.Blob+`"`), &decoded); err != nil {
-			// Try direct assignment if not base64
-			rc.Text = wire.Blob
-		} else {
-			rc.Blob = decoded
+		decoded, err := base64.StdEncoding.DecodeString(wire.Blob)
+		if err != nil {
+			return nil, errors.New("failed to decode base64 blob: " + err.Error())
 		}
+		rc.Blob = decoded
 	} else {
 		rc.Text = wire.Text
 	}
@@ -138,8 +137,8 @@ func (r *UIResourceContents) ToUIContent() (UIContent, error) {
 		Annotations: r.Annotations,
 	}
 	if r.Blob != nil {
-		// Encode blob to base64 string
-		wire.Blob = string(r.Blob) // Will be properly encoded by ContentFromWire
+		// Encode blob to base64 string for wire format
+		wire.Blob = base64.StdEncoding.EncodeToString(r.Blob)
 	}
 	return ContentFromWire(wire)
 }

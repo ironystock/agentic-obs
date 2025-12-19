@@ -7,6 +7,7 @@ package mcpui
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 // ActionType constants define the types of UI actions.
@@ -193,6 +194,24 @@ type LinkActionPayload struct {
 	URL string `json:"url"`
 }
 
+// Validate checks that the LinkActionPayload has a valid URL.
+func (p *LinkActionPayload) Validate() error {
+	if p.URL == "" {
+		return fmt.Errorf("link payload URL is required")
+	}
+	parsed, err := url.Parse(p.URL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("URL must have http or https scheme, got: %s", parsed.Scheme)
+	}
+	if parsed.Host == "" {
+		return fmt.Errorf("URL must have a host")
+	}
+	return nil
+}
+
 // UISizeActionPayload is the payload for ui-size-change actions.
 // It notifies the host of UI dimension changes.
 type UISizeActionPayload struct {
@@ -269,9 +288,22 @@ func NewNotifyAction(message string, level string) (*UIAction, error) {
 }
 
 // NewLinkAction creates a new link action.
-func NewLinkAction(url string) (*UIAction, error) {
+// The URL is validated to ensure it is a valid absolute URL with http or https scheme.
+func NewLinkAction(rawURL string) (*UIAction, error) {
+	// Validate URL
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, fmt.Errorf("URL must have http or https scheme, got: %s", parsed.Scheme)
+	}
+	if parsed.Host == "" {
+		return nil, fmt.Errorf("URL must have a host")
+	}
+
 	payload := LinkActionPayload{
-		URL: url,
+		URL: rawURL,
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
