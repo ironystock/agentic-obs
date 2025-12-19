@@ -936,34 +936,299 @@ var audioMixerTemplate = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Mixer</title>
-    <style>` + sharedCSS + `</style>
+    <style>` + sharedCSS + `
+        .audio-channel {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .audio-channel:hover {
+            border-color: var(--border);
+        }
+
+        .audio-channel.focused {
+            border-color: var(--accent);
+        }
+
+        .audio-channel.muted {
+            opacity: 0.6;
+        }
+
+        .channel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .channel-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .channel-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .channel-type {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .channel-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-display {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .mute-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .mute-toggle:hover {
+            background: var(--border);
+        }
+
+        .mute-toggle.muted {
+            background: var(--error);
+            color: white;
+        }
+
+        .mute-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .slider-track {
+            position: relative;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .slider-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--success) 0%, var(--warning) 70%, var(--error) 100%);
+            border-radius: 4px;
+            transition: width 0.1s;
+        }
+
+        .audio-channel.muted .slider-fill {
+            background: var(--text-secondary);
+        }
+
+        .volume-slider {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            background: transparent;
+            position: relative;
+            z-index: 1;
+            margin-top: -8px;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            cursor: pointer;
+            border: 2px solid var(--bg-card);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            cursor: pointer;
+            border: 2px solid var(--bg-card);
+        }
+
+        .db-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        .keyboard-hint {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+
+        .keyboard-hint kbd {
+            background: var(--bg-card);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .refresh-indicator.visible {
+            opacity: 1;
+        }
+
+        .no-inputs {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .no-inputs svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Audio <span class="accent">Mixer</span></h1>
 
         <div class="card">
-            <h2>Audio Inputs</h2>
-            {{range .Inputs}}
-            <div class="slider-container" data-input="{{.Name}}">
-                <div class="slider-header">
-                    <span class="slider-name">{{.Name}}</span>
-                    <span class="slider-value">{{printf "%.1f" .VolumeDB}} dB</span>
-                    <button class="btn mute-btn {{if .IsMuted}}muted{{end}}" onclick="toggleMute('{{.Name}}')">
-                        {{if .IsMuted}}Unmute{{else}}Mute{{end}}
-                    </button>
+            <h2>Audio Inputs ({{len .Inputs}})</h2>
+            {{if .Inputs}}
+            {{range $i, $input := .Inputs}}
+            <div class="audio-channel {{if .IsMuted}}muted{{end}}"
+                 data-input="{{.Name}}"
+                 data-index="{{$i}}"
+                 tabindex="0">
+                <div class="channel-header">
+                    <div class="channel-info">
+                        <span class="channel-name">{{.Name}}</span>
+                        <span class="channel-type">{{.InputKind}}</span>
+                    </div>
+                    <div class="channel-controls">
+                        <span class="volume-display">{{printf "%.1f" .VolumeDB}} dB</span>
+                        <button class="mute-toggle {{if .IsMuted}}muted{{end}}"
+                                onclick="toggleMute('{{.Name}}')"
+                                title="{{if .IsMuted}}Unmute{{else}}Mute{{end}} (M)">
+                            {{if .IsMuted}}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                                <line x1="23" y1="9" x2="17" y2="15"/>
+                                <line x1="17" y1="9" x2="23" y2="15"/>
+                            </svg>
+                            {{else}}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            {{end}}
+                        </button>
+                    </div>
                 </div>
-                <input type="range" min="0" max="100" value="{{printf "%.0f" .VolumePercent}}"
+                <div class="slider-track">
+                    <div class="slider-fill" style="width: {{printf "%.0f" .VolumePercent}}%"></div>
+                </div>
+                <input type="range"
+                       class="volume-slider"
+                       min="0" max="100"
+                       value="{{printf "%.0f" .VolumePercent}}"
+                       data-input="{{.Name}}"
+                       oninput="updateSlider(this)"
                        onchange="setVolume('{{.Name}}', this.value)">
+                <div class="db-markers">
+                    <span>-∞</span>
+                    <span>-20</span>
+                    <span>-10</span>
+                    <span>0 dB</span>
+                </div>
             </div>
-            {{else}}
-            <p style="color: var(--text-secondary);">No audio inputs available</p>
             {{end}}
+            {{else}}
+            <div class="no-inputs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                    <line x1="23" y1="9" x2="17" y2="15"/>
+                    <line x1="17" y1="9" x2="23" y2="15"/>
+                </svg>
+                <p>No audio inputs available</p>
+                <p style="font-size: 0.8rem; margin-top: 8px;">Connect to OBS to see audio sources</p>
+            </div>
+            {{end}}
+        </div>
+
+        <div class="keyboard-hint">
+            <kbd>↑</kbd><kbd>↓</kbd> Navigate | <kbd>←</kbd><kbd>→</kbd> Adjust Volume | <kbd>M</kbd> Mute/Unmute | <kbd>0</kbd> Reset
         </div>
     </div>
 
+    <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
+
     <script>
+        let focusedIndex = 0;
+        const channels = document.querySelectorAll('.audio-channel');
+
+        function updateSlider(slider) {
+            const channel = slider.closest('.audio-channel');
+            const fill = channel.querySelector('.slider-fill');
+            const display = channel.querySelector('.volume-display');
+            const value = slider.value;
+            fill.style.width = value + '%';
+            // Map 0-100 to -inf to 0 dB (using -60 as practical minimum)
+            const db = value === '0' ? '-∞' : ((value / 100) * 26 - 26).toFixed(1);
+            display.textContent = db + ' dB';
+        }
+
         function toggleMute(inputName) {
+            showRefreshIndicator();
             fetch('{{.BaseURL}}/ui/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -972,11 +1237,21 @@ var audioMixerTemplate = `<!DOCTYPE html>
                     messageId: 'mute-' + Date.now(),
                     payload: { toolName: 'toggle_input_mute', params: { input_name: inputName } }
                 })
-            }).then(() => location.reload());
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.payload && data.payload.error) {
+                    alert('Error: ' + data.payload.error.message);
+                    hideRefreshIndicator();
+                } else {
+                    refreshAudioState();
+                }
+            })
+            .catch(() => hideRefreshIndicator());
         }
 
         function setVolume(inputName, value) {
-            const db = (value / 100) * 26 - 26; // Map 0-100 to -26 to 0 dB
+            const db = value == 0 ? -100 : (value / 100) * 26 - 26; // Map 0-100 to -100 (mute) to 0 dB
             fetch('{{.BaseURL}}/ui/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -987,6 +1262,128 @@ var audioMixerTemplate = `<!DOCTYPE html>
                 })
             });
         }
+
+        function showRefreshIndicator() {
+            document.getElementById('refreshIndicator').classList.add('visible');
+        }
+
+        function hideRefreshIndicator() {
+            document.getElementById('refreshIndicator').classList.remove('visible');
+        }
+
+        function refreshAudioState() {
+            location.reload();
+        }
+
+        function setFocus(index) {
+            if (index < 0) index = channels.length - 1;
+            if (index >= channels.length) index = 0;
+            focusedIndex = index;
+
+            channels.forEach((ch, i) => {
+                ch.classList.toggle('focused', i === index);
+            });
+            channels[index].focus();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (channels.length === 0) return;
+
+            const focusedChannel = channels[focusedIndex];
+            const slider = focusedChannel?.querySelector('.volume-slider');
+            const inputName = focusedChannel?.dataset.input;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    setFocus(focusedIndex - 1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    setFocus(focusedIndex + 1);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if (slider) {
+                        slider.value = Math.max(0, parseInt(slider.value) - 5);
+                        updateSlider(slider);
+                        setVolume(inputName, slider.value);
+                    }
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (slider) {
+                        slider.value = Math.min(100, parseInt(slider.value) + 5);
+                        updateSlider(slider);
+                        setVolume(inputName, slider.value);
+                    }
+                    break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    if (inputName) toggleMute(inputName);
+                    break;
+                case '0':
+                    e.preventDefault();
+                    if (slider) {
+                        slider.value = 77; // ~0 dB
+                        updateSlider(slider);
+                        setVolume(inputName, slider.value);
+                    }
+                    break;
+            }
+        });
+
+        // Click to focus channel
+        channels.forEach((channel, index) => {
+            channel.addEventListener('click', (e) => {
+                if (!e.target.closest('.mute-toggle')) {
+                    setFocus(index);
+                }
+            });
+            channel.addEventListener('focus', () => {
+                focusedIndex = index;
+                channels.forEach((ch, i) => ch.classList.toggle('focused', i === index));
+            });
+        });
+
+        // Auto-refresh audio state every 3 seconds
+        setInterval(() => {
+            fetch('{{.BaseURL}}/ui/audio')
+                .then(response => response.text())
+                .then(html => {
+                    // Only refresh if no slider is being dragged
+                    if (!document.querySelector('.volume-slider:active')) {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newChannels = doc.querySelectorAll('.audio-channel');
+
+                        newChannels.forEach(newChannel => {
+                            const inputName = newChannel.dataset.input;
+                            const oldChannel = document.querySelector('[data-input="' + inputName + '"]');
+                            if (oldChannel) {
+                                // Update mute state
+                                const wasMuted = oldChannel.classList.contains('muted');
+                                const isMuted = newChannel.classList.contains('muted');
+                                if (wasMuted !== isMuted) {
+                                    oldChannel.classList.toggle('muted', isMuted);
+                                    const btn = oldChannel.querySelector('.mute-toggle');
+                                    btn.classList.toggle('muted', isMuted);
+                                    btn.innerHTML = newChannel.querySelector('.mute-toggle').innerHTML;
+                                }
+
+                                // Update volume display (but not slider if user isn't touching it)
+                                const newDisplay = newChannel.querySelector('.volume-display').textContent;
+                                oldChannel.querySelector('.volume-display').textContent = newDisplay;
+                            }
+                        });
+                    }
+                });
+        }, 3000);
+
+        // Initial focus
+        if (channels.length > 0) setFocus(0);
     </script>
 </body>
 </html>`

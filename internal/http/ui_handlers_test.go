@@ -679,3 +679,140 @@ func TestSceneInfoEnhancements(t *testing.T) {
 	assert.Equal(t, 5, scene.SourceCount)
 	assert.Equal(t, "http://localhost:8765/ui/scene-thumbnail/Main", scene.ThumbnailURL)
 }
+
+// Phase 4: Audio Mixer Enhancement Tests
+
+func TestAudioMixerEnhancedTemplate(t *testing.T) {
+	// Test the enhanced audio mixer template features
+	provider := &mockStatusProvider{
+		audioInputs: []AudioInputInfo{
+			{
+				Name:          "Desktop Audio",
+				Volume:        0.5,
+				VolumePercent: 50,
+				VolumeDB:      -13.0,
+				IsMuted:       false,
+				InputKind:     "wasapi_output_capture",
+			},
+			{
+				Name:          "Mic/Aux",
+				Volume:        0.8,
+				VolumePercent: 80,
+				VolumeDB:      -5.2,
+				IsMuted:       true,
+				InputKind:     "wasapi_input_capture",
+			},
+		},
+	}
+	handlers := NewUIHandlers(provider, "http://localhost:8765")
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.HandleUIAudio(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	body := rec.Body.String()
+	// Enhanced features
+	assert.Contains(t, body, "audio-channel", "should have audio channel class")
+	assert.Contains(t, body, "channel-name", "should have channel name class")
+	assert.Contains(t, body, "channel-type", "should show input kind")
+	assert.Contains(t, body, "volume-slider", "should have volume slider")
+	assert.Contains(t, body, "slider-fill", "should have slider fill indicator")
+	assert.Contains(t, body, "mute-toggle", "should have mute toggle button")
+	assert.Contains(t, body, "keyboard-hint", "should have keyboard hints")
+	assert.Contains(t, body, "db-markers", "should have dB markers")
+	assert.Contains(t, body, "Audio Inputs (2)", "should show input count")
+	assert.Contains(t, body, "wasapi_output_capture", "should show input kind")
+	assert.Contains(t, body, "-13.0 dB", "should show dB value")
+}
+
+func TestAudioInputInfoStruct(t *testing.T) {
+	// Test that AudioInputInfo has all required fields for the enhanced template
+	input := AudioInputInfo{
+		Name:          "Test Input",
+		Volume:        0.75,
+		VolumePercent: 75.0,
+		VolumeDB:      -6.5,
+		IsMuted:       false,
+		InputKind:     "test_kind",
+	}
+
+	assert.Equal(t, "Test Input", input.Name)
+	assert.Equal(t, 0.75, input.Volume)
+	assert.Equal(t, 75.0, input.VolumePercent)
+	assert.Equal(t, -6.5, input.VolumeDB)
+	assert.False(t, input.IsMuted)
+	assert.Equal(t, "test_kind", input.InputKind)
+}
+
+func TestAudioMixerWithMutedInput(t *testing.T) {
+	provider := &mockStatusProvider{
+		audioInputs: []AudioInputInfo{
+			{Name: "Mic", IsMuted: true, VolumePercent: 0, VolumeDB: -100, InputKind: "mic"},
+		},
+	}
+	handlers := NewUIHandlers(provider, "http://localhost:8765")
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.HandleUIAudio(rec, req)
+
+	body := rec.Body.String()
+	// Check that the muted class is applied to the channel
+	assert.Contains(t, body, `class="audio-channel muted"`)
+	// Check that the mute button has the muted class
+	assert.Contains(t, body, `class="mute-toggle muted"`)
+	// Check that the unmute icon (X through speaker) is shown
+	assert.Contains(t, body, "x1=\"23\" y1=\"9\"") // Part of the muted SVG icon
+}
+
+func TestAudioMixerVolumeSliderRange(t *testing.T) {
+	provider := &mockStatusProvider{
+		audioInputs: []AudioInputInfo{
+			{Name: "Test", VolumePercent: 0, VolumeDB: -100, InputKind: "test"},
+			{Name: "Test2", VolumePercent: 50, VolumeDB: -13, InputKind: "test"},
+			{Name: "Test3", VolumePercent: 100, VolumeDB: 0, InputKind: "test"},
+		},
+	}
+	handlers := NewUIHandlers(provider, "http://localhost:8765")
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.HandleUIAudio(rec, req)
+
+	body := rec.Body.String()
+	// Check slider values
+	assert.Contains(t, body, `value="0"`)   // Min volume
+	assert.Contains(t, body, `value="50"`)  // Mid volume
+	assert.Contains(t, body, `value="100"`) // Max volume
+	// Check slider fill widths
+	assert.Contains(t, body, `width: 0%`)   // Min fill
+	assert.Contains(t, body, `width: 50%`)  // Mid fill
+	assert.Contains(t, body, `width: 100%`) // Max fill
+}
+
+func TestAudioMixerKeyboardHints(t *testing.T) {
+	provider := &mockStatusProvider{
+		audioInputs: []AudioInputInfo{
+			{Name: "Test", InputKind: "test"},
+		},
+	}
+	handlers := NewUIHandlers(provider, "http://localhost:8765")
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.HandleUIAudio(rec, req)
+
+	body := rec.Body.String()
+	// Check keyboard hints are present
+	assert.Contains(t, body, "keyboard-hint")
+	assert.Contains(t, body, "Navigate")
+	assert.Contains(t, body, "Adjust Volume")
+	assert.Contains(t, body, "Mute/Unmute")
+	assert.Contains(t, body, "Reset")
+}
