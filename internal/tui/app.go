@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -81,7 +82,7 @@ type Model struct {
 func newModel(db *storage.DB, cfg *config.Config, appName, appVersion string) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Style = lipgloss.NewStyle().Foreground(colorAccent)
 
 	return Model{
 		db:          db,
@@ -113,7 +114,7 @@ func (m Model) Init() tea.Cmd {
 		m.spinner.Tick,
 		tickCmd(),
 		fetchStatusCmd(m.db),
-		fetchHistoryCmd(m.db, 50),
+		fetchHistoryCmd(m.db, historyFetchLimit),
 	)
 }
 
@@ -130,22 +131,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.currentView = ViewConfig
 		case "3":
 			m.currentView = ViewHistory
-			return m, fetchHistoryCmd(m.db, 50)
+			return m, fetchHistoryCmd(m.db, historyFetchLimit)
 		case "tab", "right":
 			m.currentView = (m.currentView + 1) % 3
 			if m.currentView == ViewHistory {
-				return m, fetchHistoryCmd(m.db, 50)
+				return m, fetchHistoryCmd(m.db, historyFetchLimit)
 			}
 		case "shift+tab", "left":
 			m.currentView = (m.currentView + 2) % 3
 			if m.currentView == ViewHistory {
-				return m, fetchHistoryCmd(m.db, 50)
+				return m, fetchHistoryCmd(m.db, historyFetchLimit)
 			}
 		case "r":
 			// Refresh current view
-			return m, tea.Batch(fetchStatusCmd(m.db), fetchHistoryCmd(m.db, 50))
+			return m, tea.Batch(fetchStatusCmd(m.db), fetchHistoryCmd(m.db, historyFetchLimit))
 		case "j", "down":
-			if m.currentView == ViewHistory && m.historyOffset < len(m.actions)-10 {
+			if m.currentView == ViewHistory && m.historyOffset < len(m.actions)-scrollMargin {
 				m.historyOffset++
 			}
 		case "k", "up":
@@ -202,214 +203,218 @@ func (m Model) View() string {
 	}
 
 	// Compose final view
+	header := m.renderHeader()
 	tabs := m.renderTabs()
 	help := m.renderHelp()
 
-	return lipgloss.JoinVertical(lipgloss.Left, tabs, content, help)
+	return lipgloss.JoinVertical(lipgloss.Left, header, tabs, content, help)
 }
 
-// renderTabs renders the tab bar
+// renderHeader renders the header bar with app info and connection status
+func (m Model) renderHeader() string {
+	// App name and version
+	appInfo := styleHeader.Render(fmt.Sprintf("%s v%s", m.appName, m.appVersion))
+
+	// Connection status indicator
+	status := styleSuccess.Render(StatusConnected + " Connected")
+
+	// Current time
+	timeStr := styleMuted.Render(time.Now().Format("15:04:05"))
+
+	// Calculate spacing
+	leftPart := appInfo
+	rightPart := status + "  " + timeStr
+	spacing := m.width - lipgloss.Width(leftPart) - lipgloss.Width(rightPart) - headerSpacing
+	if spacing < 1 {
+		spacing = 1
+	}
+
+	headerContent := leftPart + fmt.Sprintf("%*s", spacing, "") + rightPart
+
+	return styleHeaderBox.Copy().Width(m.width - headerWidthOffset).Render(headerContent)
+}
+
+// renderTabs renders the tab bar with emoji icons
 func (m Model) renderTabs() string {
-	tabStyle := lipgloss.NewStyle().Padding(0, 2)
-	activeStyle := tabStyle.Copy().Bold(true).Foreground(lipgloss.Color("205")).Background(lipgloss.Color("236"))
-	inactiveStyle := tabStyle.Copy().Foreground(lipgloss.Color("250"))
+	tabs := []struct {
+		icon string
+		name string
+	}{
+		{TabIconStatus, "Status"},
+		{TabIconConfig, "Config"},
+		{TabIconHistory, "History"},
+	}
 
-	tabs := []string{"Status", "Config", "History"}
 	var rendered []string
-
 	for i, tab := range tabs {
+		label := tab.icon + " " + tab.name
 		if ViewType(i) == m.currentView {
-			rendered = append(rendered, activeStyle.Render(tab))
+			rendered = append(rendered, styleTabActive.Render(label))
 		} else {
-			rendered = append(rendered, inactiveStyle.Render(tab))
+			rendered = append(rendered, styleTabInactive.Render(label))
+		}
+		// Add separator between tabs (except after last)
+		if i < len(tabs)-1 {
+			rendered = append(rendered, styleTabSeparator.Render(" │ "))
 		}
 	}
 
 	tabBar := lipgloss.JoinHorizontal(lipgloss.Top, rendered...)
-	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, true, false).
-		BorderForeground(lipgloss.Color("240")).
-		Width(m.width).
-		Render(tabBar)
+	separator := styleDim.Render(fmt.Sprintf("%s", repeatChar("─", m.width)))
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Padding(0, 1).Render(tabBar),
+		separator,
+	)
 }
 
-// renderStatusView renders the status view
+// repeatChar repeats a character n times using strings.Repeat (O(n) complexity)
+func repeatChar(char string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return strings.Repeat(char, n)
+}
+
+// renderStatusView renders the status view with aligned key-value pairs
 func (m Model) renderStatusView() string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("250"))
-	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
-	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		Padding(1, 2).
-		Width(m.width - 4)
-
-	// Server info
+	// Server info with aligned labels
 	uptime := time.Since(m.startTime).Round(time.Second)
-	serverInfo := fmt.Sprintf("%s\n\n%s %s\n%s %s\n%s %s\n%s %s",
-		titleStyle.Render("Server Info"),
-		labelStyle.Render("Name:"),
-		valueStyle.Render(m.appName),
-		labelStyle.Render("Version:"),
-		valueStyle.Render(m.appVersion),
-		labelStyle.Render("Uptime:"),
-		valueStyle.Render(uptime.String()),
-		labelStyle.Render("Last Refresh:"),
-		valueStyle.Render(m.lastRefresh.Format("15:04:05")),
+	serverInfo := lipgloss.JoinVertical(lipgloss.Left,
+		styleTitle.Render("Server Info"),
+		"",
+		styleLabel.Render("Name")+styleValue.Render(m.appName),
+		styleLabel.Render("Version")+styleValue.Render(m.appVersion),
+		styleLabel.Render("Uptime")+styleValue.Render(uptime.String()),
+		styleLabel.Render("Last Refresh")+styleValue.Render(m.lastRefresh.Format("15:04:05")),
 	)
 
-	// OBS info
-	obsStatus := okStyle.Render("Configured")
-	obsInfo := fmt.Sprintf("%s\n\n%s %s\n%s %s:%s",
-		titleStyle.Render("OBS Connection"),
-		labelStyle.Render("Status:"),
-		obsStatus,
-		labelStyle.Render("Address:"),
-		valueStyle.Render(m.cfg.OBSHost),
-		valueStyle.Render(m.cfg.OBSPort),
+	// OBS info with status indicator
+	obsStatusText := styleSuccess.Render(StatusConnected + " Connected")
+	obsInfo := lipgloss.JoinVertical(lipgloss.Left,
+		styleTitle.Render("OBS Connection"),
+		"",
+		styleLabel.Render("Status")+obsStatusText,
+		styleLabel.Render("Address")+styleValue.Render(m.cfg.OBSHost+":"+m.cfg.OBSPort),
 	)
 
 	// Stats
-	statsInfo := fmt.Sprintf("%s\n\n%s %s\n%s %s",
-		titleStyle.Render("Statistics"),
-		labelStyle.Render("Screenshot Sources:"),
-		valueStyle.Render(fmt.Sprintf("%d", m.screenshotCount)),
-		labelStyle.Render("Action History:"),
-		valueStyle.Render(fmt.Sprintf("%d records", m.historyCount)),
+	statsInfo := lipgloss.JoinVertical(lipgloss.Left,
+		styleTitle.Render("Statistics"),
+		"",
+		styleLabel.Render("Screenshot Sources")+styleValue.Render(fmt.Sprintf("%d", m.screenshotCount)),
+		styleLabel.Render("Action History")+styleValue.Render(fmt.Sprintf("%d records", m.historyCount)),
 	)
 
 	// Error display
 	errorInfo := ""
 	if m.lastError != nil {
-		errorInfo = fmt.Sprintf("\n\n%s %s",
-			errorStyle.Render("Error:"),
-			errorStyle.Render(m.lastError.Error()),
-		)
+		errorInfo = "\n\n" + styleError.Render("Error: "+m.lastError.Error())
 	}
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
-		boxStyle.Render(serverInfo),
+		box.Render(serverInfo),
 		"",
-		boxStyle.Render(obsInfo),
+		box.Render(obsInfo),
 		"",
-		boxStyle.Render(statsInfo),
+		box.Render(statsInfo),
 		errorInfo,
 	)
 
 	return content
 }
 
-// renderConfigView renders the config view
+// renderConfigView renders the config view with consistent formatting
 func (m Model) renderConfigView() string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("250"))
-	enabledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
-	disabledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		Padding(1, 2).
-		Width(m.width - 4)
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
 	boolStr := func(b bool) string {
 		if b {
-			return enabledStyle.Render("Enabled")
+			return styleSuccess.Render("Enabled")
 		}
-		return disabledStyle.Render("Disabled")
+		return styleError.Render("Disabled")
 	}
 
 	// OBS config
-	obsConfig := fmt.Sprintf("%s\n\n%s %s\n%s %s\n%s %s",
-		titleStyle.Render("OBS WebSocket"),
-		labelStyle.Render("Host:"),
-		m.cfg.OBSHost,
-		labelStyle.Render("Port:"),
-		m.cfg.OBSPort,
-		labelStyle.Render("Password:"),
-		func() string {
-			if m.cfg.OBSPassword != "" {
-				return "****"
-			}
-			return "(none)"
-		}(),
+	password := "(none)"
+	if m.cfg.OBSPassword != "" {
+		password = "****"
+	}
+	obsConfig := lipgloss.JoinVertical(lipgloss.Left,
+		styleTitle.Render("OBS WebSocket"),
+		"",
+		styleLabel.Render("Host")+styleValue.Render(m.cfg.OBSHost),
+		styleLabel.Render("Port")+styleValue.Render(m.cfg.OBSPort),
+		styleLabel.Render("Password")+styleValue.Render(password),
 	)
 
 	// HTTP config
-	httpConfig := fmt.Sprintf("%s\n\n%s %s\n%s %s\n%s %d",
-		titleStyle.Render("HTTP Server"),
-		labelStyle.Render("Status:"),
-		boolStr(m.cfg.WebServer.Enabled),
-		labelStyle.Render("Host:"),
-		m.cfg.WebServer.Host,
-		labelStyle.Render("Port:"),
-		m.cfg.WebServer.Port,
+	httpConfig := lipgloss.JoinVertical(lipgloss.Left,
+		styleTitle.Render("HTTP Server"),
+		"",
+		styleLabel.Render("Status")+boolStr(m.cfg.WebServer.Enabled),
+		styleLabel.Render("Host")+styleValue.Render(m.cfg.WebServer.Host),
+		styleLabel.Render("Port")+styleValue.Render(fmt.Sprintf("%d", m.cfg.WebServer.Port)),
 	)
 
 	// Tool groups
-	toolGroups := fmt.Sprintf("%s\n\n%s %s\n%s %s\n%s %s\n%s %s\n%s %s\n%s %s",
-		titleStyle.Render("Tool Groups"),
-		labelStyle.Render("Core:"),
-		boolStr(m.cfg.ToolGroups.Core),
-		labelStyle.Render("Visual:"),
-		boolStr(m.cfg.ToolGroups.Visual),
-		labelStyle.Render("Layout:"),
-		boolStr(m.cfg.ToolGroups.Layout),
-		labelStyle.Render("Audio:"),
-		boolStr(m.cfg.ToolGroups.Audio),
-		labelStyle.Render("Sources:"),
-		boolStr(m.cfg.ToolGroups.Sources),
-		labelStyle.Render("Design:"),
-		boolStr(m.cfg.ToolGroups.Design),
+	toolGroups := lipgloss.JoinVertical(lipgloss.Left,
+		styleTitle.Render("Tool Groups"),
+		"",
+		styleLabel.Render("Core")+boolStr(m.cfg.ToolGroups.Core),
+		styleLabel.Render("Visual")+boolStr(m.cfg.ToolGroups.Visual),
+		styleLabel.Render("Layout")+boolStr(m.cfg.ToolGroups.Layout),
+		styleLabel.Render("Audio")+boolStr(m.cfg.ToolGroups.Audio),
+		styleLabel.Render("Sources")+boolStr(m.cfg.ToolGroups.Sources),
+		styleLabel.Render("Design")+boolStr(m.cfg.ToolGroups.Design),
 	)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		boxStyle.Render(obsConfig),
+		box.Render(obsConfig),
 		"",
-		boxStyle.Render(httpConfig),
+		box.Render(httpConfig),
 		"",
-		boxStyle.Render(toolGroups),
+		box.Render(toolGroups),
 	)
 }
 
-// renderHistoryView renders the history view
+// renderHistoryView renders the history view with dynamic columns and zebra striping
 func (m Model) renderHistoryView() string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("250"))
-	successStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
-	failStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		Padding(1, 2).
-		Width(m.width - 4)
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
 	if len(m.actions) == 0 {
-		return boxStyle.Render(titleStyle.Render("Action History") + "\n\n" + dimStyle.Render("No actions recorded yet"))
+		return box.Render(styleTitle.Render("Action History") + "\n\n" + styleMuted.Render("No actions recorded yet"))
+	}
+
+	// Calculate column widths dynamically based on terminal width
+	availableWidth := m.width - tablePadding
+	colTool := availableWidth - colWidthTimestamp - colWidthStatus - colWidthDuration - columnSpacing
+	if colTool < colWidthToolMin {
+		colTool = colWidthToolMin
 	}
 
 	// Header
-	header := fmt.Sprintf("%-20s %-20s %-8s %-10s",
-		headerStyle.Render("Timestamp"),
-		headerStyle.Render("Tool"),
-		headerStyle.Render("Status"),
-		headerStyle.Render("Duration"),
+	header := fmt.Sprintf("%-*s  %-*s  %-*s  %*s",
+		colWidthTimestamp, styleTableHeader.Render("Timestamp"),
+		colTool, styleTableHeader.Render("Tool"),
+		colWidthStatus, styleTableHeader.Render("Status"),
+		colWidthDuration, styleTableHeader.Render("Duration"),
 	)
+
+	// Separator
+	separator := styleDim.Render(repeatChar("─", availableWidth))
 
 	// Rows
 	var rows []string
 	rows = append(rows, header)
-	rows = append(rows, dimStyle.Render("─────────────────────────────────────────────────────────────────"))
+	rows = append(rows, separator)
 
 	// Calculate visible range
-	maxVisible := m.height - 15
-	if maxVisible < 5 {
-		maxVisible = 5
+	maxVisible := m.height - uiChromeHeight
+	if maxVisible < minVisibleRows {
+		maxVisible = minVisibleRows
 	}
 	start := m.historyOffset
 	end := start + maxVisible
@@ -417,17 +422,29 @@ func (m Model) renderHistoryView() string {
 		end = len(m.actions)
 	}
 
-	for _, action := range m.actions[start:end] {
-		status := successStyle.Render("OK")
+	for i, action := range m.actions[start:end] {
+		status := styleSuccess.Render("OK")
 		if !action.Success {
-			status = failStyle.Render("FAIL")
+			status = styleError.Render("FAIL")
 		}
 
-		row := fmt.Sprintf("%-20s %-20s %-8s %10dms",
-			dimStyle.Render(action.CreatedAt.Format("2006-01-02 15:04:05")),
-			action.ToolName,
-			status,
-			action.DurationMs,
+		// Truncate tool name if too long
+		toolName := action.ToolName
+		if len(toolName) > colTool {
+			toolName = toolName[:colTool-ellipsisLen] + "..."
+		}
+
+		// Zebra striping
+		rowStyle := styleTableRow
+		if i%2 == 1 {
+			rowStyle = styleTableRowAlt
+		}
+
+		row := fmt.Sprintf("%-*s  %-*s  %-*s  %*dms",
+			colWidthTimestamp, styleDim.Render(action.CreatedAt.Format("2006-01-02 15:04:05")),
+			colTool, rowStyle.Render(toolName),
+			colWidthStatus, status,
+			colWidthDuration-2, action.DurationMs,
 		)
 		rows = append(rows, row)
 	}
@@ -436,33 +453,23 @@ func (m Model) renderHistoryView() string {
 	scrollInfo := ""
 	if len(m.actions) > maxVisible {
 		scrollInfo = fmt.Sprintf("\n\n%s",
-			dimStyle.Render(fmt.Sprintf("Showing %d-%d of %d (j/k to scroll)", start+1, end, len(m.actions))))
+			styleMuted.Render(fmt.Sprintf("Showing %d-%d of %d (↑/↓ or j/k to scroll)", start+1, end, len(m.actions))))
 	}
 
-	content := titleStyle.Render("Action History") + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, rows...) + scrollInfo
-	return boxStyle.Render(content)
+	content := styleTitle.Render("Action History") + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, rows...) + scrollInfo
+	return box.Render(content)
 }
 
-// renderHelp renders the help bar
+// renderHelp renders the help bar with enhanced formatting
 func (m Model) renderHelp() string {
-	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
-		Padding(0, 1)
-
-	keyStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("205"))
-
-	help := fmt.Sprintf("%s/%s/%s tabs • %s refresh • %s/%s scroll • %s quit",
-		keyStyle.Render("1"),
-		keyStyle.Render("2"),
-		keyStyle.Render("3"),
-		keyStyle.Render("r"),
-		keyStyle.Render("j"),
-		keyStyle.Render("k"),
-		keyStyle.Render("q"),
+	help := fmt.Sprintf("%s Tab • %s Refresh • %s Scroll • %s Quit",
+		styleHelpKey.Render("[1-3]"),
+		styleHelpKey.Render("[r]"),
+		styleHelpKey.Render("[↑/↓]"),
+		styleHelpKey.Render("[q]"),
 	)
 
-	return helpStyle.Render(help)
+	return styleHelpText.Copy().Padding(0, 1).Render(help)
 }
 
 // Command functions
