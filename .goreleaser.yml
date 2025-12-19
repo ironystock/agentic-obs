@@ -1,0 +1,130 @@
+# GoReleaser configuration for agentic-obs
+# https://goreleaser.com
+
+version: 2
+
+project_name: agentic-obs
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod verify
+
+builds:
+  - id: agentic-obs
+    main: .
+    binary: agentic-obs
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - skills/**/*
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "typo"
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: "✨ Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "📚 Documentation"
+      regexp: '^.*?docs?(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "🔧 Maintenance"
+      order: 999
+
+release:
+  github:
+    owner: ironystock
+    name: agentic-obs
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## agentic-obs {{ .Version }}
+
+    MCP server for AI-assisted OBS Studio control.
+
+    ### Installation
+
+    **Download the appropriate archive for your platform:**
+    - Windows: `agentic-obs_{{ .Version }}_Windows_x86_64.zip`
+    - macOS (Intel): `agentic-obs_{{ .Version }}_Darwin_x86_64.tar.gz`
+    - macOS (Apple Silicon): `agentic-obs_{{ .Version }}_Darwin_arm64.tar.gz`
+    - Linux: `agentic-obs_{{ .Version }}_Linux_x86_64.tar.gz`
+
+    **Configure in Claude Desktop:**
+    ```json
+    {
+      "mcpServers": {
+        "obs": {
+          "command": "/path/to/agentic-obs"
+        }
+      }
+    }
+    ```
+
+  footer: |
+    ---
+    **Full Changelog**: https://github.com/ironystock/agentic-obs/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# Optional: brew formula (uncomment when ready)
+# brews:
+#   - repository:
+#       owner: ironystock
+#       name: homebrew-tap
+#     homepage: https://github.com/ironystock/agentic-obs
+#     description: MCP server for AI-assisted OBS Studio control
+#     license: MIT
+#     test: |
+#       system "#{bin}/agentic-obs --help"

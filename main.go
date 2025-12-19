@@ -16,10 +16,10 @@ import (
 	"github.com/ironystock/agentic-obs/internal/tui"
 )
 
-const (
-	appName    = "agentic-obs"
-	appVersion = "0.1.0"
-)
+const appName = "agentic-obs"
+
+// appVersion uses build-time injected version from version.go
+var appVersion = VersionShort()
 
 func main() {
 	// Parse command-line flags
@@ -27,7 +27,14 @@ func main() {
 	flag.BoolVar(tuiMode, "t", false, "Run in TUI dashboard mode (shorthand)")
 	showHelp := flag.Bool("help", false, "Show usage information")
 	flag.BoolVar(showHelp, "h", false, "Show usage information (shorthand)")
+	showVersion := flag.Bool("version", false, "Show version information")
+	flag.BoolVar(showVersion, "v", false, "Show version information (shorthand)")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("%s %s\n", appName, Version())
+		os.Exit(0)
+	}
 
 	if *showHelp {
 		printUsage()
@@ -323,8 +330,9 @@ func printUsage() {
 An MCP server that provides AI assistants with programmatic control over OBS Studio.
 
 Options:
-  -t, --tui     Run in TUI dashboard mode instead of MCP server mode
-  -h, --help    Show this help message
+  -t, --tui       Run in TUI dashboard mode instead of MCP server mode
+  -v, --version   Show version information
+  -h, --help      Show this help message
 
 Environment Variables:
   OBS_HOST      OBS WebSocket host (default: localhost)
