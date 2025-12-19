@@ -364,7 +364,7 @@ func TestHandleUIAction(t *testing.T) {
 		wantResponse map[string]any
 	}{
 		{
-			name:   "acknowledges tool action",
+			name:   "returns error for tool action without executor",
 			method: http.MethodPost,
 			body: `{
 				"type": "tool",
@@ -373,7 +373,7 @@ func TestHandleUIAction(t *testing.T) {
 			}`,
 			wantStatus: http.StatusOK,
 			wantResponse: map[string]any{
-				"type":      "ui-message-received",
+				"type":      "ui-message-response",
 				"messageId": "msg-123",
 			},
 		},

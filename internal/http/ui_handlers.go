@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 )
 
@@ -123,6 +124,8 @@ func (h *UIHandlers) HandleUIScenes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("[UI Scenes] Serving scene preview with BaseURL: %s, %d scenes", h.baseURL, len(scenes))
+
 	data := map[string]any{
 		"Scenes":  scenes,
 		"BaseURL": h.baseURL,
@@ -227,6 +230,8 @@ func (h *UIHandlers) servePlaceholderThumbnail(w http.ResponseWriter, sceneName 
 // HandleUIAction handles UIAction requests from embedded UIs.
 // POST /ui/action - receives UIAction JSON, executes, returns UIResponse.
 func (h *UIHandlers) HandleUIAction(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[UI Action] Received request: %s %s", r.Method, r.URL.Path)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -244,20 +249,33 @@ func (h *UIHandlers) HandleUIAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle tool actions
-	if action.Type == "tool" && h.actionExecutor != nil {
+	if action.Type == "tool" {
+		if h.actionExecutor == nil {
+			log.Printf("[UI Action] ERROR: actionExecutor is nil, cannot execute tool")
+			h.sendActionResponse(w, action.MessageID, nil, fmt.Errorf("action executor not configured"))
+			return
+		}
+
 		var toolPayload struct {
 			ToolName string         `json:"toolName"`
 			Params   map[string]any `json:"params"`
 		}
-		if err := json.Unmarshal(action.Payload, &toolPayload); err == nil {
-			err := h.executeToolAction(toolPayload.ToolName, toolPayload.Params)
-			if err != nil {
-				h.sendActionResponse(w, action.MessageID, nil, err)
-				return
-			}
-			h.sendActionResponse(w, action.MessageID, map[string]string{"status": "success"}, nil)
+		if err := json.Unmarshal(action.Payload, &toolPayload); err != nil {
+			log.Printf("[UI Action] ERROR: failed to parse payload: %v", err)
+			h.sendActionResponse(w, action.MessageID, nil, fmt.Errorf("invalid payload: %w", err))
 			return
 		}
+
+		log.Printf("[UI Action] Executing tool: %s with params: %v", toolPayload.ToolName, toolPayload.Params)
+		err := h.executeToolAction(toolPayload.ToolName, toolPayload.Params)
+		if err != nil {
+			log.Printf("[UI Action] ERROR: tool execution failed: %v", err)
+			h.sendActionResponse(w, action.MessageID, nil, err)
+			return
+		}
+		log.Printf("[UI Action] SUCCESS: tool %s executed", toolPayload.ToolName)
+		h.sendActionResponse(w, action.MessageID, map[string]string{"status": "success"}, nil)
+		return
 	}
 
 	// Default: return acknowledgment
@@ -863,7 +881,10 @@ var scenePreviewTemplate = `<!DOCTYPE html>
                     payload: { toolName: 'set_current_scene', params: { scene_name: sceneName } }
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
             .then(data => {
                 if (data.payload && data.payload.error) {
                     alert('Error: ' + data.payload.error.message);
@@ -873,8 +894,11 @@ var scenePreviewTemplate = `<!DOCTYPE html>
                     location.reload();
                 }
             })
-            .catch(() => {
-                location.reload();
+            .catch(err => {
+                console.error('Scene switch failed:', err);
+                alert('Failed to switch scene: ' + err.message);
+                isLoading = false;
+                document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('loading'));
             });
         }
 
