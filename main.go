@@ -16,10 +16,10 @@ import (
 	"github.com/ironystock/agentic-obs/internal/tui"
 )
 
-const (
-	appName    = "agentic-obs"
-	appVersion = "0.1.0"
-)
+const appName = "agentic-obs"
+
+// appVersion uses the build-time injected version from version.go
+var appVersion = version
 
 func main() {
 	// Parse command-line flags
@@ -37,7 +37,10 @@ func main() {
 	// Set up logging with timestamps and source location
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	log.Printf("========================================")
-	log.Printf("Starting %s v%s", appName, appVersion)
+	log.Printf("Starting %s v%s", appName, Version())
+	if commit != "none" {
+		log.Printf("Build: %s (%s)", commit, date)
+	}
 	log.Printf("========================================")
 
 	// Create context for initialization
@@ -170,26 +173,8 @@ func loadConfig(ctx context.Context) (*config.Config, error) {
 	cfg.ServerName = appName
 	cfg.ServerVersion = appVersion
 
-	// Check for environment variable overrides
-	if obsHost := os.Getenv("OBS_HOST"); obsHost != "" {
-		log.Printf("Using OBS_HOST from environment: %s", obsHost)
-		cfg.OBSHost = obsHost
-	}
-
-	if obsPort := os.Getenv("OBS_PORT"); obsPort != "" {
-		log.Printf("Using OBS_PORT from environment: %s", obsPort)
-		cfg.OBSPort = obsPort
-	}
-
-	if obsPassword := os.Getenv("OBS_PASSWORD"); obsPassword != "" {
-		log.Println("Using OBS_PASSWORD from environment")
-		cfg.OBSPassword = obsPassword
-	}
-
-	if dbPath := os.Getenv("DB_PATH"); dbPath != "" {
-		log.Printf("Using DB_PATH from environment: %s", dbPath)
-		cfg.DBPath = dbPath
-	}
+	// Apply environment variable overrides (takes precedence over stored config)
+	cfg.ApplyEnvOverrides()
 
 	// Run first-run setup prompts if this is first run
 	if isFirstRun {
@@ -327,10 +312,12 @@ Options:
   -h, --help    Show this help message
 
 Environment Variables:
-  OBS_HOST      OBS WebSocket host (default: localhost)
-  OBS_PORT      OBS WebSocket port (default: 4455)
-  OBS_PASSWORD  OBS WebSocket password (default: empty)
-  DB_PATH       Database file path (default: ~/.agentic-obs/db.sqlite)
+  OBS_HOST                   OBS WebSocket host (default: localhost)
+  OBS_PORT                   OBS WebSocket port (default: 4455)
+  OBS_PASSWORD               OBS WebSocket password (default: empty)
+  AGENTIC_OBS_DB             Database file path (default: ~/.agentic-obs/db.sqlite)
+  AGENTIC_OBS_HTTP_PORT      HTTP server port (default: 8765)
+  AGENTIC_OBS_HTTP_ENABLED   Enable/disable HTTP server (default: true)
 
 Examples:
   # Run MCP server (default mode)

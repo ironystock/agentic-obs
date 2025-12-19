@@ -262,6 +262,6 @@ For issues with skills or agentic-obs:
 
 ---
 
-**Last Updated**: 2025-12-18
-**agentic-obs Version**: 1.0.0
+**Last Updated**: 2025-12-19
+**agentic-obs Version**: 0.8.0
 **Skills Version**: 1.0.0

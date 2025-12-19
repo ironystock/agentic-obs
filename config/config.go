@@ -60,7 +60,7 @@ func DefaultConfig() *Config {
 
 	return &Config{
 		ServerName:    "agentic-obs",
-		ServerVersion: "0.1.0",
+		ServerVersion: "dev", // Overridden by main.go with build-time version
 		OBSHost:       "localhost",
 		OBSPort:       "4455",
 		OBSPassword:   "",
@@ -376,4 +376,79 @@ func (c *Config) String() string {
 		password,
 		c.DBPath,
 	)
+}
+
+// Environment variable names for configuration overrides
+const (
+	EnvOBSHost     = "OBS_HOST"
+	EnvOBSPort     = "OBS_PORT"
+	EnvOBSPassword = "OBS_PASSWORD"
+	EnvDBPath      = "AGENTIC_OBS_DB"
+	EnvDBPathAlt   = "DB_PATH" // Legacy alias for backwards compatibility
+	EnvHTTPPort    = "AGENTIC_OBS_HTTP_PORT"
+	EnvHTTPEnabled = "AGENTIC_OBS_HTTP_ENABLED"
+)
+
+// ApplyEnvOverrides applies environment variable overrides to the configuration.
+// Environment variables take precedence over database-stored values.
+// Returns true if any overrides were applied.
+func (c *Config) ApplyEnvOverrides() bool {
+	applied := false
+
+	if val := os.Getenv(EnvOBSHost); val != "" {
+		c.OBSHost = val
+		applied = true
+		log.Printf("Config override: %s=%s", EnvOBSHost, val)
+	}
+
+	if val := os.Getenv(EnvOBSPort); val != "" {
+		c.OBSPort = val
+		applied = true
+		log.Printf("Config override: %s=%s", EnvOBSPort, val)
+	}
+
+	if val := os.Getenv(EnvOBSPassword); val != "" {
+		c.OBSPassword = val
+		applied = true
+		log.Printf("Config override: %s=<redacted>", EnvOBSPassword)
+	}
+
+	// Check both new and legacy DB path env vars (new takes precedence)
+	if val := os.Getenv(EnvDBPath); val != "" {
+		c.DBPath = val
+		applied = true
+		log.Printf("Config override: %s=%s", EnvDBPath, val)
+	} else if val := os.Getenv(EnvDBPathAlt); val != "" {
+		c.DBPath = val
+		applied = true
+		log.Printf("Config override: %s=%s (legacy, prefer %s)", EnvDBPathAlt, val, EnvDBPath)
+	}
+
+	if val := os.Getenv(EnvHTTPPort); val != "" {
+		var port int
+		if _, err := fmt.Sscanf(val, "%d", &port); err == nil && port > 0 && port < 65536 {
+			c.WebServer.Port = port
+			applied = true
+			log.Printf("Config override: %s=%d", EnvHTTPPort, port)
+		} else {
+			log.Printf("Warning: invalid %s value '%s', ignoring", EnvHTTPPort, val)
+		}
+	}
+
+	if val := os.Getenv(EnvHTTPEnabled); val != "" {
+		switch strings.ToLower(val) {
+		case "true", "1", "yes", "on":
+			c.WebServer.Enabled = true
+			applied = true
+			log.Printf("Config override: %s=true", EnvHTTPEnabled)
+		case "false", "0", "no", "off":
+			c.WebServer.Enabled = false
+			applied = true
+			log.Printf("Config override: %s=false", EnvHTTPEnabled)
+		default:
+			log.Printf("Warning: invalid %s value '%s', expected true/false", EnvHTTPEnabled, val)
+		}
+	}
+
+	return applied
 }
