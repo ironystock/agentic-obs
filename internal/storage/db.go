@@ -149,6 +149,24 @@ func (db *DB) migrate(ctx context.Context) error {
 
 		// Migration 10: Create index for fast latest screenshot lookup
 		`CREATE INDEX IF NOT EXISTS idx_screenshots_source_captured ON screenshots(source_id, captured_at DESC)`,
+
+		// Migration 11: Create action_history table for tracking MCP tool calls
+		`CREATE TABLE IF NOT EXISTS action_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			action TEXT NOT NULL,
+			tool_name TEXT,
+			input TEXT,
+			output TEXT,
+			success INTEGER DEFAULT 1,
+			duration_ms INTEGER,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+
+		// Migration 12: Create index for action_history lookups
+		`CREATE INDEX IF NOT EXISTS idx_action_history_created ON action_history(created_at DESC)`,
+
+		// Migration 13: Create index for filtering by tool name
+		`CREATE INDEX IF NOT EXISTS idx_action_history_tool ON action_history(tool_name)`,
 	}
 
 	// Execute each migration in a transaction

@@ -5,8 +5,8 @@
 This document outlines the architecture, decisions, and implementation roadmap for the **agentic-obs** MCP server - a Go-based bridge between AI assistants and OBS Studio.
 
 **Created:** 2025-12-14
-**Updated:** 2025-12-15
-**Status:** ✅ Phase 5A Complete - 30 Tools, 4 Resources, 10 Prompts (Setup & Config)
+**Updated:** 2025-12-18
+**Status:** ✅ Phase 6.1 Complete - 30 Tools, 4 Resources, 10 Prompts, Web Dashboard
 
 ---
 
@@ -504,30 +504,54 @@ CREATE TABLE state (
 
 ---
 
-### Phase 5B-D: Future Enhancements (Planned)
+### Phase 6.1: Web Frontend ✅ COMPLETE
 
-**Phase 5B - Web Frontend:**
-- [ ] Dashboard for monitoring and configuration
-- [ ] API endpoints for status, history, screenshots
-- [ ] Configuration management via web interface
+**Deliverables:**
+- [x] Web dashboard at `http://localhost:8765/`
+- [x] API endpoints: `/api/status`, `/api/history`, `/api/history/stats`, `/api/screenshots`, `/api/config`
+- [x] Real-time status display with auto-refresh
+- [x] Screenshot sources gallery with live preview
+- [x] Action history viewer with filtering
+- [x] Configuration management via web interface
+- [x] Dark-themed responsive UI (vanilla JS, no build step)
+- [x] Action history database table with statistics
 
-**Phase 5C - TUI App:**
+**New Files:**
+- `internal/http/handlers.go` - API handlers
+- `internal/http/static/index.html` - Dashboard UI
+- `internal/storage/history.go` - Action history storage
+
+**API Endpoints:**
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | GET | Web dashboard |
+| `/api/status` | GET | Server status JSON |
+| `/api/history` | GET | Action history (supports `?limit=N`, `?tool=name`) |
+| `/api/history/stats` | GET | Action statistics |
+| `/api/screenshots` | GET | Screenshot sources with URLs |
+| `/api/config` | GET/POST | Read/update configuration |
+
+---
+
+### Phase 6.2-6.4: Future Enhancements (Planned)
+
+**Phase 6.2 - TUI App:**
 - [ ] Terminal interface using Bubbletea
 - [ ] Mirror web frontend functionality
 
-**Phase 5D - Scene Design:**
+**Phase 6.3 - Scene Design:**
 - [ ] Source creation tools (text, image, color, browser, media)
 - [ ] Layout control tools (transform, bounds, crop, order)
 - [ ] Advanced tools (duplicate, lock, list input kinds)
 
-**Phase 6 - Advanced:**
+**Phase 6.4 - Advanced:**
 - [ ] Automation rules and macros (event-triggered actions)
 - [ ] Multi-instance OBS support
 - [ ] Additional resource types (sources, filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in)
+- [ ] Action logging hooks in MCP tool handlers
 
 **Success Criteria:**
-- Web dashboard provides full server visibility
 - TUI offers command-line management
 - AI can programmatically design OBS scenes
 
@@ -696,11 +720,12 @@ CREATE TABLE state (
 
 ---
 
-**Document Version:** 1.5
-**Last Updated:** 2025-12-15
-**Next Review:** Before Phase 5B planning
+**Document Version:** 1.6
+**Last Updated:** 2025-12-18
+**Next Review:** Before Phase 6.2 planning
 
 **Changelog:**
+- v1.6 (2025-12-18): Phase 6.1 complete - Web dashboard, API endpoints, action history, config management
 - v1.5 (2025-12-15): Phase 5A complete - Tool group preferences, optional webserver, screenshot-url resource, first-run setup
 - v1.4 (2025-12-15): Phase 4 complete - MCP resources (screenshots, presets), 10 MCP prompts, comprehensive tests
 - v1.3 (2025-12-15): Phase 3 complete - agentic screenshot sources, HTTP server, background capture manager
