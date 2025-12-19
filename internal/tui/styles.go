@@ -85,3 +85,28 @@ const (
 	TabIconConfig  = "⚙️"
 	TabIconHistory = "📜"
 )
+
+// Layout constants
+const (
+	// Box and container offsets
+	boxWidthOffset    = 4  // Offset for box width from terminal width
+	headerWidthOffset = 2  // Offset for header box width
+	headerSpacing     = 6  // Spacing offset in header
+	tablePadding      = 12 // Padding/border offset for table width
+	columnSpacing     = 6  // Spacing between table columns
+
+	// Table column widths
+	colWidthTimestamp = 19 // "2006-01-02 15:04:05"
+	colWidthStatus    = 6  // "OK" or "FAIL"
+	colWidthDuration  = 10 // "12345ms"
+	colWidthToolMin   = 15 // Minimum tool column width
+	ellipsisLen       = 3  // Length of "..."
+
+	// View dimensions
+	uiChromeHeight = 18 // Height used by header, tabs, help bar
+	minVisibleRows = 5  // Minimum rows to show in history
+	scrollMargin   = 10 // Margin for scroll detection
+
+	// Data limits
+	historyFetchLimit = 50 // Number of history records to fetch
+)

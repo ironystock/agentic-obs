@@ -114,7 +114,7 @@ func (m Model) Init() tea.Cmd {
 		m.spinner.Tick,
 		tickCmd(),
 		fetchStatusCmd(m.db),
-		fetchHistoryCmd(m.db, 50),
+		fetchHistoryCmd(m.db, historyFetchLimit),
 	)
 }
 
@@ -131,22 +131,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.currentView = ViewConfig
 		case "3":
 			m.currentView = ViewHistory
-			return m, fetchHistoryCmd(m.db, 50)
+			return m, fetchHistoryCmd(m.db, historyFetchLimit)
 		case "tab", "right":
 			m.currentView = (m.currentView + 1) % 3
 			if m.currentView == ViewHistory {
-				return m, fetchHistoryCmd(m.db, 50)
+				return m, fetchHistoryCmd(m.db, historyFetchLimit)
 			}
 		case "shift+tab", "left":
 			m.currentView = (m.currentView + 2) % 3
 			if m.currentView == ViewHistory {
-				return m, fetchHistoryCmd(m.db, 50)
+				return m, fetchHistoryCmd(m.db, historyFetchLimit)
 			}
 		case "r":
 			// Refresh current view
-			return m, tea.Batch(fetchStatusCmd(m.db), fetchHistoryCmd(m.db, 50))
+			return m, tea.Batch(fetchStatusCmd(m.db), fetchHistoryCmd(m.db, historyFetchLimit))
 		case "j", "down":
-			if m.currentView == ViewHistory && m.historyOffset < len(m.actions)-10 {
+			if m.currentView == ViewHistory && m.historyOffset < len(m.actions)-scrollMargin {
 				m.historyOffset++
 			}
 		case "k", "up":
@@ -224,14 +224,14 @@ func (m Model) renderHeader() string {
 	// Calculate spacing
 	leftPart := appInfo
 	rightPart := status + "  " + timeStr
-	spacing := m.width - lipgloss.Width(leftPart) - lipgloss.Width(rightPart) - 6
+	spacing := m.width - lipgloss.Width(leftPart) - lipgloss.Width(rightPart) - headerSpacing
 	if spacing < 1 {
 		spacing = 1
 	}
 
 	headerContent := leftPart + fmt.Sprintf("%*s", spacing, "") + rightPart
 
-	return styleHeaderBox.Copy().Width(m.width - 2).Render(headerContent)
+	return styleHeaderBox.Copy().Width(m.width - headerWidthOffset).Render(headerContent)
 }
 
 // renderTabs renders the tab bar with emoji icons
@@ -278,7 +278,7 @@ func repeatChar(char string, n int) string {
 
 // renderStatusView renders the status view with aligned key-value pairs
 func (m Model) renderStatusView() string {
-	box := styleBox.Copy().Width(m.width - 4)
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
 	// Server info with aligned labels
 	uptime := time.Since(m.startTime).Round(time.Second)
@@ -328,7 +328,7 @@ func (m Model) renderStatusView() string {
 
 // renderConfigView renders the config view with consistent formatting
 func (m Model) renderConfigView() string {
-	box := styleBox.Copy().Width(m.width - 4)
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
 	boolStr := func(b bool) string {
 		if b {
@@ -382,28 +382,25 @@ func (m Model) renderConfigView() string {
 
 // renderHistoryView renders the history view with dynamic columns and zebra striping
 func (m Model) renderHistoryView() string {
-	box := styleBox.Copy().Width(m.width - 4)
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
 	if len(m.actions) == 0 {
 		return box.Render(styleTitle.Render("Action History") + "\n\n" + styleMuted.Render("No actions recorded yet"))
 	}
 
 	// Calculate column widths dynamically based on terminal width
-	availableWidth := m.width - 12 // Account for padding and borders
-	colTimestamp := 19             // Fixed: "2006-01-02 15:04:05"
-	colStatus := 6                 // Fixed: "OK" or "FAIL"
-	colDuration := 10              // Fixed: "12345ms"
-	colTool := availableWidth - colTimestamp - colStatus - colDuration - 6
-	if colTool < 15 {
-		colTool = 15
+	availableWidth := m.width - tablePadding
+	colTool := availableWidth - colWidthTimestamp - colWidthStatus - colWidthDuration - columnSpacing
+	if colTool < colWidthToolMin {
+		colTool = colWidthToolMin
 	}
 
 	// Header
 	header := fmt.Sprintf("%-*s  %-*s  %-*s  %*s",
-		colTimestamp, styleTableHeader.Render("Timestamp"),
+		colWidthTimestamp, styleTableHeader.Render("Timestamp"),
 		colTool, styleTableHeader.Render("Tool"),
-		colStatus, styleTableHeader.Render("Status"),
-		colDuration, styleTableHeader.Render("Duration"),
+		colWidthStatus, styleTableHeader.Render("Status"),
+		colWidthDuration, styleTableHeader.Render("Duration"),
 	)
 
 	// Separator
@@ -415,9 +412,9 @@ func (m Model) renderHistoryView() string {
 	rows = append(rows, separator)
 
 	// Calculate visible range
-	maxVisible := m.height - 18 // Account for header, tabs, help bar
-	if maxVisible < 5 {
-		maxVisible = 5
+	maxVisible := m.height - uiChromeHeight
+	if maxVisible < minVisibleRows {
+		maxVisible = minVisibleRows
 	}
 	start := m.historyOffset
 	end := start + maxVisible
@@ -434,7 +431,7 @@ func (m Model) renderHistoryView() string {
 		// Truncate tool name if too long
 		toolName := action.ToolName
 		if len(toolName) > colTool {
-			toolName = toolName[:colTool-3] + "..."
+			toolName = toolName[:colTool-ellipsisLen] + "..."
 		}
 
 		// Zebra striping
@@ -444,10 +441,10 @@ func (m Model) renderHistoryView() string {
 		}
 
 		row := fmt.Sprintf("%-*s  %-*s  %-*s  %*dms",
-			colTimestamp, styleDim.Render(action.CreatedAt.Format("2006-01-02 15:04:05")),
+			colWidthTimestamp, styleDim.Render(action.CreatedAt.Format("2006-01-02 15:04:05")),
 			colTool, rowStyle.Render(toolName),
-			colStatus, status,
-			colDuration-2, action.DurationMs,
+			colWidthStatus, status,
+			colWidthDuration-2, action.DurationMs,
 		)
 		rows = append(rows, row)
 	}
