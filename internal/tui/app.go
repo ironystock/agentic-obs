@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -267,16 +268,12 @@ func (m Model) renderTabs() string {
 	)
 }
 
-// repeatChar repeats a character n times
+// repeatChar repeats a character n times using strings.Repeat (O(n) complexity)
 func repeatChar(char string, n int) string {
 	if n <= 0 {
 		return ""
 	}
-	result := ""
-	for i := 0; i < n; i++ {
-		result += char
-	}
-	return result
+	return strings.Repeat(char, n)
 }
 
 // renderStatusView renders the status view with aligned key-value pairs
