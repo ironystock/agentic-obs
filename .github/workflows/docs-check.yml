@@ -4,13 +4,17 @@ on:
   pull_request:
     paths:
       - '**/*.md'
+      - 'skills/**'
       - 'scripts/verify-docs.sh'
+      - 'scripts/verify-skills.sh'
   push:
     branches:
       - main
     paths:
       - '**/*.md'
+      - 'skills/**'
       - 'scripts/verify-docs.sh'
+      - 'scripts/verify-skills.sh'
 
 jobs:
   docs-check:
@@ -21,11 +25,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Make verification script executable
-        run: chmod +x scripts/verify-docs.sh
+      - name: Make verification scripts executable
+        run: chmod +x scripts/verify-docs.sh scripts/verify-skills.sh
 
       - name: Run documentation consistency checks
         run: ./scripts/verify-docs.sh
+
+      - name: Run skills validation
+        run: ./scripts/verify-skills.sh
 
       - name: Check for broken internal links
         run: |
