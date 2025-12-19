@@ -1109,12 +1109,24 @@ var audioMixerTemplate = `<!DOCTYPE html>
         }
 
         .db-markers {
-            display: flex;
-            justify-content: space-between;
+            position: relative;
+            height: 1.2em;
             margin-top: 4px;
             font-size: 0.65rem;
             color: var(--text-secondary);
         }
+
+        .db-markers span {
+            position: absolute;
+            transform: translateX(-50%);
+        }
+
+        /* Logarithmic scale positions: 10^(dB/30) * 100 */
+        .db-markers span:nth-child(1) { left: 0%; transform: translateX(0); }      /* -∞ at 0% */
+        .db-markers span:nth-child(2) { left: 25.1%; }   /* -18dB at 25.1% */
+        .db-markers span:nth-child(3) { left: 50.1%; }   /* -9dB at 50.1% */
+        .db-markers span:nth-child(4) { left: 79.4%; }   /* -3dB at 79.4% */
+        .db-markers span:nth-child(5) { left: 100%; transform: translateX(-100%); } /* 0dB at 100% */
 
         .keyboard-hint {
             text-align: center;
@@ -1206,12 +1218,13 @@ var audioMixerTemplate = `<!DOCTYPE html>
                        min="0" max="100"
                        value="{{printf "%.0f" .VolumePercent}}"
                        data-input="{{.Name}}"
-                       oninput="updateSlider(this)"
-                       onchange="setVolume('{{.Name}}', this.value)">
+                       oninput="updateSlider(this, false)"
+                       onchange="updateSlider(this, true); setVolume('{{.Name}}', this.value)">
                 <div class="db-markers">
                     <span>-∞</span>
-                    <span>-20</span>
-                    <span>-10</span>
+                    <span>-18</span>
+                    <span>-9</span>
+                    <span>-3</span>
                     <span>0 dB</span>
                 </div>
             </div>
@@ -1240,14 +1253,46 @@ var audioMixerTemplate = `<!DOCTYPE html>
         let focusedIndex = 0;
         const channels = document.querySelectorAll('.audio-channel');
 
-        function updateSlider(slider) {
+        // Snap dB value to 0.5 increments
+        function snapToHalfDb(db) {
+            return Math.round(db * 2) / 2;
+        }
+
+        // Logarithmic audio fader curve
+        // Attempt to match perceptual loudness: slider position ≈ perceived volume
+        // Uses: slider = 10^(dB/30) * 100, giving roughly:
+        //   0dB=100%, -3dB≈79%, -10dB≈46%, -20dB≈22%, -30dB=10%, -60dB≈1%
+        function sliderToDb(value) {
+            if (value <= 0) return -100; // Mute
+            if (value >= 100) return 0;
+            // dB = 30 * log10(value/100)
+            const db = 30 * Math.log10(value / 100);
+            return snapToHalfDb(db);
+        }
+
+        // Convert dB to slider value (0-100) using logarithmic curve
+        function dbToSlider(db) {
+            if (db <= -60) return 0;
+            if (db >= 0) return 100;
+            // slider = 10^(dB/30) * 100
+            return Math.pow(10, db / 30) * 100;
+        }
+
+        function updateSlider(slider, snap = false) {
             const channel = slider.closest('.audio-channel');
             const fill = channel.querySelector('.slider-fill');
             const display = channel.querySelector('.volume-display');
-            const value = slider.value;
+            let value = parseFloat(slider.value);
+
+            // Snap to 0.5dB increments
+            if (snap && value > 0) {
+                const db = sliderToDb(value);
+                value = dbToSlider(db);
+                slider.value = value;
+            }
+
             fill.style.width = value + '%';
-            // Map 0-100 to -inf to 0 dB (using -60 as practical minimum)
-            const db = value === '0' ? '-∞' : ((value / 100) * 26 - 26).toFixed(1);
+            const db = value === 0 ? '-∞' : sliderToDb(value).toFixed(1);
             display.textContent = db + ' dB';
         }
 
@@ -1275,7 +1320,7 @@ var audioMixerTemplate = `<!DOCTYPE html>
         }
 
         function setVolume(inputName, value) {
-            const db = value == 0 ? -100 : (value / 100) * 26 - 26; // Map 0-100 to -100 (mute) to 0 dB
+            const db = sliderToDb(value);
             fetch('{{.BaseURL}}/ui/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1330,16 +1375,22 @@ var audioMixerTemplate = `<!DOCTYPE html>
                 case 'ArrowLeft':
                     e.preventDefault();
                     if (slider) {
-                        slider.value = Math.max(0, parseInt(slider.value) - 5);
-                        updateSlider(slider);
+                        // Decrease by 0.5dB
+                        const currentDb = sliderToDb(slider.value);
+                        const newDb = Math.max(-60, currentDb - 0.5);
+                        slider.value = dbToSlider(newDb);
+                        updateSlider(slider, true);
                         setVolume(inputName, slider.value);
                     }
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
                     if (slider) {
-                        slider.value = Math.min(100, parseInt(slider.value) + 5);
-                        updateSlider(slider);
+                        // Increase by 0.5dB
+                        const currentDb = sliderToDb(slider.value);
+                        const newDb = Math.min(0, currentDb + 0.5);
+                        slider.value = dbToSlider(newDb);
+                        updateSlider(slider, true);
                         setVolume(inputName, slider.value);
                     }
                     break;
@@ -1351,8 +1402,8 @@ var audioMixerTemplate = `<!DOCTYPE html>
                 case '0':
                     e.preventDefault();
                     if (slider) {
-                        slider.value = 77; // ~0 dB
-                        updateSlider(slider);
+                        slider.value = 100; // 0 dB (unity gain)
+                        updateSlider(slider, true);
                         setVolume(inputName, slider.value);
                     }
                     break;

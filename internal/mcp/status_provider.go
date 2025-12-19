@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"math"
 	"strings"
 
 	agenthttp "github.com/ironystock/agentic-obs/internal/http"
@@ -105,10 +107,24 @@ func (s *Server) GetAudioInputs() ([]agenthttp.AudioInputInfo, error) {
 
 		muted, _ := s.obsClient.GetInputMute(input.InputName)
 
+		// Convert dB to slider percentage (0-100) using logarithmic curve
+		// Formula: sliderPercent = 10^(dB/30) * 100
+		// This gives: 0dB=100%, -10dB≈46%, -20dB≈22%, -30dB=10%, -60dB≈1%
+		volumePercent := 0.0
+		if volumeMul > 0 && volumeDB > -60 {
+			volumePercent = math.Pow(10, volumeDB/30) * 100
+			if volumePercent > 100 {
+				volumePercent = 100 // Clamp for any gain above 0dB
+			}
+		}
+
+		log.Printf("[Audio] Input %q: volumeMul=%.4f, volumeDB=%.2f, volumePercent=%.1f, muted=%v",
+			input.InputName, volumeMul, volumeDB, volumePercent, muted)
+
 		result = append(result, agenthttp.AudioInputInfo{
 			Name:          input.InputName,
 			Volume:        volumeMul,
-			VolumePercent: volumeMul * 100,
+			VolumePercent: volumePercent,
 			VolumeDB:      volumeDB,
 			IsMuted:       muted,
 			InputKind:     input.InputKind,

@@ -437,6 +437,7 @@ func (c *Client) SetInputVolume(inputName string, volumeDb *float64, volumeMul *
 }
 
 // GetInputVolume retrieves the volume level of an audio input.
+// Returns (volumeMultiplier, volumeDb, error).
 func (c *Client) GetInputVolume(inputName string) (float64, float64, error) {
 	client, err := c.getClient()
 	if err != nil {
@@ -451,7 +452,7 @@ func (c *Client) GetInputVolume(inputName string) (float64, float64, error) {
 		return 0, 0, fmt.Errorf("failed to get volume for input '%s': %w. Input may not exist", inputName, err)
 	}
 
-	return resp.InputVolumeDb, resp.InputVolumeMul, nil
+	return resp.InputVolumeMul, resp.InputVolumeDb, nil
 }
 
 // GetOBSStatus retrieves overall OBS status information.
