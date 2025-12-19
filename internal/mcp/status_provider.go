@@ -109,8 +109,11 @@ func (s *Server) GetAudioInputs() ([]agenthttp.AudioInputInfo, error) {
 		muted, _ := s.obsClient.GetInputMute(input.InputName)
 
 		// Convert dB to slider percentage (0-100) using logarithmic curve
+		// The constant 30 creates a perceptual loudness curve matching pro audio consoles:
+		// - Based on Stevens' power law for human loudness perception
+		// - 10dB change ≈ "twice as loud" perception, so 50% slider ≈ -10dB
 		// Formula: sliderPercent = 10^(dB/30) * 100
-		// This gives: 0dB=100%, -10dB≈46%, -20dB≈22%, -30dB=10%, -60dB≈1%
+		// Gives: 0dB=100%, -10dB≈46%, -20dB≈22%, -30dB=10%, -60dB≈1%
 		volumePercent := 0.0
 		if volumeMul > 0 && volumeDB > -60 {
 			volumePercent = math.Pow(10, volumeDB/30) * 100

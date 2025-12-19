@@ -29,6 +29,8 @@ type Config struct {
 	Host string
 	// Port to listen on (default: 8765)
 	Port int
+	// ThumbnailCacheSec is the Cache-Control max-age for thumbnails (0 to disable)
+	ThumbnailCacheSec int
 }
 
 // isValidSourceName validates that a source name is safe to use.
@@ -66,8 +68,9 @@ func isValidSourceName(name string) bool {
 // DefaultConfig returns the default HTTP server configuration.
 func DefaultConfig() Config {
 	return Config{
-		Host: "localhost",
-		Port: 8765,
+		Host:              "localhost",
+		Port:              8765,
+		ThumbnailCacheSec: 5, // 5 seconds default, 0 for development
 	}
 }
 
@@ -141,7 +144,7 @@ func (s *Server) setupRoutes() *http.ServeMux {
 	// MCP-UI endpoints (only if status provider is configured)
 	if s.statusProvider != nil {
 		baseURL := fmt.Sprintf("http://%s", s.addr)
-		s.uiHandlers = NewUIHandlers(s.statusProvider, baseURL)
+		s.uiHandlers = NewUIHandlers(s.statusProvider, baseURL, s.cfg.ThumbnailCacheSec)
 
 		// Set action executor if provider implements it
 		if executor, ok := s.statusProvider.(ActionExecutor); ok {

@@ -111,16 +111,19 @@ type ScreenshotSourceInfo struct {
 //   - GET /ui/scene-thumbnail/{name} - Scene thumbnail image
 //   - POST /ui/action - Execute UI-triggered actions (scene switch, mute, volume)
 type UIHandlers struct {
-	statusProvider StatusProvider
-	actionExecutor ActionExecutor
-	baseURL        string // Base URL for constructing absolute URLs in templates
+	statusProvider    StatusProvider
+	actionExecutor    ActionExecutor
+	baseURL           string // Base URL for constructing absolute URLs in templates
+	thumbnailCacheSec int    // Cache duration for thumbnails (0 to disable caching)
 }
 
 // NewUIHandlers creates a new UIHandlers instance.
-func NewUIHandlers(provider StatusProvider, baseURL string) *UIHandlers {
+// thumbnailCacheSec controls Cache-Control max-age for thumbnails (0 to disable).
+func NewUIHandlers(provider StatusProvider, baseURL string, thumbnailCacheSec int) *UIHandlers {
 	return &UIHandlers{
-		statusProvider: provider,
-		baseURL:        baseURL,
+		statusProvider:    provider,
+		baseURL:           baseURL,
+		thumbnailCacheSec: thumbnailCacheSec,
 	}
 }
 
@@ -255,7 +258,11 @@ func (h *UIHandlers) HandleSceneThumbnail(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", mimeType)
-	w.Header().Set("Cache-Control", "max-age=5") // Cache for 5 seconds
+	if h.thumbnailCacheSec > 0 {
+		w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", h.thumbnailCacheSec))
+	} else {
+		w.Header().Set("Cache-Control", "no-store") // Disable caching for development
+	}
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(imageData)))
 	w.Write(imageData)
 }

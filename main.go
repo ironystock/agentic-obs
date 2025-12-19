@@ -72,15 +72,16 @@ func main() {
 	// Step 3: Create MCP server (includes storage and OBS client initialization)
 	log.Println("[3/5] Initializing MCP server...")
 	serverConfig := mcp.ServerConfig{
-		ServerName:    cfg.ServerName,
-		ServerVersion: cfg.ServerVersion,
-		OBSHost:       cfg.OBSHost,
-		OBSPort:       cfg.OBSPort,
-		OBSPassword:   cfg.OBSPassword,
-		DBPath:        cfg.DBPath,
-		HTTPEnabled:   cfg.WebServer.Enabled,
-		HTTPHost:      cfg.WebServer.Host,
-		HTTPPort:      cfg.WebServer.Port,
+		ServerName:        cfg.ServerName,
+		ServerVersion:     cfg.ServerVersion,
+		OBSHost:           cfg.OBSHost,
+		OBSPort:           cfg.OBSPort,
+		OBSPassword:       cfg.OBSPassword,
+		DBPath:            cfg.DBPath,
+		HTTPEnabled:       cfg.WebServer.Enabled,
+		HTTPHost:          cfg.WebServer.Host,
+		HTTPPort:          cfg.WebServer.Port,
+		ThumbnailCacheSec: cfg.WebServer.ThumbnailCacheSec,
 		ToolGroups: mcp.ToolGroupConfig{
 			Core:    cfg.ToolGroups.Core,
 			Visual:  cfg.ToolGroups.Visual,

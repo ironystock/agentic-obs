@@ -139,7 +139,7 @@ func TestHandleUIStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(tt.provider, "http://localhost:8765")
+			handlers := NewUIHandlers(tt.provider, "http://localhost:8765", 5)
 
 			req := httptest.NewRequest(tt.method, "/ui/status", nil)
 			rec := httptest.NewRecorder()
@@ -208,7 +208,7 @@ func TestHandleUIScenes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(tt.provider, "http://localhost:8765")
+			handlers := NewUIHandlers(tt.provider, "http://localhost:8765", 5)
 
 			req := httptest.NewRequest(tt.method, "/ui/scenes", nil)
 			rec := httptest.NewRecorder()
@@ -273,7 +273,7 @@ func TestHandleUIAudio(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(tt.provider, "http://localhost:8765")
+			handlers := NewUIHandlers(tt.provider, "http://localhost:8765", 5)
 
 			req := httptest.NewRequest(tt.method, "/ui/audio", nil)
 			rec := httptest.NewRecorder()
@@ -338,7 +338,7 @@ func TestHandleUIScreenshots(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(tt.provider, "http://localhost:8765")
+			handlers := NewUIHandlers(tt.provider, "http://localhost:8765", 5)
 
 			req := httptest.NewRequest(tt.method, "/ui/screenshots", nil)
 			rec := httptest.NewRecorder()
@@ -406,7 +406,7 @@ func TestHandleUIAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765")
+			handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765", 5)
 
 			var body *strings.Reader
 			if tt.body != "" {
@@ -439,7 +439,7 @@ func TestUIHandlersContentType(t *testing.T) {
 		status: map[string]any{"connected": true},
 		scenes: []SceneInfo{{Name: "Test", Index: 0, IsCurrent: true}},
 	}
-	handlers := NewUIHandlers(provider, "http://localhost:8765")
+	handlers := NewUIHandlers(provider, "http://localhost:8765", 5)
 
 	tests := []struct {
 		name     string
@@ -482,7 +482,7 @@ func TestUIHandlersContentType(t *testing.T) {
 
 func TestNewUIHandlers(t *testing.T) {
 	provider := &mockStatusProvider{}
-	handlers := NewUIHandlers(provider, "http://example.com:9000")
+	handlers := NewUIHandlers(provider, "http://example.com:9000", 5)
 
 	assert.NotNil(t, handlers)
 	assert.Equal(t, "http://example.com:9000", handlers.baseURL)
@@ -490,7 +490,7 @@ func TestNewUIHandlers(t *testing.T) {
 }
 
 func TestSetActionExecutor(t *testing.T) {
-	handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765")
+	handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765", 5)
 	executor := &mockActionExecutor{}
 
 	handlers.SetActionExecutor(executor)
@@ -551,7 +551,7 @@ func TestHandleSceneThumbnail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765")
+			handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765", 5)
 			if tt.executor != nil {
 				handlers.SetActionExecutor(tt.executor)
 			}
@@ -634,7 +634,7 @@ func TestHandleUIActionWithExecutor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765")
+			handlers := NewUIHandlers(&mockStatusProvider{}, "http://localhost:8765", 5)
 			handlers.SetActionExecutor(tt.executor)
 
 			req := httptest.NewRequest(http.MethodPost, "/ui/action", strings.NewReader(tt.body))
@@ -704,7 +704,7 @@ func TestAudioMixerEnhancedTemplate(t *testing.T) {
 			},
 		},
 	}
-	handlers := NewUIHandlers(provider, "http://localhost:8765")
+	handlers := NewUIHandlers(provider, "http://localhost:8765", 5)
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
 	rec := httptest.NewRecorder()
@@ -753,7 +753,7 @@ func TestAudioMixerWithMutedInput(t *testing.T) {
 			{Name: "Mic", IsMuted: true, VolumePercent: 0, VolumeDB: -100, InputKind: "mic"},
 		},
 	}
-	handlers := NewUIHandlers(provider, "http://localhost:8765")
+	handlers := NewUIHandlers(provider, "http://localhost:8765", 5)
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
 	rec := httptest.NewRecorder()
@@ -777,7 +777,7 @@ func TestAudioMixerVolumeSliderRange(t *testing.T) {
 			{Name: "Test3", VolumePercent: 100, VolumeDB: 0, InputKind: "test"},
 		},
 	}
-	handlers := NewUIHandlers(provider, "http://localhost:8765")
+	handlers := NewUIHandlers(provider, "http://localhost:8765", 5)
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
 	rec := httptest.NewRecorder()
@@ -801,7 +801,7 @@ func TestAudioMixerKeyboardHints(t *testing.T) {
 			{Name: "Test", InputKind: "test"},
 		},
 	}
-	handlers := NewUIHandlers(provider, "http://localhost:8765")
+	handlers := NewUIHandlers(provider, "http://localhost:8765", 5)
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/audio", nil)
 	rec := httptest.NewRecorder()

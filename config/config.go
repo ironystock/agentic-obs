@@ -45,9 +45,10 @@ type ToolGroupConfig struct {
 
 // WebServerConfig controls HTTP server settings
 type WebServerConfig struct {
-	Enabled bool   // Whether HTTP server is enabled
-	Host    string // HTTP server host
-	Port    int    // HTTP server port
+	Enabled           bool   // Whether HTTP server is enabled
+	Host              string // HTTP server host
+	Port              int    // HTTP server port
+	ThumbnailCacheSec int    // Cache duration for thumbnails in seconds (0 to disable)
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -73,9 +74,10 @@ func DefaultConfig() *Config {
 			Design:  true,
 		},
 		WebServer: WebServerConfig{
-			Enabled: true,
-			Host:    "localhost",
-			Port:    8765,
+			Enabled:           true,
+			Host:              "localhost",
+			Port:              8765,
+			ThumbnailCacheSec: 5, // 5 seconds default, 0 for development
 		},
 	}
 }
@@ -248,9 +250,10 @@ func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 		log.Printf("Warning: failed to load webserver config: %v", err)
 	} else {
 		cfg.WebServer = WebServerConfig{
-			Enabled: webCfg.Enabled,
-			Host:    webCfg.Host,
-			Port:    webCfg.Port,
+			Enabled:           webCfg.Enabled,
+			Host:              webCfg.Host,
+			Port:              webCfg.Port,
+			ThumbnailCacheSec: webCfg.ThumbnailCacheSec,
 		}
 	}
 
@@ -299,9 +302,10 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 
 	// Save webserver configuration
 	webCfg := storage.WebServerConfig{
-		Enabled: cfg.WebServer.Enabled,
-		Host:    cfg.WebServer.Host,
-		Port:    cfg.WebServer.Port,
+		Enabled:           cfg.WebServer.Enabled,
+		Host:              cfg.WebServer.Host,
+		Port:              cfg.WebServer.Port,
+		ThumbnailCacheSec: cfg.WebServer.ThumbnailCacheSec,
 	}
 	if err := db.SaveWebServerConfig(ctx, webCfg); err != nil {
 		return fmt.Errorf("failed to save webserver config: %w", err)

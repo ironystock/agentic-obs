@@ -27,12 +27,16 @@
     </div>
 
     <script>
-        // Auto-refresh images every 5 seconds
+        // Auto-refresh images every 5 seconds with error handling
         setInterval(() => {
             document.querySelectorAll('.screenshot-card img').forEach(img => {
                 const url = new URL(img.src, location.href);
                 url.searchParams.set('t', Date.now());
-                img.src = url.toString();
+                // Create a test image to check if the new URL loads
+                const testImg = new Image();
+                testImg.onload = () => { img.src = url.toString(); };
+                testImg.onerror = () => { console.warn('Screenshot refresh failed for:', url.pathname); };
+                testImg.src = url.toString();
             });
         }, 5000);
     </script>

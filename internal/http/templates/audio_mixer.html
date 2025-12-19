@@ -217,6 +217,33 @@
     margin-bottom: 12px;
     opacity: 0.5;
 }
+
+.connection-status {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--error);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1000;
+}
+
+.connection-status.visible {
+    display: flex;
+}
+
+.connection-status svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
     </style>
 </head>
 <body>
@@ -239,7 +266,7 @@
                     <div class="channel-controls">
                         <span class="volume-display">{{printf "%.1f" .VolumeDB}} dB</span>
                         <button class="mute-toggle {{if .IsMuted}}muted{{end}}"
-                                onclick="toggleMute('{{.Name}}')"
+                                onclick="toggleMute(this)"
                                 title="{{if .IsMuted}}Unmute{{else}}Mute{{end}} (M)">
                             {{if .IsMuted}}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -265,7 +292,7 @@
                        value="{{printf "%.0f" .VolumePercent}}"
                        data-input="{{.Name}}"
                        oninput="updateSlider(this, false)"
-                       onchange="updateSlider(this, true); setVolume('{{.Name}}', this.value)">
+                       onchange="updateSlider(this, true); setVolume(this.dataset.input, this.value)">
                 <div class="db-markers">
                     <span>-&#8734;</span>
                     <span>-18</span>
@@ -294,6 +321,12 @@
     </div>
 
     <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
+    <div class="connection-status" id="connectionStatus">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+        </svg>
+        <span>Connection lost - retrying...</span>
+    </div>
 
     <script>
         let focusedIndex = 0;
@@ -304,30 +337,38 @@
             return Math.round(db * 2) / 2;
         }
 
-        // Logarithmic audio fader curve
-        // Attempt to match perceptual loudness: slider position = perceived volume
-        // Uses: slider = 10^(dB/30) * 100, giving roughly:
-        //   0dB=100%, -3dB~79%, -10dB~46%, -20dB~22%, -30dB=10%, -60dB~1%
+        // Logarithmic audio fader curve for perceptual loudness control
+        //
+        // The constant 30 in the formula dB = 30 * log10(slider/100) is derived from:
+        // - Human perception of loudness follows approximately a power law (Stevens' law)
+        // - A 10dB change is perceived as roughly "twice as loud" or "half as loud"
+        // - Using 30 creates a curve where slider position ≈ perceived loudness:
+        //   100% = 0dB (unity), 50% ≈ -10dB (half perceived volume),
+        //   25% ≈ -18dB, 10% = -30dB, 1% ≈ -60dB (near silence)
+        //
+        // This matches professional audio mixing consoles which use log tapers.
         function sliderToDb(value) {
             if (value <= 0) return -100; // Mute
             if (value >= 100) return 0;
-            // dB = 30 * log10(value/100)
             const db = 30 * Math.log10(value / 100);
             return snapToHalfDb(db);
         }
 
-        // Convert dB to slider value (0-100) using logarithmic curve
+        // Convert dB to slider value (0-100) - inverse of sliderToDb
         function dbToSlider(db) {
             if (db <= -60) return 0;
             if (db >= 0) return 100;
-            // slider = 10^(dB/30) * 100
             return Math.pow(10, db / 30) * 100;
         }
 
         function updateSlider(slider, snap = false) {
-            const channel = slider.closest('.audio-channel');
+            const channel = slider?.closest('.audio-channel');
+            if (!channel) return; // Guard against missing parent
+
             const fill = channel.querySelector('.slider-fill');
             const display = channel.querySelector('.volume-display');
+            if (!fill || !display) return; // Guard against missing DOM elements
+
             let value = parseFloat(slider.value);
 
             // Snap to 0.5dB increments
@@ -342,8 +383,16 @@
             display.textContent = db + ' dB';
         }
 
-        function toggleMute(inputName) {
+        function toggleMute(btn) {
+            const channel = btn.closest('.audio-channel');
+            const inputName = channel?.dataset.input;
+            if (!channel || !inputName) return;
+
             showRefreshIndicator();
+
+            // Optimistic UI update - toggle mute state immediately
+            const wasMuted = channel.classList.contains('muted');
+
             fetch('{{.BaseURL}}/ui/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -355,14 +404,32 @@
             })
             .then(response => response.json())
             .then(data => {
+                hideRefreshIndicator();
                 if (data.payload && data.payload.error) {
                     alert('Error: ' + data.payload.error.message);
-                    hideRefreshIndicator();
                 } else {
-                    refreshAudioState();
+                    // Update the channel's mute state in the DOM
+                    const nowMuted = !wasMuted;
+                    channel.classList.toggle('muted', nowMuted);
+                    btn.classList.toggle('muted', nowMuted);
+                    btn.title = nowMuted ? 'Unmute (M)' : 'Mute (M)';
+                    // Update the icon
+                    btn.innerHTML = nowMuted
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                             <line x1="23" y1="9" x2="17" y2="15"/>
+                             <line x1="17" y1="9" x2="23" y2="15"/>
+                           </svg>`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                           </svg>`;
                 }
             })
-            .catch(() => hideRefreshIndicator());
+            .catch(err => {
+                hideRefreshIndicator();
+                console.error('Mute toggle failed:', err);
+            });
         }
 
         function setVolume(inputName, value) {
@@ -384,10 +451,6 @@
 
         function hideRefreshIndicator() {
             document.getElementById('refreshIndicator').classList.remove('visible');
-        }
-
-        function refreshAudioState() {
-            location.reload();
         }
 
         function setFocus(index) {
@@ -443,7 +506,8 @@
                 case 'm':
                 case 'M':
                     e.preventDefault();
-                    if (inputName) toggleMute(inputName);
+                    const muteBtn = focusedChannel?.querySelector('.mute-toggle');
+                    if (muteBtn) toggleMute(muteBtn);
                     break;
                 case '0':
                     e.preventDefault();
@@ -469,11 +533,39 @@
             });
         });
 
-        // Auto-refresh audio state every 3 seconds
-        setInterval(() => {
+        // Auto-refresh with error handling and exponential backoff
+        let refreshFailures = 0;
+        const baseInterval = 3000;
+        const maxInterval = 30000;
+        let refreshTimer = null;
+
+        function showConnectionError() {
+            document.getElementById('connectionStatus').classList.add('visible');
+        }
+
+        function hideConnectionError() {
+            document.getElementById('connectionStatus').classList.remove('visible');
+        }
+
+        function scheduleRefresh() {
+            // Exponential backoff: 3s, 6s, 12s, 24s, max 30s
+            const interval = Math.min(baseInterval * Math.pow(2, refreshFailures), maxInterval);
+            refreshTimer = setTimeout(refreshAudioStateAuto, interval);
+        }
+
+        function refreshAudioStateAuto() {
             fetch('{{.BaseURL}}/ui/audio')
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.text();
+                })
                 .then(html => {
+                    // Reset failures on success
+                    if (refreshFailures > 0) {
+                        refreshFailures = 0;
+                        hideConnectionError();
+                    }
+
                     // Only refresh if no slider is being dragged
                     if (!document.querySelector('.volume-slider:active')) {
                         const parser = new DOMParser();
@@ -500,8 +592,21 @@
                             }
                         });
                     }
+                    scheduleRefresh();
+                })
+                .catch(err => {
+                    console.warn('Audio refresh failed:', err.message);
+                    refreshFailures++;
+                    // Show error after 2 consecutive failures
+                    if (refreshFailures >= 2) {
+                        showConnectionError();
+                    }
+                    scheduleRefresh();
                 });
-        }, 3000);
+        }
+
+        // Start auto-refresh
+        scheduleRefresh();
 
         // Initial focus
         if (channels.length > 0) setFocus(0);
