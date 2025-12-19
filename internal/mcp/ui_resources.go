@@ -3,7 +3,7 @@ package mcp
 import (
 	"fmt"
 
-	"github.com/ironystock/agentic-obs/pkg/mcpui"
+	"github.com/ironystock/mcpui-go"
 )
 
 // UI resource URI patterns

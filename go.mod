@@ -7,8 +7,9 @@ require (
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/ironystock/mcpui-go v0.1.0
 	github.com/modelcontextprotocol/go-sdk v1.1.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	modernc.org/sqlite v1.40.1
 )
 
