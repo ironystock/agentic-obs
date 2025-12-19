@@ -146,40 +146,73 @@ for endpoint in "${API_ENDPOINTS[@]}"; do
     fi
 done
 
-# Check help.go embedded content matches expected values
+# Check help_content.go constants match expected values
 echo ""
 echo "--- Help Tool Content Consistency ---"
 
-# Check tool count in help.go
-echo -n "Checking: help.go tool count ($EXPECTED_TOOLS)... "
-HELP_TOOL_ISSUES=$(grep -E "All Available Tools \([0-9]+ total\)" internal/mcp/help.go 2>/dev/null | grep -v "$EXPECTED_TOOLS total" || true)
+# Check HelpToolCount constant (use word boundary to avoid matching HelpHelpToolCount)
+echo -n "Checking: HelpToolCount constant ($EXPECTED_TOOLS)... "
+HELP_TOOL_CONST=$(grep -E "^\s*HelpToolCount\s*=" internal/mcp/help_content.go 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' || echo "0")
+if [ "$HELP_TOOL_CONST" = "$EXPECTED_TOOLS" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} HelpToolCount is $HELP_TOOL_CONST (expected $EXPECTED_TOOLS)"
+    ISSUES_FOUND=1
+fi
+
+# Check HelpPromptCount constant
+echo -n "Checking: HelpPromptCount constant ($EXPECTED_PROMPTS)... "
+HELP_PROMPT_CONST=$(grep -E "^\s*HelpPromptCount\s*=" internal/mcp/help_content.go 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' || echo "0")
+if [ "$HELP_PROMPT_CONST" = "$EXPECTED_PROMPTS" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} HelpPromptCount is $HELP_PROMPT_CONST (expected $EXPECTED_PROMPTS)"
+    ISSUES_FOUND=1
+fi
+
+# Check HelpResourceCount constant
+echo -n "Checking: HelpResourceCount constant ($EXPECTED_RESOURCES)... "
+HELP_RESOURCE_CONST=$(grep -E "^\s*HelpResourceCount\s*=" internal/mcp/help_content.go 2>/dev/null | head -1 | awk -F'=' '{print $2}' | awk '{print $1}' || echo "0")
+if [ "$HELP_RESOURCE_CONST" = "$EXPECTED_RESOURCES" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} HelpResourceCount is $HELP_RESOURCE_CONST (expected $EXPECTED_RESOURCES)"
+    ISSUES_FOUND=1
+fi
+
+# Check tool count in help_content.go text
+echo -n "Checking: help_content.go tool count text ($EXPECTED_TOOLS)... "
+HELP_TOOL_ISSUES=$(grep -E "All Available Tools \([0-9]+ total\)" internal/mcp/help_content.go 2>/dev/null | grep -v "$EXPECTED_TOOLS total" || true)
 if [ -z "$HELP_TOOL_ISSUES" ]; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}ISSUES FOUND${NC}"
-    echo -e "  ${YELLOW}→${NC} help.go has incorrect tool count (expected $EXPECTED_TOOLS)"
+    echo -e "  ${YELLOW}→${NC} help_content.go has incorrect tool count text (expected $EXPECTED_TOOLS)"
     ISSUES_FOUND=1
 fi
 
-# Check prompt count in help.go
-echo -n "Checking: help.go prompt count ($EXPECTED_PROMPTS)... "
-HELP_PROMPT_ISSUES=$(grep -E "MCP Prompts \([0-9]+ workflows\)" internal/mcp/help.go 2>/dev/null | grep -v "$EXPECTED_PROMPTS workflows" || true)
+# Check prompt count in help_content.go text
+echo -n "Checking: help_content.go prompt count text ($EXPECTED_PROMPTS)... "
+HELP_PROMPT_ISSUES=$(grep -E "MCP Prompts \([0-9]+ workflows\)" internal/mcp/help_content.go 2>/dev/null | grep -v "$EXPECTED_PROMPTS workflows" || true)
 if [ -z "$HELP_PROMPT_ISSUES" ]; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}ISSUES FOUND${NC}"
-    echo -e "  ${YELLOW}→${NC} help.go has incorrect prompt count (expected $EXPECTED_PROMPTS)"
+    echo -e "  ${YELLOW}→${NC} help_content.go has incorrect prompt count text (expected $EXPECTED_PROMPTS)"
     ISSUES_FOUND=1
 fi
 
-# Check resource count in help.go
-echo -n "Checking: help.go resource count ($EXPECTED_RESOURCES)... "
-HELP_RESOURCE_ISSUES=$(grep -E "MCP Resources \([0-9]+ types\)" internal/mcp/help.go 2>/dev/null | grep -v "$EXPECTED_RESOURCES types" || true)
+# Check resource count in help_content.go text
+echo -n "Checking: help_content.go resource count text ($EXPECTED_RESOURCES)... "
+HELP_RESOURCE_ISSUES=$(grep -E "MCP Resources \([0-9]+ types\)" internal/mcp/help_content.go 2>/dev/null | grep -v "$EXPECTED_RESOURCES types" || true)
 if [ -z "$HELP_RESOURCE_ISSUES" ]; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}ISSUES FOUND${NC}"
-    echo -e "  ${YELLOW}→${NC} help.go has incorrect resource count (expected $EXPECTED_RESOURCES)"
+    echo -e "  ${YELLOW}→${NC} help_content.go has incorrect resource count text (expected $EXPECTED_RESOURCES)"
     ISSUES_FOUND=1
 fi
 
