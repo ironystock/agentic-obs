@@ -189,15 +189,89 @@ After updates, verify:
 |------|---------|--------------|
 | README.md | User-facing overview | Features, Installation, Usage |
 | CLAUDE.md | AI assistant context | Architecture, Tools, Resources, Prompts |
-| PROJECT_PLAN.md | Development roadmap | Phases, Decisions, Metrics |
+| PROJECT_PLAN.md | Project status & links | Metrics, Quick links |
+| CHANGELOG.md | Version history | Phases, releases, metrics |
+| design/ARCHITECTURE.md | System diagrams | Communication flow, components |
+| design/ROADMAP.md | Future enhancements | Planned features, research |
+| design/decisions/*.md | ADRs | Technical decisions |
 | docs/README.md | Documentation index | Links, Categories, Resources, Prompts, API |
 | docs/TOOLS.md | Tool reference | All 45 tools with examples |
-| docs/SCREENSHOTS.md | Screenshot feature guide | Setup, Usage, Workflows |
+| docs/TROUBLESHOOTING.md | Common issues | Connection, Web UI, audio |
 | docs/API.md | HTTP API reference | Endpoints, Validation, Security |
-| internal/mcp/help.go | Embedded help content | Tool counts, prompts, help text |
+| internal/mcp/help_content.go | Embedded help content | Tool counts, prompts, help text |
 
 ---
 
-**Last Updated:** 2025-12-18
+## Checklists for Adding Features
+
+### Adding a New Tool
+
+1. **Code changes:**
+   - [ ] Add tool definition in `internal/mcp/tools.go`
+   - [ ] Implement handler function
+   - [ ] Add to tool group registration
+   - [ ] Add OBS command if needed in `internal/obs/commands.go`
+
+2. **Documentation updates:**
+   - [ ] Update tool count in `internal/mcp/help_content.go` (HelpToolCount)
+   - [ ] Add help entry in `internal/mcp/help_tools.go`
+   - [ ] Add tool to `docs/TOOLS.md`
+   - [ ] Update tool count in `CLAUDE.md`
+   - [ ] Update tool count in `scripts/verify-docs.sh`
+   - [ ] Add to relevant example file in `examples/prompts/`
+
+3. **Verify:**
+   - [ ] Run `./scripts/verify-docs.sh`
+   - [ ] Run `go test ./...`
+
+### Adding a New Prompt
+
+1. **Code changes:**
+   - [ ] Add prompt definition in `internal/mcp/prompts.go`
+   - [ ] Add message generation in `handleGetPrompt()`
+   - [ ] Add completion support if arguments needed
+
+2. **Documentation updates:**
+   - [ ] Update prompt count in `internal/mcp/help_content.go` (HelpPromptCount)
+   - [ ] Add prompt help in `internal/mcp/help_content.go`
+   - [ ] Update prompt count in `CLAUDE.md`
+   - [ ] Update prompt count in `scripts/verify-docs.sh`
+   - [ ] Add to `examples/prompts/README.md` mapping table
+
+3. **Verify:**
+   - [ ] Run `./scripts/verify-docs.sh`
+   - [ ] Run `go test ./...`
+
+### Adding a New Resource
+
+1. **Code changes:**
+   - [ ] Add to `handleResourcesList()` in `internal/mcp/resources.go`
+   - [ ] Add case in `handleResourceRead()`
+   - [ ] Add OBS event handlers for notifications
+
+2. **Documentation updates:**
+   - [ ] Update resource count in `internal/mcp/help_content.go` (HelpResourceCount)
+   - [ ] Add resource documentation in help content
+   - [ ] Update resource count in `CLAUDE.md`
+   - [ ] Update resource count in `scripts/verify-docs.sh`
+   - [ ] Add to `design/ARCHITECTURE.md` resources table
+
+3. **Verify:**
+   - [ ] Run `./scripts/verify-docs.sh`
+   - [ ] Run `go test ./...`
+
+### Making an Architectural Decision
+
+1. **Create ADR:**
+   - [ ] Create `design/decisions/NNN-title.md` using template
+   - [ ] Add to index in `design/decisions/README.md`
+
+2. **Documentation updates:**
+   - [ ] Reference ADR in relevant documentation
+   - [ ] Update `design/ARCHITECTURE.md` if affects architecture
+
+---
+
+**Last Updated:** 2025-12-19
 **Created:** Phase 4 completion
-**Updated:** Phase 7 - Added completions, help tool, new prompts, Claude Skills
+**Updated:** Phase 7+ - Documentation restructuring, design/ directory, checklists

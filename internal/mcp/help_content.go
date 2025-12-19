@@ -2,15 +2,30 @@ package mcp
 
 import "fmt"
 
-// Help metrics - these should match the actual implementation.
-// Update these when adding tools, resources, or prompts.
-// The verify-docs.sh script checks these values match documentation.
+// ============================================================================
+// SOURCE OF TRUTH: Help Metrics
+// ============================================================================
+//
+// These constants are the SOURCE OF TRUTH for tool, resource, and prompt counts.
+// All documentation should reference these values.
+//
+// VERIFICATION:
+//   - Run: ./scripts/verify-docs.sh
+//   - The script checks that documentation matches these constants
+//
+// UPDATE PROCEDURE (when adding tools/resources/prompts):
+//   1. Update the appropriate constant below
+//   2. Update HelpToolCount if total changes
+//   3. Run ./scripts/verify-docs.sh to find docs needing updates
+//   4. See scripts/DOC_UPDATE_CHECKLIST.md for full checklist
+//
+// ============================================================================
 const (
 	HelpToolCount     = 45 // Total MCP tools (including help)
 	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
 	HelpPromptCount   = 13 // Workflow prompts
 
-	// Tool counts by category
+	// Tool counts by category (should sum to HelpToolCount)
 	HelpCoreToolCount    = 13 // Scene management, recording, streaming, status
 	HelpHelpToolCount    = 1  // The help tool itself
 	HelpSourcesToolCount = 3  // Source management

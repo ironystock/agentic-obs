@@ -6,6 +6,55 @@ This directory contains natural language prompt examples for controlling OBS Stu
 
 Each file contains conversational prompts you can use to interact with OBS through an AI assistant like Claude. These aren't code snippets or API calls - they're actual phrases you would type or speak to the AI.
 
+---
+
+## MCP Prompts Reference
+
+In addition to natural language, agentic-obs provides **13 structured MCP prompts** that AI clients can invoke directly. These prompts combine multiple tools into guided workflows.
+
+### Prompt → Example File Mapping
+
+| MCP Prompt | Example File | Description |
+|------------|--------------|-------------|
+| `stream-launch` | [workflows.md](workflows.md) | Pre-stream checklist |
+| `stream-teardown` | [workflows.md](workflows.md) | End-stream cleanup |
+| `audio-check` | [audio.md](audio.md) | Audio verification |
+| `recording-workflow` | [recording.md](recording.md) | Recording session |
+| `quick-status` | [scenes.md](scenes.md) | Brief OBS status |
+| `scene-organizer` | [scenes.md](scenes.md) | Scene organization |
+| `visual-check` | [screenshots.md](screenshots.md) | Visual layout analysis |
+| `visual-setup` | [screenshots.md](screenshots.md) | Configure monitoring |
+| `problem-detection` | [screenshots.md](screenshots.md) | Issue detection |
+| `scene-designer` | - | Scene layout creation |
+| `source-management` | - | Source visibility control |
+| `preset-switcher` | - | Preset management |
+| `health-check` | [workflows.md](workflows.md) | OBS diagnostic |
+
+### Using MCP Prompts
+
+MCP prompts can be invoked directly by AI clients. For example:
+
+**Natural language (these examples):**
+```
+"Help me prepare for my stream"
+```
+
+**Structured MCP prompt:**
+```
+prompts/get: stream-launch
+```
+
+Both approaches work - natural language is more conversational, while MCP prompts provide consistent, guided workflows.
+
+### Getting Help
+
+Use the `help` tool for detailed documentation:
+- `help("prompts")` - List all prompts with arguments
+- `help("stream-launch")` - Details for specific prompt
+- `help("tools")` - List all available tools
+
+---
+
 ## Available Prompt Collections
 
 ### [scenes.md](scenes.md)

@@ -2,6 +2,11 @@
 
 Natural language examples for AI-powered visual monitoring of your OBS stream.
 
+**MCP Prompts:** `visual-check`, `visual-setup`, `problem-detection`
+**Tools Used:** `create_screenshot_source`, `remove_screenshot_source`, `list_screenshot_sources`, `configure_screenshot_cadence`
+
+---
+
 ## Why Screenshots?
 
 Screenshots give your AI assistant **eyes** on your stream. Instead of blindly executing commands, the AI can:
@@ -13,6 +18,8 @@ Screenshots give your AI assistant **eyes** on your stream. Instead of blindly e
 ---
 
 ## Setting Up Screenshot Capture
+
+**Tools Used:** `create_screenshot_source`
 
 ### Basic Setup
 

@@ -106,11 +106,18 @@ REQUIRED_FILES=(
     "README.md"
     "CLAUDE.md"
     "PROJECT_PLAN.md"
+    "CHANGELOG.md"
     "docs/README.md"
     "docs/TOOLS.md"
     "docs/SCREENSHOTS.md"
     "docs/QUICKSTART.md"
     "docs/API.md"
+    "docs/TROUBLESHOOTING.md"
+    "docs/RESOURCES.md"
+    "design/README.md"
+    "design/ARCHITECTURE.md"
+    "design/ROADMAP.md"
+    "design/decisions/README.md"
     "skills/README.md"
 )
 
@@ -145,6 +152,43 @@ for endpoint in "${API_ENDPOINTS[@]}"; do
         ISSUES_FOUND=1
     fi
 done
+
+# Check ADRs exist
+echo ""
+echo "--- Architecture Decision Records ---"
+EXPECTED_ADRS=(
+    "design/decisions/001-sqlite-pure-go.md"
+    "design/decisions/002-obs-connection.md"
+    "design/decisions/003-scenes-as-resources.md"
+    "design/decisions/004-tool-groups.md"
+    "design/decisions/005-auth-storage.md"
+    "design/decisions/006-auto-detect-setup.md"
+    "design/decisions/007-web-ui-interfaces.md"
+)
+
+for adr in "${EXPECTED_ADRS[@]}"; do
+    echo -n "Checking: $adr exists... "
+    if [ -f "$adr" ]; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}MISSING${NC}"
+        ISSUES_FOUND=1
+    fi
+done
+
+# Check prompts in prompts.go match help content
+echo ""
+echo "--- Prompts Consistency ---"
+echo -n "Checking: prompt count in prompts.go ($EXPECTED_PROMPTS)... "
+# Count AddPrompt calls (each prompt is registered with AddPrompt)
+PROMPTS_IN_CODE=$(grep -c "AddPrompt" internal/mcp/prompts.go 2>/dev/null || echo "0")
+if [ "$PROMPTS_IN_CODE" = "$EXPECTED_PROMPTS" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} prompts.go has $PROMPTS_IN_CODE prompts (expected $EXPECTED_PROMPTS)"
+    ISSUES_FOUND=1
+fi
 
 # Check help_content.go constants match expected values
 echo ""
