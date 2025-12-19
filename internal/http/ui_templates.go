@@ -62,9 +62,9 @@ func getTemplate(name string) (*template.Template, error) {
 
 // Template names
 const (
-	templateStatusDashboard  = "status_dashboard"
-	templateScenePreview     = "scene_preview"
-	templateAudioMixer       = "audio_mixer"
+	templateStatusDashboard   = "status_dashboard"
+	templateScenePreview      = "scene_preview"
+	templateAudioMixer        = "audio_mixer"
 	templateScreenshotGallery = "screenshot_gallery"
-	templateError            = "error"
+	templateError             = "error"
 )
