@@ -14,10 +14,10 @@ import "fmt"
 //   - The script checks that documentation matches these constants
 //
 // UPDATE PROCEDURE (when adding tools/resources/prompts):
-//   1. Update the appropriate constant below
-//   2. Update HelpToolCount if total changes
-//   3. Run ./scripts/verify-docs.sh to find docs needing updates
-//   4. See scripts/DOC_UPDATE_CHECKLIST.md for full checklist
+//  1. Update the appropriate constant below
+//  2. Update HelpToolCount if total changes
+//  3. Run ./scripts/verify-docs.sh to find docs needing updates
+//  4. See scripts/DOC_UPDATE_CHECKLIST.md for full checklist
 //
 // ============================================================================
 const (
