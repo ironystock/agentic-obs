@@ -103,6 +103,8 @@ func NewServer(config ServerConfig) (*Server, error) {
 			httpCfg.Port = config.HTTPPort
 		}
 		s.httpServer = agenthttp.NewServer(db, httpCfg)
+		// Set MCP server as status provider for UI endpoints
+		s.httpServer.SetStatusProvider(s)
 	}
 
 	// Initialize screenshot manager (works without HTTP server for MCP resource access)

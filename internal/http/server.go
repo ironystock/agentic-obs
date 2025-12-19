@@ -73,11 +73,13 @@ func DefaultConfig() Config {
 
 // Server provides HTTP endpoints for serving screenshot images and the web dashboard.
 type Server struct {
-	storage    *storage.DB
-	httpServer *http.Server
-	addr       string
-	cfg        Config
-	startTime  time.Time
+	storage        *storage.DB
+	httpServer     *http.Server
+	addr           string
+	cfg            Config
+	startTime      time.Time
+	statusProvider StatusProvider
+	uiHandlers     *UIHandlers
 
 	mu       sync.RWMutex
 	running  bool
@@ -85,6 +87,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server for serving screenshots.
+// Use SetStatusProvider to enable MCP-UI endpoints.
 func NewServer(db *storage.DB, cfg Config) *Server {
 	if cfg.Host == "" {
 		cfg.Host = "localhost"
@@ -102,6 +105,17 @@ func NewServer(db *storage.DB, cfg Config) *Server {
 		startTime: time.Now(),
 	}
 
+	return s
+}
+
+// SetStatusProvider configures the status provider for MCP-UI endpoints.
+// This must be called before Start() to enable UI routes.
+func (s *Server) SetStatusProvider(provider StatusProvider) {
+	s.statusProvider = provider
+}
+
+// setupRoutes configures all HTTP routes.
+func (s *Server) setupRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Screenshot and health endpoints
@@ -115,6 +129,18 @@ func NewServer(db *storage.DB, cfg Config) *Server {
 	mux.HandleFunc("/api/screenshots", s.handleAPIScreenshots)
 	mux.HandleFunc("/api/config", s.handleAPIConfig)
 
+	// MCP-UI endpoints (only if status provider is configured)
+	if s.statusProvider != nil {
+		baseURL := fmt.Sprintf("http://%s", s.addr)
+		s.uiHandlers = NewUIHandlers(s.statusProvider, baseURL)
+
+		mux.HandleFunc("/ui/status", s.uiHandlers.HandleUIStatus)
+		mux.HandleFunc("/ui/scenes", s.uiHandlers.HandleUIScenes)
+		mux.HandleFunc("/ui/audio", s.uiHandlers.HandleUIAudio)
+		mux.HandleFunc("/ui/screenshots", s.uiHandlers.HandleUIScreenshots)
+		mux.HandleFunc("/ui/action", s.uiHandlers.HandleUIAction)
+	}
+
 	// Serve static files for the web dashboard
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
@@ -123,15 +149,7 @@ func NewServer(db *storage.DB, cfg Config) *Server {
 		mux.Handle("/", http.FileServer(http.FS(staticFS)))
 	}
 
-	s.httpServer = &http.Server{
-		Addr:         addr,
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	return s
+	return mux
 }
 
 // Start begins serving HTTP requests in a background goroutine.
@@ -152,7 +170,17 @@ func (s *Server) Start() error {
 
 	// Update addr with actual bound address (useful if port was 0)
 	s.addr = listener.Addr().String()
-	s.httpServer.Addr = s.addr
+
+	// Setup routes (must happen after addr is finalized for UI handlers)
+	mux := s.setupRoutes()
+
+	s.httpServer = &http.Server{
+		Addr:         s.addr,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 
 	s.running = true
 
