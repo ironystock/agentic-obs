@@ -36,8 +36,8 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
-github.com/ironystock/mcpui-go v0.0.0-20251219223537-3b37b3e9d357 h1:0GiHHdHkM8YK3xaY+RHouJdWXVH/4klER6PbLJMETQI=
-github.com/ironystock/mcpui-go v0.0.0-20251219223537-3b37b3e9d357/go.mod h1:wMu5NGf7ot57p9RNrGIiX3JYZlZUKh1bj2Bv1W5dG18=
+github.com/ironystock/mcpui-go v0.1.0 h1:czPvWviaVjfOmHRw33MibDxxGUf4m3UUfsrij8/ZTLg=
+github.com/ironystock/mcpui-go v0.1.0/go.mod h1:wMu5NGf7ot57p9RNrGIiX3JYZlZUKh1bj2Bv1W5dG18=
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
