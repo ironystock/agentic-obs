@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Status Dashboard</title>
+    <style>{{.SharedCSS}}</style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="accent">agentic-obs</span> Status</h1>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Connection</h2>
+                <div class="status-item">
+                    <span class="status-label">OBS WebSocket</span>
+                    <span class="badge online"><span class="dot"></span> Connected</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Recording</h2>
+                <div class="status-item">
+                    <span class="status-label">Status</span>
+                    <span class="status-value">Idle</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Streaming</h2>
+                <div class="status-item">
+                    <span class="status-label">Status</span>
+                    <span class="status-value">Offline</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Scenes ({{len .Scenes}})</h2>
+            <div class="scene-grid">
+                {{range .Scenes}}
+                <div class="scene-card {{if .IsCurrent}}active{{end}}" data-scene="{{.Name}}">
+                    <div class="name">{{.Name}}</div>
+                    <div class="index">Scene #{{.Index}}</div>
+                </div>
+                {{else}}
+                <p style="color: var(--text-secondary);">No scenes available</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UIAction helper for scene switching
+        document.querySelectorAll('.scene-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const sceneName = card.dataset.scene;
+                if (!sceneName) return;
+
+                // Send UIAction to parent
+                const action = {
+                    type: 'tool',
+                    messageId: 'scene-' + Date.now(),
+                    payload: {
+                        toolName: 'set_current_scene',
+                        params: { scene_name: sceneName }
+                    }
+                };
+
+                // Post to action endpoint
+                fetch('{{.BaseURL}}/ui/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(action)
+                }).then(() => {
+                    // Refresh to show updated state
+                    location.reload();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

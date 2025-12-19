@@ -34,9 +34,10 @@ const (
 
 // Webserver configuration keys
 const (
-	ConfigKeyWebServerEnabled = "web_server_enabled" // Whether HTTP server is enabled
-	ConfigKeyWebServerHost    = "web_server_host"    // HTTP server host
-	ConfigKeyWebServerPort    = "web_server_port"    // HTTP server port
+	ConfigKeyWebServerEnabled      = "web_server_enabled"       // Whether HTTP server is enabled
+	ConfigKeyWebServerHost         = "web_server_host"          // HTTP server host
+	ConfigKeyWebServerPort         = "web_server_port"          // HTTP server port
+	ConfigKeyWebServerThumbnailTTL = "web_server_thumbnail_ttl" // Thumbnail cache duration in seconds
 )
 
 // Config keys used in the config table
@@ -394,17 +395,19 @@ func (db *DB) LoadToolGroupConfig(ctx context.Context) (ToolGroupConfig, error) 
 
 // WebServerConfig represents HTTP server configuration.
 type WebServerConfig struct {
-	Enabled bool   // Whether HTTP server is enabled
-	Host    string // HTTP server host (default: localhost)
-	Port    int    // HTTP server port (default: 8765)
+	Enabled           bool   // Whether HTTP server is enabled
+	Host              string // HTTP server host (default: localhost)
+	Port              int    // HTTP server port (default: 8765)
+	ThumbnailCacheSec int    // Thumbnail cache duration in seconds (0 to disable)
 }
 
 // DefaultWebServerConfig returns webserver config with defaults.
 func DefaultWebServerConfig() WebServerConfig {
 	return WebServerConfig{
-		Enabled: true,
-		Host:    "localhost",
-		Port:    8765,
+		Enabled:           true,
+		Host:              "localhost",
+		Port:              8765,
+		ThumbnailCacheSec: 5, // 5 seconds default, 0 for development
 	}
 }
 
@@ -436,6 +439,9 @@ func (db *DB) SaveWebServerConfig(ctx context.Context, cfg WebServerConfig) erro
 		}
 		if _, err := stmt.ExecContext(ctx, ConfigKeyWebServerPort, fmt.Sprintf("%d", cfg.Port)); err != nil {
 			return fmt.Errorf("failed to save web server port: %w", err)
+		}
+		if _, err := stmt.ExecContext(ctx, ConfigKeyWebServerThumbnailTTL, fmt.Sprintf("%d", cfg.ThumbnailCacheSec)); err != nil {
+			return fmt.Errorf("failed to save thumbnail cache TTL: %w", err)
 		}
 
 		return nil
@@ -480,6 +486,19 @@ func (db *DB) LoadWebServerConfig(ctx context.Context) (WebServerConfig, error) 
 		var port int
 		if _, parseErr := fmt.Sscanf(portStr, "%d", &port); parseErr == nil && port > 0 {
 			cfg.Port = port
+		}
+	}
+
+	// Load thumbnail cache TTL
+	var ttlStr string
+	err = db.conn.QueryRowContext(ctx,
+		"SELECT value FROM config WHERE key = ?",
+		ConfigKeyWebServerThumbnailTTL,
+	).Scan(&ttlStr)
+	if err == nil {
+		var ttl int
+		if _, parseErr := fmt.Sscanf(ttlStr, "%d", &ttl); parseErr == nil && ttl >= 0 {
+			cfg.ThumbnailCacheSec = ttl
 		}
 	}
 

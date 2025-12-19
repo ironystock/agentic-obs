@@ -48,155 +48,155 @@ type SetVolumeInput struct {
 
 // ListPresetsInput is the input for listing scene presets
 type ListPresetsInput struct {
-	SceneName string `json:"scene_name,omitempty" jsonschema:"description=Optional scene name to filter presets by"`
+	SceneName string `json:"scene_name,omitempty" jsonschema:"Optional scene name to filter presets by"`
 }
 
 // PresetNameInput is the input for preset operations by name
 type PresetNameInput struct {
-	PresetName string `json:"preset_name" jsonschema:"required,description=Name of the preset to operate on"`
+	PresetName string `json:"preset_name" jsonschema:"Name of the preset to operate on"`
 }
 
 // RenamePresetInput is the input for renaming a preset
 type RenamePresetInput struct {
-	OldName string `json:"old_name" jsonschema:"required,description=Current name of the preset to rename"`
-	NewName string `json:"new_name" jsonschema:"required,description=New name for the preset"`
+	OldName string `json:"old_name" jsonschema:"Current name of the preset to rename"`
+	NewName string `json:"new_name" jsonschema:"New name for the preset"`
 }
 
 // SavePresetInput is the input for saving a scene preset
 type SavePresetInput struct {
-	PresetName string `json:"preset_name" jsonschema:"required,description=Name to give the new preset"`
-	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the OBS scene to capture state from"`
+	PresetName string `json:"preset_name" jsonschema:"Name to give the new preset"`
+	SceneName  string `json:"scene_name" jsonschema:"Name of the OBS scene to capture state from"`
 }
 
 // CreateScreenshotSourceInput is the input for creating a screenshot source
 type CreateScreenshotSourceInput struct {
-	Name        string `json:"name" jsonschema:"required,description=Unique name for this screenshot source"`
-	SourceName  string `json:"source_name" jsonschema:"required,description=OBS scene or source name to capture"`
-	CadenceMs   int    `json:"cadence_ms,omitempty" jsonschema:"description=Capture interval in milliseconds (default: 5000)"`
-	ImageFormat string `json:"image_format,omitempty" jsonschema:"description=Image format: png or jpg (default: png)"`
-	ImageWidth  int    `json:"image_width,omitempty" jsonschema:"description=Optional resize width (0 = original)"`
-	ImageHeight int    `json:"image_height,omitempty" jsonschema:"description=Optional resize height (0 = original)"`
-	Quality     int    `json:"quality,omitempty" jsonschema:"description=Compression quality 0-100 (default: 80)"`
+	Name        string `json:"name" jsonschema:"Unique name for this screenshot source"`
+	SourceName  string `json:"source_name" jsonschema:"OBS scene or source name to capture"`
+	CadenceMs   int    `json:"cadence_ms,omitempty" jsonschema:"Capture interval in milliseconds (default: 5000)"`
+	ImageFormat string `json:"image_format,omitempty" jsonschema:"Image format: png or jpg (default: png)"`
+	ImageWidth  int    `json:"image_width,omitempty" jsonschema:"Optional resize width (0 = original)"`
+	ImageHeight int    `json:"image_height,omitempty" jsonschema:"Optional resize height (0 = original)"`
+	Quality     int    `json:"quality,omitempty" jsonschema:"Compression quality 0-100 (default: 80)"`
 }
 
 // ScreenshotSourceNameInput is the input for screenshot source operations by name
 type ScreenshotSourceNameInput struct {
-	Name string `json:"name" jsonschema:"required,description=Name of the screenshot source"`
+	Name string `json:"name" jsonschema:"Name of the screenshot source"`
 }
 
 // ConfigureScreenshotCadenceInput is the input for updating screenshot cadence
 type ConfigureScreenshotCadenceInput struct {
-	Name      string `json:"name" jsonschema:"required,description=Name of the screenshot source"`
-	CadenceMs int    `json:"cadence_ms" jsonschema:"required,description=New capture interval in milliseconds"`
+	Name      string `json:"name" jsonschema:"Name of the screenshot source"`
+	CadenceMs int    `json:"cadence_ms" jsonschema:"New capture interval in milliseconds"`
 }
 
 // Design tool input types
 
 // CreateTextSourceInput is the input for creating a text source
 type CreateTextSourceInput struct {
-	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the scene to add the source to"`
-	SourceName string `json:"source_name" jsonschema:"required,description=Name for the new text source"`
-	Text       string `json:"text" jsonschema:"required,description=Text content to display"`
-	FontName   string `json:"font_name,omitempty" jsonschema:"description=Font face name (default: Arial)"`
-	FontSize   int    `json:"font_size,omitempty" jsonschema:"description=Font size in points (default: 36)"`
-	Color      int64  `json:"color,omitempty" jsonschema:"description=Text color as ABGR integer (default: white)"`
+	SceneName  string `json:"scene_name" jsonschema:"Name of the scene to add the source to"`
+	SourceName string `json:"source_name" jsonschema:"Name for the new text source"`
+	Text       string `json:"text" jsonschema:"Text content to display"`
+	FontName   string `json:"font_name,omitempty" jsonschema:"Font face name (default: Arial)"`
+	FontSize   int    `json:"font_size,omitempty" jsonschema:"Font size in points (default: 36)"`
+	Color      int64  `json:"color,omitempty" jsonschema:"Text color as ABGR integer (default: white)"`
 }
 
 // CreateImageSourceInput is the input for creating an image source
 type CreateImageSourceInput struct {
-	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the scene to add the source to"`
-	SourceName string `json:"source_name" jsonschema:"required,description=Name for the new image source"`
-	FilePath   string `json:"file_path" jsonschema:"required,description=Path to the image file"`
+	SceneName  string `json:"scene_name" jsonschema:"Name of the scene to add the source to"`
+	SourceName string `json:"source_name" jsonschema:"Name for the new image source"`
+	FilePath   string `json:"file_path" jsonschema:"Path to the image file"`
 }
 
 // CreateColorSourceInput is the input for creating a color source
 type CreateColorSourceInput struct {
-	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the scene to add the source to"`
-	SourceName string `json:"source_name" jsonschema:"required,description=Name for the new color source"`
-	Color      int64  `json:"color" jsonschema:"required,description=Color as ABGR integer (e.g., 0xFF0000FF for red)"`
-	Width      int    `json:"width,omitempty" jsonschema:"description=Width in pixels (default: 1920)"`
-	Height     int    `json:"height,omitempty" jsonschema:"description=Height in pixels (default: 1080)"`
+	SceneName  string `json:"scene_name" jsonschema:"Name of the scene to add the source to"`
+	SourceName string `json:"source_name" jsonschema:"Name for the new color source"`
+	Color      int64  `json:"color" jsonschema:"Color as ABGR integer (e.g., 0xFF0000FF for red)"`
+	Width      int    `json:"width,omitempty" jsonschema:"Width in pixels (default: 1920)"`
+	Height     int    `json:"height,omitempty" jsonschema:"Height in pixels (default: 1080)"`
 }
 
 // CreateBrowserSourceInput is the input for creating a browser source
 type CreateBrowserSourceInput struct {
-	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the scene to add the source to"`
-	SourceName string `json:"source_name" jsonschema:"required,description=Name for the new browser source"`
-	URL        string `json:"url" jsonschema:"required,description=URL to load in the browser source"`
-	Width      int    `json:"width,omitempty" jsonschema:"description=Browser width in pixels (default: 800)"`
-	Height     int    `json:"height,omitempty" jsonschema:"description=Browser height in pixels (default: 600)"`
-	FPS        int    `json:"fps,omitempty" jsonschema:"description=Frame rate (default: 30)"`
+	SceneName  string `json:"scene_name" jsonschema:"Name of the scene to add the source to"`
+	SourceName string `json:"source_name" jsonschema:"Name for the new browser source"`
+	URL        string `json:"url" jsonschema:"URL to load in the browser source"`
+	Width      int    `json:"width,omitempty" jsonschema:"Browser width in pixels (default: 800)"`
+	Height     int    `json:"height,omitempty" jsonschema:"Browser height in pixels (default: 600)"`
+	FPS        int    `json:"fps,omitempty" jsonschema:"Frame rate (default: 30)"`
 }
 
 // CreateMediaSourceInput is the input for creating a media/video source
 type CreateMediaSourceInput struct {
-	SceneName  string `json:"scene_name" jsonschema:"required,description=Name of the scene to add the source to"`
-	SourceName string `json:"source_name" jsonschema:"required,description=Name for the new media source"`
-	FilePath   string `json:"file_path" jsonschema:"required,description=Path to the media file"`
-	Loop       bool   `json:"loop,omitempty" jsonschema:"description=Whether to loop the media (default: false)"`
+	SceneName  string `json:"scene_name" jsonschema:"Name of the scene to add the source to"`
+	SourceName string `json:"source_name" jsonschema:"Name for the new media source"`
+	FilePath   string `json:"file_path" jsonschema:"Path to the media file"`
+	Loop       bool   `json:"loop,omitempty" jsonschema:"Whether to loop the media (default: false)"`
 }
 
 // SetSourceTransformInput is the input for setting source transform properties
 type SetSourceTransformInput struct {
-	SceneName   string   `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID int      `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source"`
-	X           *float64 `json:"x,omitempty" jsonschema:"description=X position in pixels"`
-	Y           *float64 `json:"y,omitempty" jsonschema:"description=Y position in pixels"`
-	ScaleX      *float64 `json:"scale_x,omitempty" jsonschema:"description=X scale factor (1.0 = 100%)"`
-	ScaleY      *float64 `json:"scale_y,omitempty" jsonschema:"description=Y scale factor (1.0 = 100%)"`
-	Rotation    *float64 `json:"rotation,omitempty" jsonschema:"description=Rotation in degrees"`
+	SceneName   string   `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID int      `json:"scene_item_id" jsonschema:"Scene item ID of the source"`
+	X           *float64 `json:"x,omitempty" jsonschema:"X position in pixels"`
+	Y           *float64 `json:"y,omitempty" jsonschema:"Y position in pixels"`
+	ScaleX      *float64 `json:"scale_x,omitempty" jsonschema:"X scale factor (1.0 = 100%)"`
+	ScaleY      *float64 `json:"scale_y,omitempty" jsonschema:"Y scale factor (1.0 = 100%)"`
+	Rotation    *float64 `json:"rotation,omitempty" jsonschema:"Rotation in degrees"`
 }
 
 // GetSourceTransformInput is the input for getting source transform properties
 type GetSourceTransformInput struct {
-	SceneName   string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source"`
+	SceneName   string `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID int    `json:"scene_item_id" jsonschema:"Scene item ID of the source"`
 }
 
 // SetSourceCropInput is the input for setting source crop
 type SetSourceCropInput struct {
-	SceneName   string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source"`
-	CropTop     int    `json:"crop_top,omitempty" jsonschema:"description=Pixels to crop from top"`
-	CropBottom  int    `json:"crop_bottom,omitempty" jsonschema:"description=Pixels to crop from bottom"`
-	CropLeft    int    `json:"crop_left,omitempty" jsonschema:"description=Pixels to crop from left"`
-	CropRight   int    `json:"crop_right,omitempty" jsonschema:"description=Pixels to crop from right"`
+	SceneName   string `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID int    `json:"scene_item_id" jsonschema:"Scene item ID of the source"`
+	CropTop     int    `json:"crop_top,omitempty" jsonschema:"Pixels to crop from top"`
+	CropBottom  int    `json:"crop_bottom,omitempty" jsonschema:"Pixels to crop from bottom"`
+	CropLeft    int    `json:"crop_left,omitempty" jsonschema:"Pixels to crop from left"`
+	CropRight   int    `json:"crop_right,omitempty" jsonschema:"Pixels to crop from right"`
 }
 
 // SetSourceBoundsInput is the input for setting source bounds
 type SetSourceBoundsInput struct {
-	SceneName    string  `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID  int     `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source"`
-	BoundsType   string  `json:"bounds_type" jsonschema:"required,description=Bounds type: OBS_BOUNDS_NONE, OBS_BOUNDS_STRETCH, OBS_BOUNDS_SCALE_INNER, OBS_BOUNDS_SCALE_OUTER, OBS_BOUNDS_SCALE_TO_WIDTH, OBS_BOUNDS_SCALE_TO_HEIGHT, OBS_BOUNDS_MAX_ONLY"`
-	BoundsWidth  float64 `json:"bounds_width,omitempty" jsonschema:"description=Bounds width in pixels"`
-	BoundsHeight float64 `json:"bounds_height,omitempty" jsonschema:"description=Bounds height in pixels"`
+	SceneName    string  `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID  int     `json:"scene_item_id" jsonschema:"Scene item ID of the source"`
+	BoundsType   string  `json:"bounds_type" jsonschema:"Bounds type: OBS_BOUNDS_NONE, OBS_BOUNDS_STRETCH, OBS_BOUNDS_SCALE_INNER, OBS_BOUNDS_SCALE_OUTER, OBS_BOUNDS_SCALE_TO_WIDTH, OBS_BOUNDS_SCALE_TO_HEIGHT, OBS_BOUNDS_MAX_ONLY"`
+	BoundsWidth  float64 `json:"bounds_width,omitempty" jsonschema:"Bounds width in pixels"`
+	BoundsHeight float64 `json:"bounds_height,omitempty" jsonschema:"Bounds height in pixels"`
 }
 
 // SetSourceOrderInput is the input for setting source z-order
 type SetSourceOrderInput struct {
-	SceneName   string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source"`
-	Index       int    `json:"index" jsonschema:"required,description=New index position (0 = bottom, higher = front)"`
+	SceneName   string `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID int    `json:"scene_item_id" jsonschema:"Scene item ID of the source"`
+	Index       int    `json:"index" jsonschema:"New index position (0 = bottom, higher = front)"`
 }
 
 // SetSourceLockedInput is the input for locking/unlocking a source
 type SetSourceLockedInput struct {
-	SceneName   string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source"`
-	Locked      bool   `json:"locked" jsonschema:"required,description=Whether the source should be locked"`
+	SceneName   string `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID int    `json:"scene_item_id" jsonschema:"Scene item ID of the source"`
+	Locked      bool   `json:"locked" jsonschema:"Whether the source should be locked"`
 }
 
 // DuplicateSourceInput is the input for duplicating a source
 type DuplicateSourceInput struct {
-	SceneName     string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID   int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source to duplicate"`
-	DestSceneName string `json:"dest_scene_name,omitempty" jsonschema:"description=Destination scene name (default: same scene)"`
+	SceneName     string `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID   int    `json:"scene_item_id" jsonschema:"Scene item ID of the source to duplicate"`
+	DestSceneName string `json:"dest_scene_name,omitempty" jsonschema:"Destination scene name (default: same scene)"`
 }
 
 // RemoveSourceInput is the input for removing a source from a scene
 type RemoveSourceInput struct {
-	SceneName   string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source to remove"`
+	SceneName   string `json:"scene_name" jsonschema:"Name of the scene containing the source"`
+	SceneItemID int    `json:"scene_item_id" jsonschema:"Scene item ID of the source to remove"`
 }
 
 // registerToolHandlers registers MCP tool handlers based on enabled tool groups

@@ -88,7 +88,134 @@ func (s *Server) registerResourceHandlers() {
 	)
 	resourceCount++
 
+	// Register MCP-UI resources (only if HTTP server is enabled)
+	if s.httpServer != nil {
+		s.registerUIResources(&resourceCount)
+	}
+
 	log.Printf("Resource handlers registered successfully (%d resources)", resourceCount)
+}
+
+// registerUIResources registers UI resources for MCP-UI protocol support
+func (s *Server) registerUIResources(resourceCount *int) {
+	// Status Dashboard UI
+	s.mcpServer.AddResourceTemplate(
+		&mcpsdk.ResourceTemplate{
+			URITemplate: UIStatusDashboardURI,
+			Name:        "OBS Status Dashboard",
+			Description: "Interactive status dashboard with connection info, recording/streaming state, and scene overview",
+			MIMEType:    "text/html",
+		},
+		s.handleUIStatusResource,
+	)
+	*resourceCount++
+
+	// Scene Preview UI
+	s.mcpServer.AddResourceTemplate(
+		&mcpsdk.ResourceTemplate{
+			URITemplate: UIScenePreviewURI,
+			Name:        "Scene Preview",
+			Description: "Visual scene grid with thumbnails for interactive scene switching",
+			MIMEType:    "text/html",
+		},
+		s.handleUIScenePreviewResource,
+	)
+	*resourceCount++
+
+	// Audio Mixer UI
+	s.mcpServer.AddResourceTemplate(
+		&mcpsdk.ResourceTemplate{
+			URITemplate: UIAudioMixerURI,
+			Name:        "Audio Mixer",
+			Description: "Audio input controls with volume sliders and mute toggles",
+			MIMEType:    "text/html",
+		},
+		s.handleUIAudioMixerResource,
+	)
+	*resourceCount++
+
+	// Screenshot Gallery UI
+	s.mcpServer.AddResourceTemplate(
+		&mcpsdk.ResourceTemplate{
+			URITemplate: UIScreenshotGalleryURI,
+			Name:        "Screenshot Gallery",
+			Description: "Live screenshot gallery from configured screenshot sources",
+			MIMEType:    "text/html",
+		},
+		s.handleUIScreenshotGalleryResource,
+	)
+	*resourceCount++
+
+	log.Println("MCP-UI resources registered (4 UI resources)")
+}
+
+// handleUIStatusResource returns the status dashboard UI
+func (s *Server) handleUIStatusResource(ctx context.Context, request *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+	log.Printf("Handling UI resource read for: %s", request.Params.URI)
+
+	// Return URL reference to the HTTP-served UI
+	urlContent := fmt.Sprintf(`{"url": "%s/ui/status", "type": "url"}`, s.httpServer.GetAddr())
+
+	return &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{
+			{
+				URI:      request.Params.URI,
+				MIMEType: "application/json",
+				Text:     urlContent,
+			},
+		},
+	}, nil
+}
+
+// handleUIScenePreviewResource returns the scene preview UI
+func (s *Server) handleUIScenePreviewResource(ctx context.Context, request *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+	log.Printf("Handling UI resource read for: %s", request.Params.URI)
+
+	urlContent := fmt.Sprintf(`{"url": "%s/ui/scenes", "type": "url"}`, s.httpServer.GetAddr())
+
+	return &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{
+			{
+				URI:      request.Params.URI,
+				MIMEType: "application/json",
+				Text:     urlContent,
+			},
+		},
+	}, nil
+}
+
+// handleUIAudioMixerResource returns the audio mixer UI
+func (s *Server) handleUIAudioMixerResource(ctx context.Context, request *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+	log.Printf("Handling UI resource read for: %s", request.Params.URI)
+
+	urlContent := fmt.Sprintf(`{"url": "%s/ui/audio", "type": "url"}`, s.httpServer.GetAddr())
+
+	return &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{
+			{
+				URI:      request.Params.URI,
+				MIMEType: "application/json",
+				Text:     urlContent,
+			},
+		},
+	}, nil
+}
+
+// handleUIScreenshotGalleryResource returns the screenshot gallery UI
+func (s *Server) handleUIScreenshotGalleryResource(ctx context.Context, request *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+	log.Printf("Handling UI resource read for: %s", request.Params.URI)
+
+	urlContent := fmt.Sprintf(`{"url": "%s/ui/screenshots", "type": "url"}`, s.httpServer.GetAddr())
+
+	return &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{
+			{
+				URI:      request.Params.URI,
+				MIMEType: "application/json",
+				Text:     urlContent,
+			},
+		},
+	}, nil
 }
 
 // handleResourceRead returns detailed information about a specific scene

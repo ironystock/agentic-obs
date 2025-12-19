@@ -550,6 +550,7 @@ CREATE TABLE state (
 - [ ] Additional resource types (sources, filters, transitions, audio inputs)
 - [ ] Resource subscriptions (explicit client opt-in)
 - [ ] Action logging hooks in MCP tool handlers
+- [ ] Scene-specific audio mixer UI (show only audio sources in current scene, not all inputs)
 
 **Success Criteria:**
 - TUI offers command-line management

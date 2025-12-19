@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenshot Gallery</title>
+    <style>{{.SharedCSS}}</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Screenshot <span class="accent">Gallery</span></h1>
+
+        <div class="screenshot-grid">
+            {{range .Sources}}
+            <div class="screenshot-card">
+                <img src="{{.ImageURL}}" alt="{{.Name}}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22180%22><rect fill=%22%231a1a2e%22 width=%22300%22 height=%22180%22/><text fill=%22%23666%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22>No Image</text></svg>'">
+                <div class="info">
+                    <div class="name">{{.Name}}</div>
+                    <div class="meta">Source: {{.SourceName}} | Cadence: {{.CadenceMs}}ms</div>
+                    <div class="meta">Last: {{.LastCapture}}</div>
+                </div>
+            </div>
+            {{else}}
+            <p style="color: var(--text-secondary);">No screenshot sources configured</p>
+            {{end}}
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh images every 5 seconds with error handling
+        setInterval(() => {
+            document.querySelectorAll('.screenshot-card img').forEach(img => {
+                const url = new URL(img.src, location.href);
+                url.searchParams.set('t', Date.now());
+                // Create a test image to check if the new URL loads
+                const testImg = new Image();
+                testImg.onload = () => { img.src = url.toString(); };
+                testImg.onerror = () => { console.warn('Screenshot refresh failed for:', url.pathname); };
+                testImg.src = url.toString();
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

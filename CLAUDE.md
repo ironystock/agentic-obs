@@ -136,6 +136,46 @@ TUI Dashboard (--tui mode)
     └─ History view (action log)
 ```
 
+### Web UI Architecture (MCP-UI)
+
+The web dashboard provides a browser-based interface for OBS control at `http://localhost:8765/`.
+
+```
+Browser (Web UI)
+    ↕ HTTP (port 8765)
+HTTP Server (internal/http)
+    ├─ GET /ui/status      → StatusProvider.GetStatus()
+    ├─ GET /ui/scenes      → StatusProvider.GetScenes()
+    ├─ GET /ui/audio       → StatusProvider.GetAudioInputs()
+    ├─ GET /ui/screenshots → StatusProvider.GetScreenshotSources()
+    ├─ GET /ui/scene-thumbnail/{name} → ActionExecutor.TakeSceneThumbnail()
+    └─ POST /ui/action     → ActionExecutor.SetCurrentScene/ToggleInputMute/SetInputVolume
+           ↕ Interface
+MCP Server (internal/mcp)
+    ├─ Implements StatusProvider (read operations)
+    └─ Implements ActionExecutor (write operations)
+           ↕ WebSocket (port 4455)
+OBS Studio
+```
+
+**Key Components:**
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `StatusProvider` | `ui_handlers.go` | Interface for reading OBS state (scenes, audio, status) |
+| `ActionExecutor` | `ui_handlers.go` | Interface for executing actions (scene switch, mute, volume) |
+| `UIHandlers` | `ui_handlers.go` | HTTP request handlers for UI endpoints |
+| `Server` | `status_provider.go` | MCP server implementing both interfaces |
+| Templates | `templates/*.html` | Embedded HTML/CSS/JS for each UI page |
+
+**Request Flow Example (Scene Switch):**
+1. User clicks scene card in `/ui/scenes`
+2. JavaScript sends `POST /ui/action` with `{type: "tool", payload: {toolName: "set_current_scene", params: {scene_name: "Gaming"}}}`
+3. `UIHandlers.HandleUIAction()` parses request, calls `ActionExecutor.SetCurrentScene("Gaming")`
+4. MCP Server's `SetCurrentScene()` calls `obsClient.SetCurrentScene("Gaming")`
+5. OBS WebSocket sends `SetCurrentProgramScene` request to OBS
+6. OBS switches scene, UI reloads to show updated state
+
 ### Design Decisions
 
 1. **Storage Strategy (Moderate)**: SQLite stores connection config and scene presets (source visibility states). Scene presets enable save/restore of source configurations.
@@ -356,6 +396,51 @@ go mod tidy
 - SQLite password storage is local but unencrypted (acceptable for single-user, local deployment)
 - Resource notifications require persistent connection to OBS (auto-reconnect on failure)
 
+### Troubleshooting: Web UI Issues
+
+Common issues with the web dashboard at `http://localhost:8765/`:
+
+**Scenes Not Loading / Empty Scene Grid**
+- **Cause**: OBS not connected or connection lost
+- **Check**: Visit `/api/status` - verify `"connected": true`
+- **Fix**: Ensure OBS is running with WebSocket server enabled (Tools → WebSocket Server Settings)
+- **Fix**: Check OBS password matches config (stored in SQLite database)
+
+**Thumbnails Showing Placeholders (SVG with scene name)**
+- **Cause**: Screenshot capture failing for scene
+- **Check**: Look for `[Thumbnail] Cache miss` or errors in server logs
+- **Fix**: Verify OBS is connected and scenes exist
+- **Fix**: Scene may have no visible sources - add a source to the scene
+- **Note**: Placeholders are expected when OBS first connects (cache warming)
+
+**Scene Click Does Nothing / Flickers But Doesn't Switch**
+- **Cause**: Action executor not configured or JavaScript error
+- **Check**: Browser DevTools Console for errors
+- **Check**: Server logs for `[UI Action]` messages
+- **Fix**: Ensure `SetStatusProvider()` was called before `Start()`
+
+**Audio Sliders at Wrong Position**
+- **Cause**: Volume scale mismatch (linear vs logarithmic)
+- **Check**: Verify slider shows correct dB value (not just percentage)
+- **Fix**: Audio uses logarithmic curve: 0dB=100%, -9dB≈50%, -18dB≈25%
+- **Note**: Sliders snap to 0.5dB increments on release
+
+**"Template error" or Blank Page**
+- **Cause**: Template parsing or embedding failed
+- **Check**: Server logs for `Template load error`
+- **Fix**: Ensure `templates/*.html` files exist and are valid
+- **Fix**: Rebuild with `go build` to re-embed templates
+
+**UI Actions Return "action executor not configured"**
+- **Cause**: HTTP server started before MCP server set as provider
+- **Check**: Server initialization order in `main.go` / `server.go`
+- **Fix**: Call `httpServer.SetStatusProvider(mcpServer)` before `httpServer.Start()`
+
+**Port 8765 Already in Use**
+- **Cause**: Previous instance still running or another service using port
+- **Fix**: Kill existing process: `netstat -ano | findstr :8765` (Windows) or `lsof -i :8765` (Unix)
+- **Fix**: Configure different port in settings
+
 ### Areas Needing Attention
 
 **TODO - Future Enhancements:**
@@ -386,7 +471,7 @@ go mod tidy
 
 ---
 
-**Last Updated:** 2025-12-18
+**Last Updated:** 2025-12-19
 **Go Version:** 1.25.5
 **MCP SDK Version:** 1.1.0
 **goobs Version:** 1.5.6

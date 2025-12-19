@@ -12,8 +12,8 @@ import (
 
 // HelpInput is the input for the help tool
 type HelpInput struct {
-	Topic   string `json:"topic,omitempty" jsonschema:"description=Topic to get help on: 'overview', 'tools', 'resources', 'prompts', 'workflows', 'troubleshooting', or a specific tool name"`
-	Verbose bool   `json:"verbose,omitempty" jsonschema:"description=Include examples and detailed explanations"`
+	Topic   string `json:"topic,omitempty" jsonschema:"Topic to get help on: 'overview', 'tools', 'resources', 'prompts', 'workflows', 'troubleshooting', or a specific tool name"`
+	Verbose bool   `json:"verbose,omitempty" jsonschema:"Include examples and detailed explanations"`
 }
 
 // handleHelp provides comprehensive help on agentic-obs features
