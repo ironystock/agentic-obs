@@ -73,16 +73,16 @@ An Model Context Protocol (MCP) server that gives AI assistants programmatic con
 
 ## Quick Start
 
-1. **Get help on available tools**: Use topic="tools" to see all 44 tools grouped by category
+1. **Get help on available tools**: Use topic="tools" to see all 45 tools grouped by category
 2. **Explore resources**: Use topic="resources" to learn about scenes, screenshots, and presets
 3. **Try workflows**: Use topic="prompts" to see pre-built workflows for common tasks
 4. **Get specific help**: Use topic="<tool_name>" for detailed help on any tool
 
 ## Key Features
 
-- **44 Tools** across 6 categories (Core, Sources, Audio, Layout, Visual, Design)
+- **45 Tools** across 6 categories (Core, Sources, Audio, Layout, Visual, Design) + Help
 - **4 Resource Types** (scenes, screenshots, screenshot URLs, presets)
-- **10 Workflow Prompts** for common streaming/recording tasks
+- **13 Workflow Prompts** for common streaming/recording tasks
 - **Real-time Monitoring** via screenshot sources for AI visual inspection
 - **Scene Presets** to save and restore source visibility states
 - **Persistent Storage** for configuration and presets via SQLite
@@ -121,7 +121,7 @@ An Model Context Protocol (MCP) server that gives AI assistants programmatic con
 
 // getToolsHelp returns comprehensive list of all tools grouped by category
 func (s *Server) getToolsHelp(verbose bool) string {
-	help := `# All Available Tools (44 total)
+	help := `# All Available Tools (45 total)
 
 ## Core Tools (13 tools) - Scene Management, Recording, Streaming
 
@@ -145,6 +145,10 @@ func (s *Server) getToolsHelp(verbose bool) string {
 
 **Status:**
 - get_obs_status - Overall OBS connection and state
+
+## Help Tool (1 tool) - Always Enabled
+
+- help - Get detailed help on tools, resources, prompts, workflows, or troubleshooting
 
 ## Sources Tools (3 tools) - Source Management
 
@@ -285,7 +289,7 @@ Resources complement tools by providing read-only access to OBS state:
 
 // getPromptsHelp returns information about workflow prompts
 func (s *Server) getPromptsHelp(verbose bool) string {
-	help := `# MCP Prompts (10 workflows)
+	help := `# MCP Prompts (13 workflows)
 
 Pre-built prompts combine multiple tools into guided workflows.
 
@@ -334,6 +338,23 @@ Pre-built prompts combine multiple tools into guided workflows.
 **quick-status** - Brief status summary for rapid checks
 - Fast overview of current state
 - Ideal for quick verification
+
+## Scene Design
+
+**scene-designer** - Visual layout creation (requires scene_name)
+- Guide creating layouts using 14 Design tools
+- Source creation, positioning, transforms
+- Optional action argument for specific operations
+
+**source-management** - Manage source visibility and properties (requires scene_name)
+- Toggle source visibility in specified scene
+- Configure source settings and properties
+- Inventory and organize scene sources
+
+**visual-setup** - Configure screenshot monitoring (optional monitor_scene)
+- Set up screenshot sources for AI visual monitoring
+- Configure capture cadence and image settings
+- Enable real-time visual inspection
 `
 
 	if verbose {
@@ -350,6 +371,9 @@ Some prompts require arguments:
 - **visual-check**: screenshot_source (required) - Name of screenshot source to analyze
 - **problem-detection**: screenshot_source (required) - Name of screenshot source to check
 - **preset-switcher**: preset_name (optional) - Name of preset to apply
+- **scene-designer**: scene_name (required), action (optional) - Scene to design and optional operation
+- **source-management**: scene_name (required) - Scene to manage sources in
+- **visual-setup**: monitor_scene (optional) - Scene to configure for visual monitoring
 
 ## Creating Custom Workflows
 

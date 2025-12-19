@@ -146,6 +146,43 @@ for endpoint in "${API_ENDPOINTS[@]}"; do
     fi
 done
 
+# Check help.go embedded content matches expected values
+echo ""
+echo "--- Help Tool Content Consistency ---"
+
+# Check tool count in help.go
+echo -n "Checking: help.go tool count ($EXPECTED_TOOLS)... "
+HELP_TOOL_ISSUES=$(grep -E "All Available Tools \([0-9]+ total\)" internal/mcp/help.go 2>/dev/null | grep -v "$EXPECTED_TOOLS total" || true)
+if [ -z "$HELP_TOOL_ISSUES" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} help.go has incorrect tool count (expected $EXPECTED_TOOLS)"
+    ISSUES_FOUND=1
+fi
+
+# Check prompt count in help.go
+echo -n "Checking: help.go prompt count ($EXPECTED_PROMPTS)... "
+HELP_PROMPT_ISSUES=$(grep -E "MCP Prompts \([0-9]+ workflows\)" internal/mcp/help.go 2>/dev/null | grep -v "$EXPECTED_PROMPTS workflows" || true)
+if [ -z "$HELP_PROMPT_ISSUES" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} help.go has incorrect prompt count (expected $EXPECTED_PROMPTS)"
+    ISSUES_FOUND=1
+fi
+
+# Check resource count in help.go
+echo -n "Checking: help.go resource count ($EXPECTED_RESOURCES)... "
+HELP_RESOURCE_ISSUES=$(grep -E "MCP Resources \([0-9]+ types\)" internal/mcp/help.go 2>/dev/null | grep -v "$EXPECTED_RESOURCES types" || true)
+if [ -z "$HELP_RESOURCE_ISSUES" ]; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}ISSUES FOUND${NC}"
+    echo -e "  ${YELLOW}→${NC} help.go has incorrect resource count (expected $EXPECTED_RESOURCES)"
+    ISSUES_FOUND=1
+fi
+
 # Summary
 echo ""
 echo "=========================================="

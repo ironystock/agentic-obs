@@ -80,6 +80,15 @@ Update these after each phase:
 - [ ] examples/prompts/README.md lists all prompt files
 - [ ] Workflow examples updated for new features
 
+### 9. internal/mcp/help.go (Embedded Help Content)
+
+- [ ] Tool count matches expected (45 tools)
+- [ ] Resource count matches expected (4 resources)
+- [ ] Prompt count matches expected (13 prompts)
+- [ ] New tools have help entries in toolHelp map
+- [ ] New prompts listed in prompts section
+- [ ] Prompt arguments section lists all prompt arguments
+
 ---
 
 ## Automated Verification
@@ -185,6 +194,7 @@ After updates, verify:
 | docs/TOOLS.md | Tool reference | All 45 tools with examples |
 | docs/SCREENSHOTS.md | Screenshot feature guide | Setup, Usage, Workflows |
 | docs/API.md | HTTP API reference | Endpoints, Validation, Security |
+| internal/mcp/help.go | Embedded help content | Tool counts, prompts, help text |
 
 ---
 
