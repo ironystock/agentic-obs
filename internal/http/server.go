@@ -2,8 +2,10 @@ package http
 
 import (
 	"context"
+	"embed"
 	"encoding/base64"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -13,6 +15,9 @@ import (
 
 	"github.com/ironystock/agentic-obs/internal/storage"
 )
+
+//go:embed static/*
+var staticFiles embed.FS
 
 // Config holds HTTP server configuration options.
 //
@@ -66,12 +71,13 @@ func DefaultConfig() Config {
 	}
 }
 
-// Server provides HTTP endpoints for serving screenshot images.
+// Server provides HTTP endpoints for serving screenshot images and the web dashboard.
 type Server struct {
 	storage    *storage.DB
 	httpServer *http.Server
 	addr       string
 	cfg        Config
+	startTime  time.Time
 
 	mu       sync.RWMutex
 	running  bool
@@ -90,14 +96,32 @@ func NewServer(db *storage.DB, cfg Config) *Server {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	s := &Server{
-		storage: db,
-		cfg:     cfg,
-		addr:    addr,
+		storage:   db,
+		cfg:       cfg,
+		addr:      addr,
+		startTime: time.Now(),
 	}
 
 	mux := http.NewServeMux()
+
+	// Screenshot and health endpoints
 	mux.HandleFunc("/screenshot/", s.handleScreenshot)
 	mux.HandleFunc("/health", s.handleHealth)
+
+	// API endpoints
+	mux.HandleFunc("/api/status", s.handleAPIStatus)
+	mux.HandleFunc("/api/history", s.handleAPIHistory)
+	mux.HandleFunc("/api/history/stats", s.handleAPIHistoryStats)
+	mux.HandleFunc("/api/screenshots", s.handleAPIScreenshots)
+	mux.HandleFunc("/api/config", s.handleAPIConfig)
+
+	// Serve static files for the web dashboard
+	staticFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		log.Printf("Warning: failed to setup static file serving: %v", err)
+	} else {
+		mux.Handle("/", http.FileServer(http.FS(staticFS)))
+	}
 
 	s.httpServer = &http.Server{
 		Addr:         addr,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/ironystock/agentic-obs/internal/obs"
 	"github.com/ironystock/agentic-obs/internal/storage"
@@ -373,239 +374,285 @@ func (s *Server) registerToolHandlers() {
 // Tool handler implementations
 
 func (s *Server) handleSetCurrentScene(ctx context.Context, request *mcpsdk.CallToolRequest, input SceneNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Setting current scene to: %s", input.SceneName)
 
 	if err := s.obsClient.SetCurrentScene(input.SceneName); err != nil {
+		s.recordAction("set_current_scene", "Set current scene", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to set current scene: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully switched to scene: %s", input.SceneName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully switched to scene: %s", input.SceneName)}
+	s.recordAction("set_current_scene", "Set current scene", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleCreateScene(ctx context.Context, request *mcpsdk.CallToolRequest, input SceneNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Creating scene: %s", input.SceneName)
 
 	if err := s.obsClient.CreateScene(input.SceneName); err != nil {
+		s.recordAction("create_scene", "Create scene", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to create scene: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully created scene: %s", input.SceneName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully created scene: %s", input.SceneName)}
+	s.recordAction("create_scene", "Create scene", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleRemoveScene(ctx context.Context, request *mcpsdk.CallToolRequest, input SceneNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Removing scene: %s", input.SceneName)
 
 	if err := s.obsClient.RemoveScene(input.SceneName); err != nil {
+		s.recordAction("remove_scene", "Remove scene", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to remove scene: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully removed scene: %s", input.SceneName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully removed scene: %s", input.SceneName)}
+	s.recordAction("remove_scene", "Remove scene", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleStartRecording(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Starting recording")
 
 	if err := s.obsClient.StartRecording(); err != nil {
+		s.recordAction("start_recording", "Start recording", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to start recording: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: "Successfully started recording",
-	}, nil
+	result := SimpleResult{Message: "Successfully started recording"}
+	s.recordAction("start_recording", "Start recording", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleStopRecording(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Stopping recording")
 
 	outputPath, err := s.obsClient.StopRecording()
 	if err != nil {
+		s.recordAction("stop_recording", "Stop recording", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to stop recording: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully stopped recording. Output saved to: %s", outputPath),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully stopped recording. Output saved to: %s", outputPath)}
+	s.recordAction("stop_recording", "Stop recording", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleGetRecordingStatus(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Getting recording status")
 
 	status, err := s.obsClient.GetRecordingStatus()
 	if err != nil {
+		s.recordAction("get_recording_status", "Get recording status", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get recording status: %w", err)
 	}
 
-	// Return the status as JSON
+	s.recordAction("get_recording_status", "Get recording status", nil, status, true, time.Since(start))
 	return nil, status, nil
 }
 
 func (s *Server) handleStartStreaming(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Starting streaming")
 
 	if err := s.obsClient.StartStreaming(); err != nil {
+		s.recordAction("start_streaming", "Start streaming", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to start streaming: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: "Successfully started streaming",
-	}, nil
+	result := SimpleResult{Message: "Successfully started streaming"}
+	s.recordAction("start_streaming", "Start streaming", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleStopStreaming(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Stopping streaming")
 
 	if err := s.obsClient.StopStreaming(); err != nil {
+		s.recordAction("stop_streaming", "Stop streaming", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to stop streaming: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: "Successfully stopped streaming",
-	}, nil
+	result := SimpleResult{Message: "Successfully stopped streaming"}
+	s.recordAction("stop_streaming", "Stop streaming", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleGetStreamingStatus(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Getting streaming status")
 
 	status, err := s.obsClient.GetStreamingStatus()
 	if err != nil {
+		s.recordAction("get_streaming_status", "Get streaming status", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get streaming status: %w", err)
 	}
 
-	// Return the status as JSON
+	s.recordAction("get_streaming_status", "Get streaming status", nil, status, true, time.Since(start))
 	return nil, status, nil
 }
 
 func (s *Server) handleGetOBSStatus(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Getting OBS status")
 
 	status, err := s.obsClient.GetOBSStatus()
 	if err != nil {
+		s.recordAction("get_obs_status", "Get OBS status", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get OBS status: %w", err)
 	}
 
-	// Return the status as JSON
+	s.recordAction("get_obs_status", "Get OBS status", nil, status, true, time.Since(start))
 	return nil, status, nil
 }
 
 // New P1 tool handlers
 
 func (s *Server) handleListScenes(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Listing all scenes")
 
 	scenes, currentScene, err := s.obsClient.GetSceneList()
 	if err != nil {
+		s.recordAction("list_scenes", "List scenes", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to list scenes: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"scenes":        scenes,
 		"current_scene": currentScene,
-	}, nil
+	}
+	s.recordAction("list_scenes", "List scenes", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handlePauseRecording(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Pausing recording")
 
 	if err := s.obsClient.PauseRecording(); err != nil {
+		s.recordAction("pause_recording", "Pause recording", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to pause recording: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: "Successfully paused recording",
-	}, nil
+	result := SimpleResult{Message: "Successfully paused recording"}
+	s.recordAction("pause_recording", "Pause recording", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleResumeRecording(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Resuming recording")
 
 	if err := s.obsClient.ResumeRecording(); err != nil {
+		s.recordAction("resume_recording", "Resume recording", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to resume recording: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: "Successfully resumed recording",
-	}, nil
+	result := SimpleResult{Message: "Successfully resumed recording"}
+	s.recordAction("resume_recording", "Resume recording", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleListSources(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Listing all sources")
 
 	sources, err := s.obsClient.ListSources()
 	if err != nil {
+		s.recordAction("list_sources", "List sources", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to list sources: %w", err)
 	}
 
+	s.recordAction("list_sources", "List sources", nil, sources, true, time.Since(start))
 	return nil, sources, nil
 }
 
 func (s *Server) handleToggleSourceVisibility(ctx context.Context, request *mcpsdk.CallToolRequest, input SourceVisibilityInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Toggling visibility for source %d in scene: %s", input.SourceID, input.SceneName)
 
 	newState, err := s.obsClient.ToggleSourceVisibility(input.SceneName, int(input.SourceID))
 	if err != nil {
+		s.recordAction("toggle_source_visibility", "Toggle source visibility", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to toggle source visibility: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"scene_name": input.SceneName,
 		"source_id":  input.SourceID,
 		"visible":    newState,
-	}, nil
+	}
+	s.recordAction("toggle_source_visibility", "Toggle source visibility", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleGetSourceSettings(ctx context.Context, request *mcpsdk.CallToolRequest, input SourceNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Getting settings for source: %s", input.SourceName)
 
 	settings, err := s.obsClient.GetSourceSettings(input.SourceName)
 	if err != nil {
+		s.recordAction("get_source_settings", "Get source settings", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get source settings: %w", err)
 	}
 
+	s.recordAction("get_source_settings", "Get source settings", input, settings, true, time.Since(start))
 	return nil, settings, nil
 }
 
 func (s *Server) handleGetInputMute(ctx context.Context, request *mcpsdk.CallToolRequest, input InputNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Getting mute status for input: %s", input.InputName)
 
 	isMuted, err := s.obsClient.GetInputMute(input.InputName)
 	if err != nil {
+		s.recordAction("get_input_mute", "Get input mute", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get input mute status: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"input_name": input.InputName,
 		"is_muted":   isMuted,
-	}, nil
+	}
+	s.recordAction("get_input_mute", "Get input mute", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleToggleInputMute(ctx context.Context, request *mcpsdk.CallToolRequest, input InputNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Toggling mute for input: %s", input.InputName)
 
 	if err := s.obsClient.ToggleInputMute(input.InputName); err != nil {
+		s.recordAction("toggle_input_mute", "Toggle input mute", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to toggle input mute: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully toggled mute for input: %s", input.InputName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully toggled mute for input: %s", input.InputName)}
+	s.recordAction("toggle_input_mute", "Toggle input mute", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleSetInputVolume(ctx context.Context, request *mcpsdk.CallToolRequest, input SetVolumeInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Setting volume for input: %s", input.InputName)
 
 	if err := s.obsClient.SetInputVolume(input.InputName, input.VolumeDb, input.VolumeMul); err != nil {
+		s.recordAction("set_input_volume", "Set input volume", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to set input volume: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully set volume for input: %s", input.InputName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully set volume for input: %s", input.InputName)}
+	s.recordAction("set_input_volume", "Set input volume", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // Scene preset tool handlers
@@ -613,17 +660,19 @@ func (s *Server) handleSetInputVolume(ctx context.Context, request *mcpsdk.CallT
 // handleListScenePresets returns all saved scene presets, optionally filtered by scene name.
 // Returns a list of preset summaries (id, name, scene_name, created_at) and total count.
 func (s *Server) handleListScenePresets(ctx context.Context, request *mcpsdk.CallToolRequest, input ListPresetsInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Listing scene presets (filter: %s)", input.SceneName)
 
 	presets, err := s.storage.ListScenePresets(ctx, input.SceneName)
 	if err != nil {
+		s.recordAction("list_scene_presets", "List scene presets", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to list scene presets: %w", err)
 	}
 
 	// Convert to simpler response format (without full source details)
-	result := make([]map[string]interface{}, len(presets))
+	presetList := make([]map[string]interface{}, len(presets))
 	for i, p := range presets {
-		result[i] = map[string]interface{}{
+		presetList[i] = map[string]interface{}{
 			"id":         p.ID,
 			"name":       p.Name,
 			"scene_name": p.SceneName,
@@ -631,76 +680,90 @@ func (s *Server) handleListScenePresets(ctx context.Context, request *mcpsdk.Cal
 		}
 	}
 
-	return nil, map[string]interface{}{
-		"presets": result,
+	result := map[string]interface{}{
+		"presets": presetList,
 		"count":   len(presets),
-	}, nil
+	}
+	s.recordAction("list_scene_presets", "List scene presets", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleGetPresetDetails retrieves full details of a scene preset including source states.
 // Returns the preset's id, name, scene_name, sources array, and created_at timestamp.
 // Returns an error if the preset does not exist.
 func (s *Server) handleGetPresetDetails(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Getting preset details for: %s", input.PresetName)
 
 	preset, err := s.storage.GetScenePreset(ctx, input.PresetName)
 	if err != nil {
+		s.recordAction("get_preset_details", "Get preset details", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get preset details: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"id":         preset.ID,
 		"name":       preset.Name,
 		"scene_name": preset.SceneName,
 		"sources":    preset.Sources,
 		"created_at": preset.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	}, nil
+	}
+	s.recordAction("get_preset_details", "Get preset details", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleDeleteScenePreset permanently removes a scene preset from storage.
 // Returns a success message or an error if the preset does not exist.
 func (s *Server) handleDeleteScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Deleting scene preset: %s", input.PresetName)
 
 	if err := s.storage.DeleteScenePreset(ctx, input.PresetName); err != nil {
+		s.recordAction("delete_scene_preset", "Delete scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to delete preset: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully deleted preset: %s", input.PresetName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully deleted preset: %s", input.PresetName)}
+	s.recordAction("delete_scene_preset", "Delete scene preset", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleRenameScenePreset changes the name of an existing scene preset.
 // Returns a success message or an error if the preset does not exist or the new name conflicts.
 func (s *Server) handleRenameScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input RenamePresetInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Renaming preset from '%s' to '%s'", input.OldName, input.NewName)
 
 	if err := s.storage.RenameScenePreset(ctx, input.OldName, input.NewName); err != nil {
+		s.recordAction("rename_scene_preset", "Rename scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to rename preset: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully renamed preset from '%s' to '%s'", input.OldName, input.NewName),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully renamed preset from '%s' to '%s'", input.OldName, input.NewName)}
+	s.recordAction("rename_scene_preset", "Rename scene preset", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleGetInputVolume retrieves the current volume level of an audio input.
 // Returns volume_db (decibels) and volume_mul (linear multiplier) values.
 // Returns an error if the input does not exist or OBS is not connected.
 func (s *Server) handleGetInputVolume(ctx context.Context, request *mcpsdk.CallToolRequest, input InputNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Getting volume for input: %s", input.InputName)
 
 	volumeDb, volumeMul, err := s.obsClient.GetInputVolume(input.InputName)
 	if err != nil {
+		s.recordAction("get_input_volume", "Get input volume", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get input volume: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"input_name": input.InputName,
 		"volume_db":  volumeDb,
 		"volume_mul": volumeMul,
-	}, nil
+	}
+	s.recordAction("get_input_volume", "Get input volume", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleSaveScenePreset captures the current source visibility states from an OBS scene
@@ -708,11 +771,13 @@ func (s *Server) handleGetInputVolume(ctx context.Context, request *mcpsdk.CallT
 // source_count, and a success message. Returns an error if the scene does not exist,
 // OBS is not connected, or a preset with the same name already exists.
 func (s *Server) handleSaveScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input SavePresetInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Saving scene preset '%s' for scene '%s'", input.PresetName, input.SceneName)
 
 	// Capture current scene state from OBS
 	states, err := s.obsClient.CaptureSceneState(input.SceneName)
 	if err != nil {
+		s.recordAction("save_scene_preset", "Save scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to capture scene state: %w", err)
 	}
 
@@ -734,16 +799,19 @@ func (s *Server) handleSaveScenePreset(ctx context.Context, request *mcpsdk.Call
 
 	id, err := s.storage.CreateScenePreset(ctx, preset)
 	if err != nil {
+		s.recordAction("save_scene_preset", "Save scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to save preset: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"id":           id,
 		"preset_name":  input.PresetName,
 		"scene_name":   input.SceneName,
 		"source_count": len(sources),
 		"message":      fmt.Sprintf("Successfully saved preset '%s' with %d sources", input.PresetName, len(sources)),
-	}, nil
+	}
+	s.recordAction("save_scene_preset", "Save scene preset", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleApplyScenePreset loads a saved preset and applies its source visibility states
@@ -751,17 +819,20 @@ func (s *Server) handleSaveScenePreset(ctx context.Context, request *mcpsdk.Call
 // Returns the preset_name, scene_name, applied_count, and a success message.
 // Returns an error if the preset does not exist, the scene no longer exists, or OBS is not connected.
 func (s *Server) handleApplyScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Applying scene preset: %s", input.PresetName)
 
 	// Load preset from storage
 	preset, err := s.storage.GetScenePreset(ctx, input.PresetName)
 	if err != nil {
+		s.recordAction("apply_scene_preset", "Apply scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to load preset: %w", err)
 	}
 
 	// Get current scene items to map names to IDs
 	scene, err := s.obsClient.GetSceneByName(preset.SceneName)
 	if err != nil {
+		s.recordAction("apply_scene_preset", "Apply scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to get scene '%s': %w", preset.SceneName, err)
 	}
 
@@ -788,15 +859,18 @@ func (s *Server) handleApplyScenePreset(ctx context.Context, request *mcpsdk.Cal
 
 	// Apply preset to OBS
 	if err := s.obsClient.ApplyScenePreset(preset.SceneName, obsStates); err != nil {
+		s.recordAction("apply_scene_preset", "Apply scene preset", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to apply preset: %w", err)
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"preset_name":   input.PresetName,
 		"scene_name":    preset.SceneName,
 		"applied_count": len(obsStates),
 		"message":       fmt.Sprintf("Successfully applied preset '%s' to scene '%s'", input.PresetName, preset.SceneName),
-	}, nil
+	}
+	s.recordAction("apply_scene_preset", "Apply scene preset", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // Screenshot source tool handlers
@@ -804,6 +878,7 @@ func (s *Server) handleApplyScenePreset(ctx context.Context, request *mcpsdk.Cal
 // handleCreateScreenshotSource creates a new periodic screenshot capture source.
 // Returns the source details including the HTTP URL where screenshots can be accessed.
 func (s *Server) handleCreateScreenshotSource(ctx context.Context, request *mcpsdk.CallToolRequest, input CreateScreenshotSourceInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Creating screenshot source '%s' for OBS source '%s'", input.Name, input.SourceName)
 
 	// Set defaults
@@ -831,12 +906,14 @@ func (s *Server) handleCreateScreenshotSource(ctx context.Context, request *mcps
 
 	id, err := s.storage.CreateScreenshotSource(ctx, source)
 	if err != nil {
+		s.recordAction("create_screenshot_source", "Create screenshot source", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to create screenshot source: %w", err)
 	}
 
 	// Retrieve the full source with defaults applied
 	createdSource, err := s.storage.GetScreenshotSource(ctx, id)
 	if err != nil {
+		s.recordAction("create_screenshot_source", "Create screenshot source", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to retrieve created source: %w", err)
 	}
 
@@ -849,7 +926,7 @@ func (s *Server) handleCreateScreenshotSource(ctx context.Context, request *mcps
 	// Get the HTTP URL for this source
 	screenshotURL := s.httpServer.GetScreenshotURL(input.Name)
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"id":           id,
 		"name":         input.Name,
 		"source_name":  input.SourceName,
@@ -858,16 +935,20 @@ func (s *Server) handleCreateScreenshotSource(ctx context.Context, request *mcps
 		"quality":      input.Quality,
 		"url":          screenshotURL,
 		"message":      fmt.Sprintf("Successfully created screenshot source '%s'. Access at: %s", input.Name, screenshotURL),
-	}, nil
+	}
+	s.recordAction("create_screenshot_source", "Create screenshot source", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleRemoveScreenshotSource stops and removes a screenshot capture source.
 func (s *Server) handleRemoveScreenshotSource(ctx context.Context, request *mcpsdk.CallToolRequest, input ScreenshotSourceNameInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Removing screenshot source: %s", input.Name)
 
 	// Get the source to find its ID
 	source, err := s.storage.GetScreenshotSourceByName(ctx, input.Name)
 	if err != nil {
+		s.recordAction("remove_screenshot_source", "Remove screenshot source", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to find screenshot source: %w", err)
 	}
 
@@ -878,29 +959,32 @@ func (s *Server) handleRemoveScreenshotSource(ctx context.Context, request *mcps
 
 	// Delete from storage (cascades to delete screenshots)
 	if err := s.storage.DeleteScreenshotSource(ctx, source.ID); err != nil {
+		s.recordAction("remove_screenshot_source", "Remove screenshot source", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to delete screenshot source: %w", err)
 	}
 
-	return nil, SimpleResult{
-		Message: fmt.Sprintf("Successfully removed screenshot source '%s'", input.Name),
-	}, nil
+	result := SimpleResult{Message: fmt.Sprintf("Successfully removed screenshot source '%s'", input.Name)}
+	s.recordAction("remove_screenshot_source", "Remove screenshot source", input, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleListScreenshotSources lists all configured screenshot sources with their status and URLs.
 func (s *Server) handleListScreenshotSources(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Println("Listing screenshot sources")
 
 	sources, err := s.storage.ListScreenshotSources(ctx)
 	if err != nil {
+		s.recordAction("list_screenshot_sources", "List screenshot sources", nil, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to list screenshot sources: %w", err)
 	}
 
-	result := make([]map[string]interface{}, len(sources))
+	sourceList := make([]map[string]interface{}, len(sources))
 	for i, src := range sources {
 		// Get screenshot count for this source
 		count, _ := s.storage.CountScreenshots(ctx, src.ID)
 
-		result[i] = map[string]interface{}{
+		sourceList[i] = map[string]interface{}{
 			"id":               src.ID,
 			"name":             src.Name,
 			"source_name":      src.SourceName,
@@ -914,29 +998,35 @@ func (s *Server) handleListScreenshotSources(ctx context.Context, request *mcpsd
 		}
 	}
 
-	return nil, map[string]interface{}{
-		"sources": result,
+	result := map[string]interface{}{
+		"sources": sourceList,
 		"count":   len(sources),
-	}, nil
+	}
+	s.recordAction("list_screenshot_sources", "List screenshot sources", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 // handleConfigureScreenshotCadence updates the capture interval for a screenshot source.
 func (s *Server) handleConfigureScreenshotCadence(ctx context.Context, request *mcpsdk.CallToolRequest, input ConfigureScreenshotCadenceInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
 	log.Printf("Updating cadence for screenshot source '%s' to %dms", input.Name, input.CadenceMs)
 
 	if input.CadenceMs <= 0 {
+		s.recordAction("configure_screenshot_cadence", "Configure screenshot cadence", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("cadence_ms must be greater than 0")
 	}
 
 	// Get the source
 	source, err := s.storage.GetScreenshotSourceByName(ctx, input.Name)
 	if err != nil {
+		s.recordAction("configure_screenshot_cadence", "Configure screenshot cadence", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to find screenshot source: %w", err)
 	}
 
 	// Update in storage
 	source.CadenceMs = input.CadenceMs
 	if err := s.storage.UpdateScreenshotSource(ctx, *source); err != nil {
+		s.recordAction("configure_screenshot_cadence", "Configure screenshot cadence", input, nil, false, time.Since(start))
 		return nil, nil, fmt.Errorf("failed to update screenshot source: %w", err)
 	}
 
@@ -948,9 +1038,11 @@ func (s *Server) handleConfigureScreenshotCadence(ctx context.Context, request *
 		}
 	}
 
-	return nil, map[string]interface{}{
+	result := map[string]interface{}{
 		"name":       input.Name,
 		"cadence_ms": input.CadenceMs,
 		"message":    fmt.Sprintf("Successfully updated cadence for '%s' to %dms", input.Name, input.CadenceMs),
-	}, nil
+	}
+	s.recordAction("configure_screenshot_cadence", "Configure screenshot cadence", input, result, true, time.Since(start))
+	return nil, result, nil
 }

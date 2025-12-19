@@ -2,8 +2,10 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	agenthttp "github.com/ironystock/agentic-obs/internal/http"
 	"github.com/ironystock/agentic-obs/internal/obs"
@@ -204,6 +206,43 @@ func (s *Server) Stop() error {
 
 	log.Println("MCP server stopped")
 	return nil
+}
+
+// recordAction logs a tool action to the action history database.
+// This should be called at the end of each tool handler.
+func (s *Server) recordAction(toolName, action string, input interface{}, output interface{}, success bool, duration time.Duration) {
+	// Skip if storage is not initialized (e.g., in tests)
+	if s.storage == nil {
+		return
+	}
+
+	// Convert input/output to JSON strings
+	inputStr := ""
+	if input != nil {
+		if b, err := json.Marshal(input); err == nil {
+			inputStr = string(b)
+		}
+	}
+
+	outputStr := ""
+	if output != nil {
+		if b, err := json.Marshal(output); err == nil {
+			outputStr = string(b)
+		}
+	}
+
+	record := storage.ActionRecord{
+		Action:     action,
+		ToolName:   toolName,
+		Input:      inputStr,
+		Output:     outputStr,
+		Success:    success,
+		DurationMs: duration.Milliseconds(),
+	}
+
+	if _, err := s.storage.RecordAction(s.ctx, record); err != nil {
+		log.Printf("Warning: failed to record action history: %v", err)
+	}
 }
 
 // SendResourceUpdated notifies clients that a specific resource has been updated
