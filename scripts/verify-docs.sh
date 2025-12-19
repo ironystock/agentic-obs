@@ -14,11 +14,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Current expected values - UPDATE THESE AFTER EACH PHASE
-EXPECTED_TOOLS=44
-EXPECTED_RESOURCES=3
-EXPECTED_PROMPTS=10
+EXPECTED_TOOLS=45
+EXPECTED_RESOURCES=4
+EXPECTED_PROMPTS=13
 EXPECTED_API_ENDPOINTS=8
-CURRENT_PHASE=6
+CURRENT_PHASE=7
 
 echo "=========================================="
 echo "Documentation Consistency Verification"
@@ -111,6 +111,7 @@ REQUIRED_FILES=(
     "docs/SCREENSHOTS.md"
     "docs/QUICKSTART.md"
     "docs/API.md"
+    "skills/README.md"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do

@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Comprehensive documentation for all 44 Model Context Protocol (MCP) tools provided by the agentic-obs server.
+Comprehensive documentation for all 45 Model Context Protocol (MCP) tools provided by the agentic-obs server.
 
 ## Table of Contents
 
@@ -43,6 +43,8 @@ Comprehensive documentation for all 44 Model Context Protocol (MCP) tools provid
   - [configure_screenshot_cadence](#configure_screenshot_cadence)
 - [Status](#status)
   - [get_obs_status](#get_obs_status)
+- [Help & Discovery](#help--discovery)
+  - [help](#help)
 - [Scene Design](#scene-design)
   - [create_text_source](#create_text_source)
   - [create_image_source](#create_image_source)
@@ -65,7 +67,7 @@ Comprehensive documentation for all 44 Model Context Protocol (MCP) tools provid
 
 ## Overview
 
-The agentic-obs MCP server provides 44 tools organized into 9 categories (6 tool groups) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
+The agentic-obs MCP server provides 45 tools organized into 10 categories (6 tool groups + help) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
 
 | Category | Tools | Description | Tool Group |
 |----------|-------|-------------|------------|
@@ -77,6 +79,7 @@ The agentic-obs MCP server provides 44 tools organized into 9 categories (6 tool
 | Audio | 4 | Mute, volume control | Audio |
 | Screenshot Sources | 4 | AI visual monitoring of stream output | Visual |
 | Status | 1 | Overall OBS status | Core |
+| Help & Discovery | 1 | Topic-based help system | Always enabled |
 | Scene Design | 14 | Source creation and manipulation | Design |
 
 **General Prerequisites:**
@@ -1574,6 +1577,56 @@ For detailed documentation on use cases and best practices, see [SCREENSHOTS.md]
 - Use fps and frame_time_ms for performance analysis
 - Good for pre-flight checks before streaming/recording
 - Includes both streaming and recording states in one call
+
+---
+
+## Help & Discovery
+
+The Help tool provides built-in documentation and guidance for using agentic-obs. It's always enabled regardless of tool group configuration.
+
+### help
+
+**Purpose:** Get detailed help on agentic-obs features, tools, resources, prompts, and workflows.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| topic | string | No | Topic to get help on (default: "overview") |
+| verbose | boolean | No | Include examples and detailed explanations |
+
+**Available Topics:**
+| Topic | Description |
+|-------|-------------|
+| `overview` | Quick start guide and feature summary |
+| `tools` | List of all 45 tools by category |
+| `resources` | MCP resource types and URI patterns |
+| `prompts` | Available workflow prompts |
+| `workflows` | Common workflow patterns and best practices |
+| `troubleshooting` | Common issues and solutions |
+| `<tool_name>` | Detailed help for a specific tool (e.g., "set_current_scene") |
+
+**Example Request:**
+```json
+{
+  "topic": "tools",
+  "verbose": true
+}
+```
+
+**Example Response:**
+```json
+{
+  "topic": "tools",
+  "help": "# Available Tools\n\n## Core Tools (13)\n...",
+  "verbose": true
+}
+```
+
+**Best Practices:**
+- Use `topic="overview"` for first-time users
+- Use `topic="<tool_name>"` for specific tool documentation
+- Enable `verbose=true` for examples and detailed explanations
+- Use `topic="troubleshooting"` when encountering issues
 
 ---
 

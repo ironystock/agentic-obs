@@ -115,6 +115,55 @@ func (s *Server) registerPrompts() {
 		s.handleQuickStatus,
 	)
 
+	// Prompt 11: Scene Designer
+	s.mcpServer.AddPrompt(
+		&mcpsdk.Prompt{
+			Name:        "scene-designer",
+			Description: "Guide through creating and manipulating visual layouts with sources, transforms, and positioning",
+			Arguments: []*mcpsdk.PromptArgument{
+				{
+					Name:        "scene_name",
+					Description: "Name of the scene to design",
+					Required:    true,
+				},
+				{
+					Name:        "action",
+					Description: "Optional action: 'add_elements', 'reposition', or 'adjust_layout'",
+					Required:    false,
+				},
+			},
+		},
+		s.handleSceneDesigner,
+	)
+
+	// Prompt 12: Source Management
+	s.mcpServer.AddPrompt(
+		&mcpsdk.Prompt{
+			Name:        "source-management",
+			Description: "Manage existing sources in a scene: visibility, properties, duplication, and removal",
+			Arguments: []*mcpsdk.PromptArgument{{
+				Name:        "scene_name",
+				Description: "Name of the scene containing sources to manage",
+				Required:    true,
+			}},
+		},
+		s.handleSourceManagement,
+	)
+
+	// Prompt 13: Visual Setup
+	s.mcpServer.AddPrompt(
+		&mcpsdk.Prompt{
+			Name:        "visual-setup",
+			Description: "Create and configure screenshot sources for AI visual monitoring of stream output",
+			Arguments: []*mcpsdk.PromptArgument{{
+				Name:        "monitor_scene",
+				Description: "Optional scene name to monitor with screenshot source",
+				Required:    false,
+			}},
+		},
+		s.handleVisualSetup,
+	)
+
 	log.Println("Prompt handlers registered successfully")
 }
 
@@ -641,6 +690,378 @@ Keep it short and clear - this is a quick status check, not a detailed report.`
 
 	return &mcpsdk.GetPromptResult{
 		Description: "Get a brief summary of current OBS state (scene, recording, streaming)",
+		Messages: []*mcpsdk.PromptMessage{{
+			Role: "user",
+			Content: &mcpsdk.TextContent{
+				Text: promptText,
+			},
+		}},
+	}, nil
+}
+
+// handleSceneDesigner provides visual layout creation and manipulation workflow
+func (s *Server) handleSceneDesigner(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsdk.GetPromptResult, error) {
+	log.Println("Handling scene-designer prompt")
+
+	sceneName := ""
+	action := ""
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["scene_name"]; ok {
+			sceneName = val
+		}
+		if val, ok := req.Params.Arguments["action"]; ok {
+			action = val
+		}
+	}
+
+	if sceneName == "" {
+		return nil, fmt.Errorf("scene_name argument is required")
+	}
+
+	promptText := fmt.Sprintf(`Help me design and manipulate the visual layout for scene '%s':
+
+1. **Verify Scene Exists**
+   - Use list_scenes to check if scene '%s' exists
+   - If the scene doesn't exist, use create_scene to create it
+   - Use set_current_scene to make it active for preview
+   - Access scene details via resource: obs://scene/%s
+
+2. **List Existing Sources**
+   - Use list_sources to see all available input sources
+   - Identify sources currently in the scene
+   - Check which sources are visible and enabled
+   - Report current source count and types`, sceneName, sceneName, sceneName)
+
+	switch action {
+	case "add_elements":
+		promptText += `
+
+3. **Add New Visual Elements**
+   - Use create_text_source to add text overlays (titles, labels, timers)
+   - Use create_image_source to add static images (logos, backgrounds)
+   - Use create_color_source to add solid color backgrounds or separators
+   - Use create_browser_source to add web content (alerts, widgets)
+   - Use create_media_source to add video files or animations
+   - Use list_input_kinds to discover available source types
+
+4. **Position New Sources**
+   - Use set_source_transform to position each source (x, y coordinates)
+   - Set source dimensions with width and height
+   - Apply scaling with scale_x and scale_y
+   - Rotate sources if needed with rotation angle
+   - Use get_source_transform to verify current positioning
+
+5. **Configure Source Properties**
+   - Use set_source_bounds to control scaling behavior (fit, stretch, crop)
+   - Use set_source_crop to crop edges (top, bottom, left, right)
+   - Use set_source_order to arrange layer ordering (front to back)
+   - Use set_source_locked to prevent accidental movement
+   - Use toggle_source_visibility to show/hide sources`
+
+	case "reposition":
+		promptText += `
+
+3. **Analyze Current Layout**
+   - Use get_source_transform for each source to see current positions
+   - Identify sources that overlap or are positioned incorrectly
+   - Check for sources outside visible canvas area
+   - Verify source dimensions and scaling
+
+4. **Reposition Sources**
+   - Use set_source_transform to move sources to new coordinates
+   - Adjust source dimensions (width, height) as needed
+   - Update scaling factors (scale_x, scale_y) for better fit
+   - Change rotation angles if needed
+   - Ensure no critical elements are cut off
+
+5. **Verify and Fine-Tune**
+   - Use get_source_transform to confirm new positions
+   - Check for overlapping elements that shouldn't overlap
+   - Verify all text is readable and not obscured
+   - Use set_source_order to adjust layering if needed`
+
+	case "adjust_layout":
+		promptText += `
+
+3. **Evaluate Current Layout**
+   - Use get_source_transform to analyze all source positions and sizes
+   - Use set_source_bounds to review scaling behavior
+   - Use get_source_crop to check if any sources are cropped
+   - Identify layout issues (overlaps, gaps, poor alignment)
+
+4. **Adjust Layout Properties**
+   - Use set_source_bounds to change how sources scale (fit, stretch, crop to bounds)
+   - Use set_source_crop to trim unwanted edges (crop pixels from top/bottom/left/right)
+   - Use set_source_transform to fine-tune positions and dimensions
+   - Adjust layer ordering with set_source_order for proper visibility
+
+5. **Lock and Finalize**
+   - Use set_source_locked to lock sources in place once positioned
+   - Save the layout as a preset with save_scene_preset
+   - Document the layout design for future reference`
+
+	default:
+		// No specific action - general design workflow
+		promptText += `
+
+3. **Design Actions Available**
+
+   **Adding Elements:**
+   - create_text_source: Add text overlays, titles, labels, or timers
+   - create_image_source: Add logos, backgrounds, or static graphics
+   - create_color_source: Add solid color backgrounds or separators
+   - create_browser_source: Add web-based content, alerts, or widgets
+   - create_media_source: Add video files or animated content
+   - list_input_kinds: Discover all available source types for creation
+
+   **Positioning & Transform:**
+   - set_source_transform: Position, scale, and rotate sources
+   - get_source_transform: View current transform properties
+   - set_source_bounds: Control how sources scale (fit, stretch, crop)
+   - set_source_crop: Crop edges of sources (top, bottom, left, right)
+
+   **Organization & Management:**
+   - set_source_order: Arrange layer ordering (bring to front, send to back)
+   - set_source_locked: Lock sources to prevent accidental changes
+   - duplicate_source: Copy a source to reuse its configuration
+   - remove_source: Delete sources from the scene
+   - toggle_source_visibility: Show or hide sources
+
+4. **Design Workflow Recommendations**
+   - Start with background elements (colors, images)
+   - Add mid-layer content (video sources, browser sources)
+   - Add foreground elements (text, overlays)
+   - Position and scale each element carefully
+   - Use set_source_locked to protect finalized sources
+   - Save layout as preset for easy restoration
+
+5. **Best Practices**
+   - Use descriptive source names for easy identification
+   - Group related sources using consistent naming (e.g., "Title_Main", "Title_Subtitle")
+   - Leave margins around text for readability
+   - Ensure contrast between text and background
+   - Test layout at target resolution before going live`
+	}
+
+	promptText += `
+
+6. **Final Verification**
+   - Review all sources with list_sources
+   - Verify transforms with get_source_transform for each element
+   - Check source visibility states with toggle_source_visibility
+   - Use visual-check prompt with a screenshot source to see the final result
+   - Save the design as a preset with save_scene_preset
+
+Provide step-by-step guidance for designing the scene layout with clear recommendations.
+
+Scene to design: ` + sceneName
+
+	if action != "" {
+		promptText += fmt.Sprintf("\nAction focus: %s", action)
+	}
+
+	return &mcpsdk.GetPromptResult{
+		Description: "Guide through creating and manipulating visual layouts with sources, transforms, and positioning",
+		Messages: []*mcpsdk.PromptMessage{{
+			Role: "user",
+			Content: &mcpsdk.TextContent{
+				Text: promptText,
+			},
+		}},
+	}, nil
+}
+
+// handleSourceManagement provides source management workflow
+func (s *Server) handleSourceManagement(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsdk.GetPromptResult, error) {
+	log.Println("Handling source-management prompt")
+
+	sceneName := ""
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["scene_name"]; ok {
+			sceneName = val
+		}
+	}
+
+	if sceneName == "" {
+		return nil, fmt.Errorf("scene_name argument is required")
+	}
+
+	promptText := fmt.Sprintf(`Help me manage sources in scene '%s':
+
+1. **Inventory Current Sources**
+   - Use list_scenes to verify scene '%s' exists
+   - Use set_current_scene to make it active (if needed)
+   - Use list_sources to get all sources in the scene
+   - Access detailed scene info via resource: obs://scene/%s
+   - Report total source count and types (video, audio, image, text, browser, etc.)
+
+2. **Analyze Source States**
+   - For each source, check visibility status (visible vs hidden)
+   - Use toggle_source_visibility to review which sources are shown
+   - Identify sources that are enabled but not visible
+   - Check for sources that might be hidden accidentally
+   - Flag any sources with unusual configurations
+
+3. **Source Visibility Management**
+   - Use toggle_source_visibility to show/hide specific sources
+   - Identify which sources should be visible for different scenarios
+   - Suggest creating scene presets for common visibility configurations
+   - Report current visibility state for all sources
+
+4. **Source Properties Review**
+   - Use get_source_settings to view detailed properties for each source
+   - Check resolution, format, and quality settings
+   - Verify file paths for image and media sources
+   - Review URLs for browser sources
+   - Identify any sources with problematic settings
+
+5. **Source Organization**
+   - Use duplicate_source to copy sources that need variants
+   - Use remove_source to delete unused or redundant sources
+   - Use set_source_locked to protect important sources from changes
+   - Suggest renaming sources for better organization (via source settings)
+
+6. **Cleanup Recommendations**
+   - Identify sources that are never used or always hidden
+   - Suggest removing duplicate sources with identical settings
+   - Flag sources that consume resources unnecessarily
+   - Recommend consolidating similar sources
+
+7. **Source Management Best Practices**
+   - Keep source count reasonable (remove unused sources)
+   - Use descriptive names for easy identification
+   - Lock critical sources to prevent accidental deletion
+   - Create presets to save visibility configurations
+   - Document purpose of each source
+
+8. **Action Recommendations**
+   - Which sources should be removed to declutter?
+   - Which sources should be duplicated for variants?
+   - Which sources should be locked for protection?
+   - Should any visibility states be saved as presets?
+
+Provide a detailed source management report with actionable recommendations.
+
+Scene to manage: %s`, sceneName, sceneName, sceneName, sceneName)
+
+	return &mcpsdk.GetPromptResult{
+		Description: "Manage existing sources in a scene: visibility, properties, duplication, and removal",
+		Messages: []*mcpsdk.PromptMessage{{
+			Role: "user",
+			Content: &mcpsdk.TextContent{
+				Text: promptText,
+			},
+		}},
+	}, nil
+}
+
+// handleVisualSetup provides screenshot source setup workflow for AI monitoring
+func (s *Server) handleVisualSetup(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsdk.GetPromptResult, error) {
+	log.Println("Handling visual-setup prompt")
+
+	monitorScene := ""
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["monitor_scene"]; ok {
+			monitorScene = val
+		}
+	}
+
+	promptText := `Help me set up screenshot sources for AI visual monitoring of my stream:
+
+1. **Understand Screenshot Sources**
+   - Screenshot sources enable AI to "see" your stream output periodically
+   - Screenshots are captured at configurable intervals (cadence)
+   - Images are served via HTTP at http://localhost:8765/screenshot/{name}
+   - Screenshot resources available at obs://screenshot/{name}
+   - Essential for automated visual monitoring and problem detection
+
+2. **List Existing Screenshot Sources**
+   - Use list_screenshot_sources to see currently configured sources
+   - Review source names, scenes, cadence, and format (PNG/JPEG)
+   - Check which screenshot sources are active
+   - Identify gaps in visual monitoring coverage`
+
+	if monitorScene != "" {
+		promptText += fmt.Sprintf(`
+
+3. **Create Screenshot Source for Scene '%s'**
+   - Use create_screenshot_source with scene_name='%s'
+   - Choose a descriptive source_name (e.g., '%s-monitor')
+   - Set cadence to appropriate interval:
+     * 5000ms (5s) for active monitoring during streaming
+     * 10000ms (10s) for periodic checks
+     * 30000ms (30s) for low-frequency monitoring
+   - Select format: 'png' for quality or 'jpeg' for smaller size
+   - Verify creation with list_screenshot_sources`, monitorScene, monitorScene, monitorScene)
+	} else {
+		promptText += `
+
+3. **Create Screenshot Sources**
+   - Identify scenes that need visual monitoring
+   - Use create_screenshot_source for each scene:
+     * source_name: Descriptive name (e.g., "main-stream-monitor")
+     * scene_name: Scene to capture
+     * cadence: Capture interval in milliseconds (default: 5000ms)
+     * format: 'png' or 'jpeg' (default: 'png')
+   - Common monitoring scenarios:
+     * Main scene: For stream output verification
+     * All active scenes: For comprehensive monitoring
+     * Critical scenes: For problem detection`
+	}
+
+	promptText += `
+
+4. **Configure Screenshot Cadence**
+   - Use configure_screenshot_cadence to adjust capture frequency
+   - Cadence recommendations:
+     * 1000-3000ms: Real-time monitoring (high resource usage)
+     * 5000ms: Standard monitoring (balanced)
+     * 10000-15000ms: Periodic checks (lower resource usage)
+     * 30000ms+: Infrequent monitoring (minimal overhead)
+   - Balance monitoring needs with system performance
+   - Faster cadence = more responsive but higher CPU/disk usage
+
+5. **Verify Screenshot Access**
+   - Screenshots available at: http://localhost:8765/screenshot/{source_name}
+   - Access via MCP resource: obs://screenshot/{source_name}
+   - Use visual-check prompt with screenshot_source to analyze content
+   - Use problem-detection prompt for automated issue detection
+   - Test HTTP endpoint accessibility
+
+6. **Screenshot Source Management**
+   - Use list_screenshot_sources to verify all sources are running
+   - Use configure_screenshot_cadence to adjust intervals as needed
+   - Use remove_screenshot_source to delete unused sources
+   - Monitor disk usage (old screenshots are auto-cleaned)
+
+7. **AI Monitoring Workflows**
+   - **Visual Check:** Use visual-check prompt to analyze layout and quality
+   - **Problem Detection:** Use problem-detection prompt to find issues
+   - **Health Monitoring:** Periodically verify scenes look correct
+   - **Automated Alerts:** Detect black screens, frozen frames, wrong scenes
+
+8. **Best Practices**
+   - Create screenshot sources for all scenes used during streaming
+   - Use descriptive names: "{scene}-monitor" or "{purpose}-check"
+   - Start with 5000ms cadence, adjust based on needs
+   - Use PNG for quality, JPEG for lower disk usage
+   - Clean up screenshot sources for deleted scenes
+   - Combine with visual-check and problem-detection prompts
+
+9. **Example Setup**
+   - Main streaming scene: create_screenshot_source(source_name="main-monitor", scene_name="Gaming", cadence=5000)
+   - Offline scene: create_screenshot_source(source_name="offline-monitor", scene_name="Offline", cadence=10000)
+   - Verify: list_screenshot_sources
+   - Test: Access http://localhost:8765/screenshot/main-monitor
+
+Provide guidance on setting up comprehensive visual monitoring for AI-driven stream management.`
+
+	if monitorScene != "" {
+		promptText += fmt.Sprintf("\n\nTarget scene for monitoring: %s", monitorScene)
+	}
+
+	return &mcpsdk.GetPromptResult{
+		Description: "Create and configure screenshot sources for AI visual monitoring of stream output",
 		Messages: []*mcpsdk.PromptMessage{{
 			Role: "user",
 			Content: &mcpsdk.TextContent{

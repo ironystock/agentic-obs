@@ -22,8 +22,11 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/
 │   │   ├── server.go      # MCP server initialization and lifecycle
-│   │   ├── tools.go       # MCP tool registration and handlers (44 tools)
+│   │   ├── tools.go       # MCP tool registration and handlers (45 tools)
 │   │   ├── resources.go   # MCP resource handlers (scenes as resources)
+│   │   ├── prompts.go     # MCP prompt definitions (13 prompts)
+│   │   ├── completions.go # MCP completion handler for autocomplete
+│   │   ├── help.go        # Help tool implementation
 │   │   └── interfaces.go  # OBSClient interface for testing
 │   ├── obs/
 │   │   ├── client.go      # OBS WebSocket client wrapper
@@ -40,6 +43,11 @@ agentic-obs/
 │   │   └── manager.go     # Background screenshot capture manager
 │   └── tui/
 │       └── app.go         # Terminal UI dashboard (bubbletea)
+├── skills/                 # Claude Skills packages (4 skills)
+│   ├── streaming-assistant/
+│   ├── scene-designer/
+│   ├── audio-engineer/
+│   └── preset-manager/
 └── scripts/
     └── setup.sh           # Development setup helpers
 ```
@@ -113,9 +121,10 @@ go install
 MCP Client (Claude/AI Agent)
     ↕ stdio (JSON-RPC)
 MCP Server (this project)
-    ├─ Tools (44 total, 6 tool groups)
-    ├─ Resources (scenes, screenshots, presets)
-    ├─ Prompts (10 workflows)
+    ├─ Tools (45 total, 6 tool groups + help)
+    ├─ Resources (4 types: scenes, screenshots, screenshot-url, presets)
+    ├─ Prompts (13 workflows)
+    ├─ Completions (autocomplete for arguments and URIs)
     ↕ WebSocket (port 4455)
 OBS Studio (obs-websocket)
     ↕ SQLite (local)
@@ -147,7 +156,7 @@ TUI Dashboard (--tui mode)
 
 ### MCP Resources
 
-The server exposes three types of MCP resources for client access:
+The server exposes four types of MCP resources for client access:
 
 **1. OBS Scenes** - Scene configurations and source layouts
 - **Resource URI Pattern**: `obs://scene/{sceneName}`
@@ -163,7 +172,13 @@ The server exposes three types of MCP resources for client access:
 - **Content**: Binary image data (PNG or JPEG format)
 - **Description**: Direct access to screenshot images as MCP resources
 
-**3. Scene Presets** - Saved source visibility configurations
+**3. Screenshot URLs** - HTTP URLs for screenshot access
+- **Resource URI Pattern**: `obs://screenshot-url/{sourceName}`
+- **Resource Type**: `text/plain`
+- **Content**: HTTP URL string for accessing screenshot via web server
+- **Description**: Enables web-based image access when HTTP server is enabled
+
+**4. Scene Presets** - Saved source visibility configurations
 - **Resource URI Pattern**: `obs://preset/{presetName}`
 - **Resource Type**: `obs-preset`
 - **Content**: JSON representation of preset configuration (scene, sources, visibility states)
@@ -173,8 +188,9 @@ The server exposes three types of MCP resources for client access:
 - `resources/list` - List all available resources of all types
 - `resources/read` - Get detailed resource content (JSON or binary)
 - `resources/subscribe` - Subscribe to resource change notifications (future)
+- **Completions**: Autocomplete supported for resource URI names
 
-### MCP Tools Implemented (44 tools in 6 groups)
+### MCP Tools Implemented (45 tools in 6 groups + help)
 
 **Core Tools (13)** - Scene management, recording, streaming, status:
 - **Scene Management**: `list_scenes`, `set_current_scene`, `create_scene`, `remove_scene`
@@ -199,9 +215,12 @@ The server exposes three types of MCP resources for client access:
 - **Layout Control**: `set_source_transform`, `get_source_transform`, `set_source_crop`, `set_source_bounds`, `set_source_order`
 - **Advanced**: `set_source_locked`, `duplicate_source`, `remove_source`, `list_input_kinds`
 
+**Help Tool (1)** - Always enabled:
+- `help` - Get detailed help on tools, resources, prompts, workflows, or troubleshooting. Supports topics: overview, tools, resources, prompts, workflows, troubleshooting, or any tool name.
+
 **Note:** Scenes are also exposed as MCP resources (`resources/list`), enabling notification support. Tool groups can be enabled/disabled in configuration.
 
-### MCP Prompts Implemented (10 prompts)
+### MCP Prompts Implemented (13 prompts)
 
 Pre-built prompts for common OBS workflows and tasks:
 
@@ -217,6 +236,9 @@ Pre-built prompts for common OBS workflows and tasks:
 | `recording-workflow` | none | Complete recording session management |
 | `scene-organizer` | none | Scene organization and cleanup guidance |
 | `quick-status` | none | Brief status summary for rapid checks |
+| `scene-designer` | scene_name (required), action (optional) | Visual layout creation with 14 Design tools |
+| `source-management` | scene_name (required) | Manage source visibility and properties |
+| `visual-setup` | monitor_scene (optional) | Configure screenshot monitoring sources |
 
 **Prompts enhance the AI assistant's capability to:**
 - Guide users through complex multi-step workflows
@@ -224,6 +246,8 @@ Pre-built prompts for common OBS workflows and tasks:
 - Automate common tasks with best practices built-in
 - Offer structured checklists and verification steps
 - Combine multiple tools into cohesive operations
+
+**Completions:** Autocomplete supported for prompt arguments (preset_name, screenshot_source, scene_name).
 
 ## Important Context for AI Assistants
 
@@ -286,6 +310,12 @@ Pre-built prompts for common OBS workflows and tasks:
 - Source creation: text, image, color, browser, media sources
 - Layout control: transform, crop, bounds, z-order
 - Advanced: lock, duplicate, remove sources, list input kinds
+
+**Phase 7 (Complete):**
+- MCP Completions: Autocomplete for prompt arguments and resource URIs
+- 3 new prompts: `scene-designer`, `source-management`, `visual-setup` (total: 13)
+- Help tool: Topic-based guidance for tools, resources, prompts, workflows, troubleshooting
+- Claude Skills: 4 shareable skill packages (streaming-assistant, scene-designer, audio-engineer, preset-manager)
 
 **Future Enhancements:**
 - Multi-instance OBS support (requires architecture refactor)

@@ -8,11 +8,11 @@ Update these after each phase:
 
 | Metric | Current Value |
 |--------|---------------|
-| Tool Count | 30 |
-| Resource Count | 3 |
-| Prompt Count | 10 |
+| Tool Count | 45 |
+| Resource Count | 4 |
+| Prompt Count | 13 |
 | API Endpoints | 8 |
-| Current Phase | Phase 6 Complete |
+| Current Phase | Phase 7 Complete |
 
 ---
 
@@ -29,9 +29,9 @@ Update these after each phase:
 ### 2. CLAUDE.md (AI Context)
 
 - [ ] Architecture diagram reflects current state
-- [ ] MCP Resources section lists all resource types
-- [ ] MCP Tools section lists all 30 tools by category
-- [ ] MCP Prompts section lists all prompts with arguments
+- [ ] MCP Resources section lists all 4 resource types
+- [ ] MCP Tools section lists all 45 tools by category
+- [ ] MCP Prompts section lists all 13 prompts with arguments
 - [ ] Phase status in "Project Phases" section is current
 - [ ] "Last Updated" date is correct
 
@@ -54,9 +54,9 @@ Update these after each phase:
 
 ### 5. docs/TOOLS.md (Tool Reference)
 
-- [ ] Tool count in header is correct
+- [ ] Tool count in header is correct (45 tools)
 - [ ] All tools documented with examples
-- [ ] New tools have complete documentation
+- [ ] New tools have complete documentation (including help tool)
 - [ ] MCP Resources section is complete
 - [ ] MCP Prompts section is complete
 
@@ -124,17 +124,17 @@ See `.github/workflows/docs-check.yml` for the workflow.
 If you need to run checks manually:
 
 ```bash
-# Check for stale phase references (update "Phase 6" to current)
-grep -r "Phase [0-9] Complete" . --include="*.md" | grep -v "Phase 6"
+# Check for stale phase references (update "Phase 7" to current)
+grep -r "Phase [0-9] Complete" . --include="*.md" | grep -v "Phase 7"
 
-# Check for incorrect tool counts (update "30" to current)
-grep -rE "[0-9]+ (tools|Tools)" . --include="*.md" | grep -v "30"
+# Check for incorrect tool counts (update "45" to current)
+grep -rE "[0-9]+ (tools|Tools)" . --include="*.md" | grep -v "45"
 
 # Check for incorrect resource counts
-grep -rE "[0-9]+ (resources|Resources)" . --include="*.md" | grep -v "3"
+grep -rE "[0-9]+ (resources|Resources)" . --include="*.md" | grep -v "4"
 
 # Check for incorrect prompt counts
-grep -rE "[0-9]+ (prompts|Prompts)" . --include="*.md" | grep -v "10"
+grep -rE "[0-9]+ (prompts|Prompts)" . --include="*.md" | grep -v "13"
 
 # Check for incorrect API endpoint counts
 grep -rE "[0-9]+ (HTTP )?API endpoints" . --include="*.md" | grep -v "8"
@@ -182,7 +182,7 @@ After updates, verify:
 | CLAUDE.md | AI assistant context | Architecture, Tools, Resources, Prompts |
 | PROJECT_PLAN.md | Development roadmap | Phases, Decisions, Metrics |
 | docs/README.md | Documentation index | Links, Categories, Resources, Prompts, API |
-| docs/TOOLS.md | Tool reference | All 30 tools with examples |
+| docs/TOOLS.md | Tool reference | All 45 tools with examples |
 | docs/SCREENSHOTS.md | Screenshot feature guide | Setup, Usage, Workflows |
 | docs/API.md | HTTP API reference | Endpoints, Validation, Security |
 
@@ -190,4 +190,4 @@ After updates, verify:
 
 **Last Updated:** 2025-12-18
 **Created:** Phase 4 completion
-**Updated:** Phase 6 - Added API documentation
+**Updated:** Phase 7 - Added completions, help tool, new prompts, Claude Skills

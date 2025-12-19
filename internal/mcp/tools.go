@@ -598,6 +598,17 @@ func (s *Server) registerToolHandlers() {
 		log.Println("Design tools registered (14 tools)")
 	}
 
+	// Help tool - always enabled (not part of any tool group)
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "help",
+			Description: "Get detailed help on agentic-obs features, tools, resources, prompts, and workflows. Use topic='overview' for a quick start guide, topic='tools' for all available tools, or topic='<tool_name>' for specific tool help.",
+		},
+		s.handleHelp,
+	)
+	toolCount++
+	log.Println("Help tool registered")
+
 	log.Printf("Tool handlers registered successfully (%d tools total)", toolCount)
 }
 
