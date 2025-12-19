@@ -20,11 +20,26 @@ type StatusProvider interface {
 	GetScreenshotSources() ([]ScreenshotSourceInfo, error)
 }
 
+// ActionExecutor interface for executing UI actions.
+// This allows the UI to trigger tool calls on the MCP server.
+type ActionExecutor interface {
+	// SetCurrentScene switches to the specified scene.
+	SetCurrentScene(sceneName string) error
+	// ToggleInputMute toggles mute state for an audio input.
+	ToggleInputMute(inputName string) error
+	// SetInputVolume sets the volume for an audio input.
+	SetInputVolume(inputName string, volumeDb float64) error
+	// TakeSceneThumbnail captures a thumbnail of the specified scene.
+	TakeSceneThumbnail(sceneName string) ([]byte, string, error)
+}
+
 // SceneInfo represents a scene for UI display.
 type SceneInfo struct {
-	Name      string `json:"name"`
-	Index     int    `json:"index"`
-	IsCurrent bool   `json:"isCurrent"`
+	Name         string `json:"name"`
+	Index        int    `json:"index"`
+	IsCurrent    bool   `json:"isCurrent"`
+	SourceCount  int    `json:"sourceCount"`
+	ThumbnailURL string `json:"thumbnailUrl,omitempty"`
 }
 
 // AudioInputInfo represents an audio input for UI display.
@@ -49,6 +64,7 @@ type ScreenshotSourceInfo struct {
 // UIHandlers provides HTTP handlers for MCP-UI resources.
 type UIHandlers struct {
 	statusProvider StatusProvider
+	actionExecutor ActionExecutor
 	baseURL        string
 }
 
@@ -58,6 +74,11 @@ func NewUIHandlers(provider StatusProvider, baseURL string) *UIHandlers {
 		statusProvider: provider,
 		baseURL:        baseURL,
 	}
+}
+
+// SetActionExecutor sets the action executor for handling UI actions.
+func (h *UIHandlers) SetActionExecutor(executor ActionExecutor) {
+	h.actionExecutor = executor
 }
 
 // HandleUIStatus serves the status dashboard UI.
@@ -152,6 +173,57 @@ func (h *UIHandlers) HandleUIScreenshots(w http.ResponseWriter, r *http.Request)
 	h.renderTemplate(w, screenshotGalleryTemplate, data)
 }
 
+// HandleSceneThumbnail serves a thumbnail image for a scene.
+// GET /ui/scene-thumbnail/{sceneName}
+func (h *UIHandlers) HandleSceneThumbnail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract scene name from path
+	path := r.URL.Path
+	prefix := "/ui/scene-thumbnail/"
+	if len(path) <= len(prefix) {
+		http.Error(w, "Scene name required", http.StatusBadRequest)
+		return
+	}
+	sceneName := path[len(prefix):]
+
+	if h.actionExecutor == nil {
+		// Return a placeholder SVG if no executor
+		h.servePlaceholderThumbnail(w, sceneName)
+		return
+	}
+
+	// Take a screenshot of the scene
+	imageData, mimeType, err := h.actionExecutor.TakeSceneThumbnail(sceneName)
+	if err != nil {
+		// Return placeholder on error
+		h.servePlaceholderThumbnail(w, sceneName)
+		return
+	}
+
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Cache-Control", "max-age=5") // Cache for 5 seconds
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(imageData)))
+	w.Write(imageData)
+}
+
+func (h *UIHandlers) servePlaceholderThumbnail(w http.ResponseWriter, sceneName string) {
+	// Generate a simple SVG placeholder
+	svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+		<rect fill="#1a1a2e" width="320" height="180"/>
+		<rect fill="#16213e" x="10" y="10" width="300" height="160" rx="8"/>
+		<text fill="#e94560" x="160" y="85" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold">%s</text>
+		<text fill="#666" x="160" y="105" text-anchor="middle" font-family="sans-serif" font-size="11">Scene Preview</text>
+	</svg>`, sceneName)
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "max-age=60")
+	w.Write([]byte(svg))
+}
+
 // HandleUIAction handles UIAction requests from embedded UIs.
 // POST /ui/action - receives UIAction JSON, executes, returns UIResponse.
 func (h *UIHandlers) HandleUIAction(w http.ResponseWriter, r *http.Request) {
@@ -171,11 +243,74 @@ func (h *UIHandlers) HandleUIAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Route action to appropriate handler based on type
-	// For now, return acknowledgment
+	// Handle tool actions
+	if action.Type == "tool" && h.actionExecutor != nil {
+		var toolPayload struct {
+			ToolName string         `json:"toolName"`
+			Params   map[string]any `json:"params"`
+		}
+		if err := json.Unmarshal(action.Payload, &toolPayload); err == nil {
+			err := h.executeToolAction(toolPayload.ToolName, toolPayload.Params)
+			if err != nil {
+				h.sendActionResponse(w, action.MessageID, nil, err)
+				return
+			}
+			h.sendActionResponse(w, action.MessageID, map[string]string{"status": "success"}, nil)
+			return
+		}
+	}
+
+	// Default: return acknowledgment
 	response := map[string]any{
 		"type":      "ui-message-received",
 		"messageId": action.MessageID,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *UIHandlers) executeToolAction(toolName string, params map[string]any) error {
+	switch toolName {
+	case "set_current_scene":
+		if sceneName, ok := params["scene_name"].(string); ok {
+			return h.actionExecutor.SetCurrentScene(sceneName)
+		}
+		return fmt.Errorf("missing scene_name parameter")
+
+	case "toggle_input_mute":
+		if inputName, ok := params["input_name"].(string); ok {
+			return h.actionExecutor.ToggleInputMute(inputName)
+		}
+		return fmt.Errorf("missing input_name parameter")
+
+	case "set_input_volume":
+		inputName, ok1 := params["input_name"].(string)
+		volumeDb, ok2 := params["volume_db"].(float64)
+		if ok1 && ok2 {
+			return h.actionExecutor.SetInputVolume(inputName, volumeDb)
+		}
+		return fmt.Errorf("missing input_name or volume_db parameter")
+
+	default:
+		return fmt.Errorf("unsupported tool: %s", toolName)
+	}
+}
+
+func (h *UIHandlers) sendActionResponse(w http.ResponseWriter, messageID string, result any, err error) {
+	response := map[string]any{
+		"type":      "ui-message-response",
+		"messageId": messageID,
+	}
+
+	if err != nil {
+		response["payload"] = map[string]any{
+			"error": map[string]string{"message": err.Error()},
+		}
+	} else {
+		response["payload"] = map[string]any{
+			"response": result,
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -584,44 +719,212 @@ var scenePreviewTemplate = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scene Preview</title>
-    <style>` + sharedCSS + `</style>
+    <style>` + sharedCSS + `
+        .scene-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .scene-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .scene-card.active {
+            border-color: var(--success);
+        }
+
+        .scene-card.active .current-badge {
+            display: inline-block;
+        }
+
+        .scene-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background: var(--bg-primary);
+        }
+
+        .scene-info {
+            padding: 12px;
+        }
+
+        .scene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .scene-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .current-badge {
+            display: none;
+            background: var(--success);
+            color: var(--bg-primary);
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .scene-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .scene-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .keyboard-hint {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+
+        .keyboard-hint kbd {
+            background: var(--bg-card);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Scene <span class="accent">Preview</span></h1>
 
         <div class="card">
-            <h2>Available Scenes</h2>
+            <h2>Available Scenes ({{len .Scenes}})</h2>
             <div class="scene-grid">
                 {{range .Scenes}}
-                <div class="scene-card {{if .IsCurrent}}active{{end}}" data-scene="{{.Name}}">
-                    <div class="name">{{.Name}}</div>
-                    <div class="index">Scene #{{.Index}}</div>
+                <div class="scene-card {{if .IsCurrent}}active{{end}}" data-scene="{{.Name}}" tabindex="0">
+                    <img class="scene-thumbnail"
+                         src="{{.ThumbnailURL}}"
+                         alt="{{.Name}}"
+                         loading="lazy"
+                         onerror="this.style.display='none'">
+                    <div class="scene-info">
+                        <div class="scene-header">
+                            <span class="scene-name">{{.Name}}</span>
+                            <span class="current-badge">Live</span>
+                        </div>
+                        <div class="scene-meta">
+                            <span>Scene #{{.Index}}</span>
+                            <span>{{.SourceCount}} sources</span>
+                        </div>
+                    </div>
                 </div>
                 {{else}}
                 <p style="color: var(--text-secondary);">No scenes available</p>
                 {{end}}
             </div>
+            <div class="keyboard-hint">
+                Press <kbd>1</kbd>-<kbd>9</kbd> to switch scenes, <kbd>Enter</kbd> to select focused
+            </div>
         </div>
     </div>
 
     <script>
+        let isLoading = false;
+
+        function switchScene(sceneName) {
+            if (isLoading) return;
+            isLoading = true;
+
+            // Add loading state to all cards
+            document.querySelectorAll('.scene-card').forEach(c => c.classList.add('loading'));
+
+            fetch('{{.BaseURL}}/ui/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'tool',
+                    messageId: 'scene-' + Date.now(),
+                    payload: { toolName: 'set_current_scene', params: { scene_name: sceneName } }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.payload && data.payload.error) {
+                    alert('Error: ' + data.payload.error.message);
+                    isLoading = false;
+                    document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('loading'));
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(() => {
+                location.reload();
+            });
+        }
+
+        // Click handling
         document.querySelectorAll('.scene-card').forEach(card => {
             card.addEventListener('click', () => {
                 const sceneName = card.dataset.scene;
-                if (!sceneName) return;
-
-                fetch('{{.BaseURL}}/ui/action', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'tool',
-                        messageId: 'scene-' + Date.now(),
-                        payload: { toolName: 'set_current_scene', params: { scene_name: sceneName } }
-                    })
-                }).then(() => location.reload());
+                if (sceneName) switchScene(sceneName);
             });
         });
+
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            // Number keys 1-9 for quick switch
+            if (e.key >= '1' && e.key <= '9') {
+                const index = parseInt(e.key) - 1;
+                const cards = document.querySelectorAll('.scene-card');
+                if (cards[index]) {
+                    const sceneName = cards[index].dataset.scene;
+                    if (sceneName) switchScene(sceneName);
+                }
+            }
+
+            // Enter on focused card
+            if (e.key === 'Enter' && document.activeElement.classList.contains('scene-card')) {
+                const sceneName = document.activeElement.dataset.scene;
+                if (sceneName) switchScene(sceneName);
+            }
+
+            // Arrow key navigation
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                const cards = Array.from(document.querySelectorAll('.scene-card'));
+                const current = cards.indexOf(document.activeElement);
+                if (current >= 0) {
+                    const next = e.key === 'ArrowRight' ? current + 1 : current - 1;
+                    if (cards[next]) cards[next].focus();
+                } else if (cards.length > 0) {
+                    cards[0].focus();
+                }
+            }
+        });
+
+        // Auto-refresh thumbnails every 10 seconds
+        setInterval(() => {
+            document.querySelectorAll('.scene-thumbnail').forEach(img => {
+                const url = new URL(img.src, location.href);
+                url.searchParams.set('t', Date.now());
+                img.src = url.toString();
+            });
+        }, 10000);
     </script>
 </body>
 </html>`

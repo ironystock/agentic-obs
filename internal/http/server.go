@@ -134,10 +134,16 @@ func (s *Server) setupRoutes() *http.ServeMux {
 		baseURL := fmt.Sprintf("http://%s", s.addr)
 		s.uiHandlers = NewUIHandlers(s.statusProvider, baseURL)
 
+		// Set action executor if provider implements it
+		if executor, ok := s.statusProvider.(ActionExecutor); ok {
+			s.uiHandlers.SetActionExecutor(executor)
+		}
+
 		mux.HandleFunc("/ui/status", s.uiHandlers.HandleUIStatus)
 		mux.HandleFunc("/ui/scenes", s.uiHandlers.HandleUIScenes)
 		mux.HandleFunc("/ui/audio", s.uiHandlers.HandleUIAudio)
 		mux.HandleFunc("/ui/screenshots", s.uiHandlers.HandleUIScreenshots)
+		mux.HandleFunc("/ui/scene-thumbnail/", s.uiHandlers.HandleSceneThumbnail)
 		mux.HandleFunc("/ui/action", s.uiHandlers.HandleUIAction)
 	}
 

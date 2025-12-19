@@ -2,12 +2,17 @@ package mcp
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
+	"strings"
 
 	agenthttp "github.com/ironystock/agentic-obs/internal/http"
+	"github.com/ironystock/agentic-obs/internal/obs"
 )
 
-// Ensure Server implements StatusProvider
+// Ensure Server implements StatusProvider and ActionExecutor
 var _ agenthttp.StatusProvider = (*Server)(nil)
+var _ agenthttp.ActionExecutor = (*Server)(nil)
 
 // GetStatus returns the current OBS status.
 func (s *Server) GetStatus() (any, error) {
@@ -46,12 +51,33 @@ func (s *Server) GetScenes() ([]agenthttp.SceneInfo, error) {
 		return nil, err
 	}
 
+	// Build base URL for thumbnails
+	baseURL := ""
+	if s.httpServer != nil {
+		baseURL = s.httpServer.GetAddr()
+	}
+
 	result := make([]agenthttp.SceneInfo, len(sceneNames))
 	for i, name := range sceneNames {
+		// Get source count for each scene
+		sourceCount := 0
+		scene, err := s.obsClient.GetSceneByName(name)
+		if err == nil && scene != nil {
+			sourceCount = len(scene.Sources)
+		}
+
+		// Build thumbnail URL
+		thumbnailURL := ""
+		if baseURL != "" {
+			thumbnailURL = baseURL + "/ui/scene-thumbnail/" + name
+		}
+
 		result[i] = agenthttp.SceneInfo{
-			Name:      name,
-			Index:     i,
-			IsCurrent: name == currentScene,
+			Name:         name,
+			Index:        i,
+			IsCurrent:    name == currentScene,
+			SourceCount:  sourceCount,
+			ThumbnailURL: thumbnailURL,
 		}
 	}
 
@@ -129,4 +155,71 @@ func (s *Server) GetScreenshotSources() ([]agenthttp.ScreenshotSourceInfo, error
 	}
 
 	return result, nil
+}
+
+// ActionExecutor implementation
+
+// SetCurrentScene switches to the specified scene.
+func (s *Server) SetCurrentScene(sceneName string) error {
+	if !s.obsClient.IsConnected() {
+		return fmt.Errorf("OBS not connected")
+	}
+	return s.obsClient.SetCurrentScene(sceneName)
+}
+
+// ToggleInputMute toggles mute state for an audio input.
+func (s *Server) ToggleInputMute(inputName string) error {
+	if !s.obsClient.IsConnected() {
+		return fmt.Errorf("OBS not connected")
+	}
+	return s.obsClient.ToggleInputMute(inputName)
+}
+
+// SetInputVolume sets the volume for an audio input.
+func (s *Server) SetInputVolume(inputName string, volumeDb float64) error {
+	if !s.obsClient.IsConnected() {
+		return fmt.Errorf("OBS not connected")
+	}
+	return s.obsClient.SetInputVolume(inputName, &volumeDb, nil)
+}
+
+// TakeSceneThumbnail captures a thumbnail of the specified scene.
+func (s *Server) TakeSceneThumbnail(sceneName string) ([]byte, string, error) {
+	if !s.obsClient.IsConnected() {
+		return nil, "", fmt.Errorf("OBS not connected")
+	}
+
+	// Take screenshot of the scene
+	opts := obs.ScreenshotOptions{
+		SourceName: sceneName,
+		Format:     "jpg",
+		Width:      320,
+		Height:     180,
+		Quality:    75,
+	}
+
+	dataURI, err := s.obsClient.TakeSourceScreenshot(opts)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Parse data URI: data:image/jpeg;base64,<data>
+	parts := strings.SplitN(dataURI, ",", 2)
+	if len(parts) != 2 {
+		return nil, "", fmt.Errorf("invalid data URI format")
+	}
+
+	// Extract MIME type
+	mimeType := "image/jpeg"
+	if strings.Contains(parts[0], "image/png") {
+		mimeType = "image/png"
+	}
+
+	// Decode base64
+	imageData, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	return imageData, mimeType, nil
 }
