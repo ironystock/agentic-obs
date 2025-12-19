@@ -188,9 +188,9 @@ type SetSourceLockedInput struct {
 
 // DuplicateSourceInput is the input for duplicating a source
 type DuplicateSourceInput struct {
-	SceneName      string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
-	SceneItemID    int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source to duplicate"`
-	DestSceneName  string `json:"dest_scene_name,omitempty" jsonschema:"description=Destination scene name (default: same scene)"`
+	SceneName     string `json:"scene_name" jsonschema:"required,description=Name of the scene containing the source"`
+	SceneItemID   int    `json:"scene_item_id" jsonschema:"required,description=Scene item ID of the source to duplicate"`
+	DestSceneName string `json:"dest_scene_name,omitempty" jsonschema:"description=Destination scene name (default: same scene)"`
 }
 
 // RemoveSourceInput is the input for removing a source from a scene
@@ -1438,9 +1438,9 @@ func (s *Server) handleCreateMediaSource(ctx context.Context, request *mcpsdk.Ca
 	log.Printf("Creating media source '%s' in scene '%s'", input.SourceName, input.SceneName)
 
 	settings := map[string]interface{}{
-		"local_file":  input.FilePath,
-		"looping":     input.Loop,
-		"hw_decode":   true,
+		"local_file":   input.FilePath,
+		"looping":      input.Loop,
+		"hw_decode":    true,
 		"clear_on_end": false,
 	}
 
