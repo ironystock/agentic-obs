@@ -47,6 +47,7 @@ type ToolGroupConfig struct {
 	Layout  bool // Layout management tools (scene presets)
 	Audio   bool // Audio control tools
 	Sources bool // Source management tools
+	Design  bool // Scene design tools (source creation, transforms)
 }
 
 // DefaultToolGroupConfig returns config with all tool groups enabled
@@ -57,6 +58,7 @@ func DefaultToolGroupConfig() ToolGroupConfig {
 		Layout:  true,
 		Audio:   true,
 		Sources: true,
+		Design:  true,
 	}
 }
 

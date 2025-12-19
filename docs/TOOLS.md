@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Comprehensive documentation for all 30 Model Context Protocol (MCP) tools provided by the agentic-obs server.
+Comprehensive documentation for all 44 Model Context Protocol (MCP) tools provided by the agentic-obs server.
 
 ## Table of Contents
 
@@ -43,6 +43,21 @@ Comprehensive documentation for all 30 Model Context Protocol (MCP) tools provid
   - [configure_screenshot_cadence](#configure_screenshot_cadence)
 - [Status](#status)
   - [get_obs_status](#get_obs_status)
+- [Scene Design](#scene-design)
+  - [create_text_source](#create_text_source)
+  - [create_image_source](#create_image_source)
+  - [create_color_source](#create_color_source)
+  - [create_browser_source](#create_browser_source)
+  - [create_media_source](#create_media_source)
+  - [set_source_transform](#set_source_transform)
+  - [get_source_transform](#get_source_transform)
+  - [set_source_crop](#set_source_crop)
+  - [set_source_bounds](#set_source_bounds)
+  - [set_source_order](#set_source_order)
+  - [set_source_locked](#set_source_locked)
+  - [duplicate_source](#duplicate_source)
+  - [remove_source](#remove_source)
+  - [list_input_kinds](#list_input_kinds)
 - [Common Patterns](#common-patterns)
 - [Error Handling](#error-handling)
 
@@ -50,18 +65,19 @@ Comprehensive documentation for all 30 Model Context Protocol (MCP) tools provid
 
 ## Overview
 
-The agentic-obs MCP server provides 30 tools organized into 8 categories for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
+The agentic-obs MCP server provides 44 tools organized into 9 categories (6 tool groups) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
 
-| Category | Tools | Description |
-|----------|-------|-------------|
-| Scene Management | 4 | List, switch, create, remove scenes |
-| Scene Presets | 6 | Save and restore source visibility configurations |
-| Recording | 5 | Start, stop, pause, resume, status |
-| Streaming | 3 | Start, stop, status |
-| Sources | 3 | List, toggle visibility, get settings |
-| Audio | 4 | Mute, volume control |
-| Screenshot Sources | 4 | AI visual monitoring of stream output |
-| Status | 1 | Overall OBS status |
+| Category | Tools | Description | Tool Group |
+|----------|-------|-------------|------------|
+| Scene Management | 4 | List, switch, create, remove scenes | Core |
+| Scene Presets | 6 | Save and restore source visibility configurations | Layout |
+| Recording | 5 | Start, stop, pause, resume, status | Core |
+| Streaming | 3 | Start, stop, status | Core |
+| Sources | 3 | List, toggle visibility, get settings | Sources |
+| Audio | 4 | Mute, volume control | Audio |
+| Screenshot Sources | 4 | AI visual monitoring of stream output | Visual |
+| Status | 1 | Overall OBS status | Core |
+| Scene Design | 14 | Source creation and manipulation | Design |
 
 **General Prerequisites:**
 - OBS Studio 28+ running with WebSocket server enabled
@@ -1561,6 +1577,287 @@ For detailed documentation on use cases and best practices, see [SCREENSHOTS.md]
 
 ---
 
+## Scene Design
+
+Scene Design tools enable AI assistants to programmatically create and manipulate OBS sources. These tools are part of the **Design** tool group.
+
+### create_text_source
+
+**Purpose:** Create a text/label source in a scene with customizable font and color.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene to add the source to |
+| source_name | string | Yes | Name for the new text source |
+| text | string | Yes | Text content to display |
+| font_name | string | No | Font face name (default: Arial) |
+| font_size | integer | No | Font size in points (default: 36) |
+| color | integer | No | Text color as ABGR integer (default: white) |
+
+**Return Value Schema:**
+```json
+{
+  "scene_name": "Gaming",
+  "source_name": "Score Display",
+  "scene_item_id": 15,
+  "message": "Successfully created text source 'Score Display' in scene 'Gaming'"
+}
+```
+
+---
+
+### create_image_source
+
+**Purpose:** Create an image source in a scene from a file path.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene to add the source to |
+| source_name | string | Yes | Name for the new image source |
+| file_path | string | Yes | Path to the image file |
+
+---
+
+### create_color_source
+
+**Purpose:** Create a solid color source in a scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene to add the source to |
+| source_name | string | Yes | Name for the new color source |
+| color | integer | Yes | Color as ABGR integer (e.g., 0xFF0000FF for red) |
+| width | integer | No | Width in pixels (default: 1920) |
+| height | integer | No | Height in pixels (default: 1080) |
+
+---
+
+### create_browser_source
+
+**Purpose:** Create a browser source in a scene to display web content.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene to add the source to |
+| source_name | string | Yes | Name for the new browser source |
+| url | string | Yes | URL to load in the browser source |
+| width | integer | No | Browser width in pixels (default: 800) |
+| height | integer | No | Browser height in pixels (default: 600) |
+| fps | integer | No | Frame rate (default: 30) |
+
+---
+
+### create_media_source
+
+**Purpose:** Create a media/video source in a scene from a file.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene to add the source to |
+| source_name | string | Yes | Name for the new media source |
+| file_path | string | Yes | Path to the media file |
+| loop | boolean | No | Whether to loop the media (default: false) |
+
+---
+
+### set_source_transform
+
+**Purpose:** Set position, scale, and rotation of a source in a scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source |
+| x | float | No | X position in pixels |
+| y | float | No | Y position in pixels |
+| scale_x | float | No | X scale factor (1.0 = 100%) |
+| scale_y | float | No | Y scale factor (1.0 = 100%) |
+| rotation | float | No | Rotation in degrees |
+
+**Return Value Schema:**
+```json
+{
+  "scene_name": "Gaming",
+  "scene_item_id": 5,
+  "x": 100.0,
+  "y": 50.0,
+  "scale_x": 1.0,
+  "scale_y": 1.0,
+  "rotation": 0.0,
+  "message": "Successfully updated source transform"
+}
+```
+
+---
+
+### get_source_transform
+
+**Purpose:** Get the current transform properties of a source in a scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source |
+
+**Return Value Schema:**
+```json
+{
+  "scene_name": "Gaming",
+  "scene_item_id": 5,
+  "x": 100.0,
+  "y": 50.0,
+  "scale_x": 1.0,
+  "scale_y": 1.0,
+  "rotation": 0.0,
+  "width": 1920.0,
+  "height": 1080.0,
+  "source_width": 1920.0,
+  "source_height": 1080.0,
+  "bounds_type": "OBS_BOUNDS_NONE",
+  "bounds_width": 0.0,
+  "bounds_height": 0.0,
+  "crop_top": 0,
+  "crop_bottom": 0,
+  "crop_left": 0,
+  "crop_right": 0
+}
+```
+
+---
+
+### set_source_crop
+
+**Purpose:** Set crop values for a source in a scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source |
+| crop_top | integer | No | Pixels to crop from top |
+| crop_bottom | integer | No | Pixels to crop from bottom |
+| crop_left | integer | No | Pixels to crop from left |
+| crop_right | integer | No | Pixels to crop from right |
+
+---
+
+### set_source_bounds
+
+**Purpose:** Set bounds type and size for a source in a scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source |
+| bounds_type | string | Yes | Bounds type: OBS_BOUNDS_NONE, OBS_BOUNDS_STRETCH, OBS_BOUNDS_SCALE_INNER, etc. |
+| bounds_width | float | No | Bounds width in pixels |
+| bounds_height | float | No | Bounds height in pixels |
+
+---
+
+### set_source_order
+
+**Purpose:** Set the z-order index of a source in a scene (0 = back, higher = front).
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source |
+| index | integer | Yes | New index position |
+
+---
+
+### set_source_locked
+
+**Purpose:** Lock or unlock a source to prevent accidental changes.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source |
+| locked | boolean | Yes | Whether the source should be locked |
+
+---
+
+### duplicate_source
+
+**Purpose:** Duplicate a source within the same scene or to another scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source to duplicate |
+| dest_scene_name | string | No | Destination scene name (default: same scene) |
+
+**Return Value Schema:**
+```json
+{
+  "source_scene": "Gaming",
+  "source_item_id": 5,
+  "dest_scene": "Gaming",
+  "new_scene_item_id": 15,
+  "message": "Successfully duplicated source to scene 'Gaming' with item ID 15"
+}
+```
+
+---
+
+### remove_source
+
+**Purpose:** Remove a source from a scene.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| scene_name | string | Yes | Name of the scene containing the source |
+| scene_item_id | integer | Yes | Scene item ID of the source to remove |
+
+---
+
+### list_input_kinds
+
+**Purpose:** List all available input source types in OBS.
+
+**Parameters:** None
+
+**Return Value Schema:**
+```json
+{
+  "input_kinds": [
+    "text_gdiplus_v3",
+    "image_source",
+    "color_source_v3",
+    "browser_source",
+    "ffmpeg_source",
+    "wasapi_input_capture",
+    "wasapi_output_capture",
+    "dshow_input",
+    "game_capture",
+    "window_capture",
+    "monitor_capture"
+  ],
+  "count": 11
+}
+```
+
+**Use Cases:**
+- Discover what source types are available
+- Build dynamic source creation interfaces
+- Verify input kinds before creation
+
+---
+
 ## Common Patterns
 
 ### Pre-Flight Checks
@@ -2005,10 +2302,10 @@ Prompts use both tools and resources internally:
 
 ---
 
-**Document Version:** 4.0
+**Document Version:** 5.0
 **Last Updated:** 2025-12-18
-**agentic-obs Version:** Phase 6 Complete
-**Total Tools:** 30
+**agentic-obs Version:** Phase 6.3 Complete
+**Total Tools:** 44 (6 tool groups)
 **Total Resources:** 3 types (scenes, screenshots, presets)
 **Total Prompts:** 10
 **Total API Endpoints:** 8

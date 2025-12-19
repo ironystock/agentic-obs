@@ -40,6 +40,7 @@ type ToolGroupConfig struct {
 	Layout  bool // Layout management tools (scene presets)
 	Audio   bool // Audio control tools
 	Sources bool // Source management tools
+	Design  bool // Scene design tools (source creation, transforms)
 }
 
 // WebServerConfig controls HTTP server settings
@@ -69,6 +70,7 @@ func DefaultConfig() *Config {
 			Layout:  true,
 			Audio:   true,
 			Sources: true,
+			Design:  true,
 		},
 		WebServer: WebServerConfig{
 			Enabled: true,
@@ -151,6 +153,7 @@ func (c *Config) PromptFirstRunSetup() error {
 	c.ToolGroups.Layout = promptBool("Layout management (scene presets)", c.ToolGroups.Layout)
 	c.ToolGroups.Audio = promptBool("Audio control (mute, volume)", c.ToolGroups.Audio)
 	c.ToolGroups.Sources = promptBool("Source management (visibility, settings)", c.ToolGroups.Sources)
+	c.ToolGroups.Design = promptBool("Scene design (create sources, transforms)", c.ToolGroups.Design)
 
 	// Webserver prompt
 	fmt.Println("\n--- HTTP Server ---")
@@ -180,6 +183,7 @@ func (c *Config) PromptFirstRunSetup() error {
 	fmt.Printf("Layout tools: %v\n", c.ToolGroups.Layout)
 	fmt.Printf("Audio tools: %v\n", c.ToolGroups.Audio)
 	fmt.Printf("Source tools: %v\n", c.ToolGroups.Sources)
+	fmt.Printf("Design tools: %v\n", c.ToolGroups.Design)
 	fmt.Printf("HTTP server: %v", c.WebServer.Enabled)
 	if c.WebServer.Enabled {
 		fmt.Printf(" (port %d)", c.WebServer.Port)
@@ -234,6 +238,7 @@ func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 			Layout:  toolGroups.Layout,
 			Audio:   toolGroups.Audio,
 			Sources: toolGroups.Sources,
+			Design:  toolGroups.Design,
 		}
 	}
 
@@ -286,6 +291,7 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 		Layout:  cfg.ToolGroups.Layout,
 		Audio:   cfg.ToolGroups.Audio,
 		Sources: cfg.ToolGroups.Sources,
+		Design:  cfg.ToolGroups.Design,
 	}
 	if err := db.SaveToolGroupConfig(ctx, toolGroups); err != nil {
 		return fmt.Errorf("failed to save tool group config: %w", err)

@@ -60,6 +60,23 @@ type MockOBSClient struct {
 
 	// Screenshot mock data
 	mockScreenshotData string // Base64 PNG data to return
+
+	// Design tool mock data
+	sceneItemTransforms map[string]map[int]*obs.SceneItemTransform // scene -> itemID -> transform
+	sceneItemLocked     map[string]map[int]bool                    // scene -> itemID -> locked
+	inputKinds          []string                                   // available input kinds
+	nextSceneItemID     int                                        // counter for new scene items
+
+	// Error injection for design tools
+	ErrorOnCreateInput           error
+	ErrorOnGetSceneItemTransform error
+	ErrorOnSetSceneItemTransform error
+	ErrorOnSetSceneItemIndex     error
+	ErrorOnSetSceneItemLocked    error
+	ErrorOnGetSceneItemLocked    error
+	ErrorOnDuplicateSceneItem    error
+	ErrorOnRemoveSceneItem       error
+	ErrorOnGetInputKindList      error
 }
 
 // NewMockOBSClient creates a new mock OBS client with default test data.
@@ -99,6 +116,27 @@ func NewMockOBSClient() *MockOBSClient {
 		recording: false,
 		paused:    false,
 		streaming: false,
+		// Design tool mock data
+		sceneItemTransforms: map[string]map[int]*obs.SceneItemTransform{
+			"Scene 1": {
+				1: {PositionX: 0, PositionY: 0, ScaleX: 1.0, ScaleY: 1.0, Rotation: 0, Width: 1920, Height: 1080},
+				2: {PositionX: 100, PositionY: 50, ScaleX: 1.0, ScaleY: 1.0, Rotation: 0, Width: 400, Height: 100},
+			},
+			"Gaming": {
+				3: {PositionX: 0, PositionY: 0, ScaleX: 1.0, ScaleY: 1.0, Rotation: 0, Width: 1920, Height: 1080},
+				4: {PositionX: 1600, PositionY: 800, ScaleX: 0.25, ScaleY: 0.25, Rotation: 0, Width: 320, Height: 180},
+			},
+		},
+		sceneItemLocked: map[string]map[int]bool{
+			"Scene 1": {1: false, 2: false},
+			"Gaming":  {3: false, 4: false},
+		},
+		inputKinds: []string{
+			"text_gdiplus_v3", "image_source", "color_source_v3", "browser_source",
+			"ffmpeg_source", "wasapi_input_capture", "wasapi_output_capture",
+			"dshow_input", "game_capture", "window_capture", "monitor_capture",
+		},
+		nextSceneItemID: 100,
 	}
 }
 
@@ -868,4 +906,366 @@ func (m *MockOBSClient) SetMockScreenshotData(data string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.mockScreenshotData = data
+}
+
+// Design tool mock implementations
+
+// CreateInput simulates creating an input source in a scene.
+func (m *MockOBSClient) CreateInput(sceneName, sourceName, inputKind string, settings map[string]interface{}) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnCreateInput != nil {
+		return 0, m.ErrorOnCreateInput
+	}
+
+	if !m.connected {
+		return 0, fmt.Errorf("not connected to OBS")
+	}
+
+	// Check if scene exists
+	found := false
+	for _, s := range m.scenes {
+		if s == sceneName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return 0, fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	// Generate new scene item ID
+	m.nextSceneItemID++
+	newID := m.nextSceneItemID
+
+	// Add the source to the scene
+	newSource := obs.SceneSource{
+		ID:      newID,
+		Name:    sourceName,
+		Type:    inputKind,
+		Enabled: true,
+		Visible: true,
+	}
+
+	if m.sceneItems == nil {
+		m.sceneItems = make(map[string][]obs.SceneSource)
+	}
+	m.sceneItems[sceneName] = append(m.sceneItems[sceneName], newSource)
+
+	// Initialize transform for the new item
+	if m.sceneItemTransforms == nil {
+		m.sceneItemTransforms = make(map[string]map[int]*obs.SceneItemTransform)
+	}
+	if m.sceneItemTransforms[sceneName] == nil {
+		m.sceneItemTransforms[sceneName] = make(map[int]*obs.SceneItemTransform)
+	}
+	m.sceneItemTransforms[sceneName][newID] = &obs.SceneItemTransform{
+		PositionX: 0, PositionY: 0,
+		ScaleX: 1.0, ScaleY: 1.0,
+		Rotation: 0,
+		Width:    1920, Height: 1080,
+	}
+
+	// Initialize locked state
+	if m.sceneItemLocked == nil {
+		m.sceneItemLocked = make(map[string]map[int]bool)
+	}
+	if m.sceneItemLocked[sceneName] == nil {
+		m.sceneItemLocked[sceneName] = make(map[int]bool)
+	}
+	m.sceneItemLocked[sceneName][newID] = false
+
+	// Store source settings
+	if m.sourceSettings == nil {
+		m.sourceSettings = make(map[string]map[string]interface{})
+	}
+	m.sourceSettings[sourceName] = settings
+
+	return newID, nil
+}
+
+// GetSceneItemTransform returns the transform for a scene item.
+func (m *MockOBSClient) GetSceneItemTransform(sceneName string, sceneItemID int) (*obs.SceneItemTransform, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetSceneItemTransform != nil {
+		return nil, m.ErrorOnGetSceneItemTransform
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	sceneTransforms, exists := m.sceneItemTransforms[sceneName]
+	if !exists {
+		return nil, fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	transform, exists := sceneTransforms[sceneItemID]
+	if !exists {
+		return nil, fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	// Return a copy to prevent modification
+	result := *transform
+	return &result, nil
+}
+
+// SetSceneItemTransform sets the transform for a scene item.
+func (m *MockOBSClient) SetSceneItemTransform(sceneName string, sceneItemID int, transform *obs.SceneItemTransform) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetSceneItemTransform != nil {
+		return m.ErrorOnSetSceneItemTransform
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	sceneTransforms, exists := m.sceneItemTransforms[sceneName]
+	if !exists {
+		return fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	if _, exists := sceneTransforms[sceneItemID]; !exists {
+		return fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	// Store a copy
+	newTransform := *transform
+	m.sceneItemTransforms[sceneName][sceneItemID] = &newTransform
+	return nil
+}
+
+// SetSceneItemIndex sets the z-order index of a scene item.
+func (m *MockOBSClient) SetSceneItemIndex(sceneName string, sceneItemID int, index int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetSceneItemIndex != nil {
+		return m.ErrorOnSetSceneItemIndex
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	items, exists := m.sceneItems[sceneName]
+	if !exists {
+		return fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	// Find the item
+	found := false
+	for _, item := range items {
+		if item.ID == sceneItemID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	// In a real implementation, we'd reorder the items
+	// For mock, just validate and succeed
+	if index < 0 || index >= len(items) {
+		return fmt.Errorf("invalid index %d for scene with %d items", index, len(items))
+	}
+
+	return nil
+}
+
+// SetSceneItemLocked sets the locked state of a scene item.
+func (m *MockOBSClient) SetSceneItemLocked(sceneName string, sceneItemID int, locked bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetSceneItemLocked != nil {
+		return m.ErrorOnSetSceneItemLocked
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	sceneLocked, exists := m.sceneItemLocked[sceneName]
+	if !exists {
+		return fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	if _, exists := sceneLocked[sceneItemID]; !exists {
+		return fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	m.sceneItemLocked[sceneName][sceneItemID] = locked
+	return nil
+}
+
+// GetSceneItemLocked returns the locked state of a scene item.
+func (m *MockOBSClient) GetSceneItemLocked(sceneName string, sceneItemID int) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetSceneItemLocked != nil {
+		return false, m.ErrorOnGetSceneItemLocked
+	}
+
+	if !m.connected {
+		return false, fmt.Errorf("not connected to OBS")
+	}
+
+	sceneLocked, exists := m.sceneItemLocked[sceneName]
+	if !exists {
+		return false, fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	locked, exists := sceneLocked[sceneItemID]
+	if !exists {
+		return false, fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	return locked, nil
+}
+
+// DuplicateSceneItem duplicates a scene item to the same or another scene.
+func (m *MockOBSClient) DuplicateSceneItem(sceneName string, sceneItemID int, destScene string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnDuplicateSceneItem != nil {
+		return 0, m.ErrorOnDuplicateSceneItem
+	}
+
+	if !m.connected {
+		return 0, fmt.Errorf("not connected to OBS")
+	}
+
+	// Find source item
+	items, exists := m.sceneItems[sceneName]
+	if !exists {
+		return 0, fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	var sourceItem *obs.SceneSource
+	for _, item := range items {
+		if item.ID == sceneItemID {
+			sourceItem = &item
+			break
+		}
+	}
+	if sourceItem == nil {
+		return 0, fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	// Check destination scene exists
+	found := false
+	for _, s := range m.scenes {
+		if s == destScene {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return 0, fmt.Errorf("destination scene '%s' not found", destScene)
+	}
+
+	// Generate new ID
+	m.nextSceneItemID++
+	newID := m.nextSceneItemID
+
+	// Create duplicate
+	newSource := obs.SceneSource{
+		ID:      newID,
+		Name:    sourceItem.Name,
+		Type:    sourceItem.Type,
+		Enabled: sourceItem.Enabled,
+		Visible: sourceItem.Visible,
+	}
+	m.sceneItems[destScene] = append(m.sceneItems[destScene], newSource)
+
+	// Copy transform
+	if m.sceneItemTransforms[destScene] == nil {
+		m.sceneItemTransforms[destScene] = make(map[int]*obs.SceneItemTransform)
+	}
+	if srcTransform, ok := m.sceneItemTransforms[sceneName][sceneItemID]; ok {
+		transformCopy := *srcTransform
+		m.sceneItemTransforms[destScene][newID] = &transformCopy
+	}
+
+	// Copy locked state
+	if m.sceneItemLocked[destScene] == nil {
+		m.sceneItemLocked[destScene] = make(map[int]bool)
+	}
+	if srcLocked, ok := m.sceneItemLocked[sceneName][sceneItemID]; ok {
+		m.sceneItemLocked[destScene][newID] = srcLocked
+	}
+
+	return newID, nil
+}
+
+// RemoveSceneItem removes a scene item from a scene.
+func (m *MockOBSClient) RemoveSceneItem(sceneName string, sceneItemID int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnRemoveSceneItem != nil {
+		return m.ErrorOnRemoveSceneItem
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	items, exists := m.sceneItems[sceneName]
+	if !exists {
+		return fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	// Find and remove the item
+	idx := -1
+	for i, item := range items {
+		if item.ID == sceneItemID {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return fmt.Errorf("scene item %d not found in scene '%s'", sceneItemID, sceneName)
+	}
+
+	m.sceneItems[sceneName] = append(items[:idx], items[idx+1:]...)
+
+	// Clean up transform and locked state
+	if sceneTransforms, ok := m.sceneItemTransforms[sceneName]; ok {
+		delete(sceneTransforms, sceneItemID)
+	}
+	if sceneLocked, ok := m.sceneItemLocked[sceneName]; ok {
+		delete(sceneLocked, sceneItemID)
+	}
+
+	return nil
+}
+
+// GetInputKindList returns the list of available input kinds.
+func (m *MockOBSClient) GetInputKindList() ([]string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetInputKindList != nil {
+		return nil, m.ErrorOnGetInputKindList
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	// Return a copy
+	result := make([]string, len(m.inputKinds))
+	copy(result, m.inputKinds)
+	return result, nil
 }

@@ -57,6 +57,23 @@ type OBSClient interface {
 	TakeSourceScreenshot(opts obs.ScreenshotOptions) (string, error)
 	CreateBrowserSource(sceneName, sourceName string, settings obs.BrowserSourceSettings) (int, error)
 
+	// Scene design - source creation
+	CreateInput(sceneName, sourceName, inputKind string, settings map[string]interface{}) (int, error)
+
+	// Scene design - transform operations
+	GetSceneItemTransform(sceneName string, sceneItemID int) (*obs.SceneItemTransform, error)
+	SetSceneItemTransform(sceneName string, sceneItemID int, transform *obs.SceneItemTransform) error
+	SetSceneItemIndex(sceneName string, sceneItemID int, index int) error
+
+	// Scene design - item management
+	SetSceneItemLocked(sceneName string, sceneItemID int, locked bool) error
+	GetSceneItemLocked(sceneName string, sceneItemID int) (bool, error)
+	DuplicateSceneItem(sceneName string, sceneItemID int, destScene string) (int, error)
+	RemoveSceneItem(sceneName string, sceneItemID int) error
+
+	// Scene design - input kinds
+	GetInputKindList() ([]string, error)
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }
