@@ -11,7 +11,8 @@ Update these after each phase:
 | Tool Count | 30 |
 | Resource Count | 3 |
 | Prompt Count | 10 |
-| Current Phase | Phase 4 Complete |
+| API Endpoints | 8 |
+| Current Phase | Phase 6 Complete |
 
 ---
 
@@ -65,7 +66,15 @@ Update these after each phase:
 - [ ] HTTP endpoint documented
 - [ ] Visual monitoring workflows current
 
-### 7. examples/ Directory
+### 7. docs/API.md (HTTP API Reference)
+
+- [ ] All endpoints documented
+- [ ] Request/response examples present
+- [ ] Validation rules documented
+- [ ] Security considerations listed
+- [ ] API endpoint count correct
+
+### 8. examples/ Directory
 
 - [ ] New features have example prompts
 - [ ] examples/prompts/README.md lists all prompt files
@@ -85,10 +94,11 @@ Run the automated verification script:
 
 This script checks:
 - Stale phase references
-- Incorrect tool/resource/prompt counts
+- Incorrect tool/resource/prompt/API endpoint counts
 - Unresolved TODO items
 - "Coming Soon" for completed features
 - Required files exist
+- API endpoints are documented
 
 ### Pre-commit Hook
 
@@ -114,8 +124,8 @@ See `.github/workflows/docs-check.yml` for the workflow.
 If you need to run checks manually:
 
 ```bash
-# Check for stale phase references (update "Phase 4" to current)
-grep -r "Phase [0-9] Complete" . --include="*.md" | grep -v "Phase 4"
+# Check for stale phase references (update "Phase 6" to current)
+grep -r "Phase [0-9] Complete" . --include="*.md" | grep -v "Phase 6"
 
 # Check for incorrect tool counts (update "30" to current)
 grep -rE "[0-9]+ (tools|Tools)" . --include="*.md" | grep -v "30"
@@ -125,6 +135,9 @@ grep -rE "[0-9]+ (resources|Resources)" . --include="*.md" | grep -v "3"
 
 # Check for incorrect prompt counts
 grep -rE "[0-9]+ (prompts|Prompts)" . --include="*.md" | grep -v "10"
+
+# Check for incorrect API endpoint counts
+grep -rE "[0-9]+ (HTTP )?API endpoints" . --include="*.md" | grep -v "8"
 
 # Find TODO items that should be resolved
 grep -r "TODO" . --include="*.md"
@@ -142,11 +155,13 @@ After updates, verify:
 - [ ] All files agree on tool count
 - [ ] All files agree on resource count
 - [ ] All files agree on prompt count
+- [ ] All files agree on API endpoint count
 - [ ] All files agree on current phase status
 - [ ] No "TODO" or "Coming Soon" for completed features
 - [ ] Build passes: `go build`
 - [ ] Tests pass: `go test ./...`
 - [ ] No vet warnings: `go vet ./...`
+- [ ] Docs check passes: `./scripts/verify-docs.sh`
 
 ---
 
@@ -166,11 +181,13 @@ After updates, verify:
 | README.md | User-facing overview | Features, Installation, Usage |
 | CLAUDE.md | AI assistant context | Architecture, Tools, Resources, Prompts |
 | PROJECT_PLAN.md | Development roadmap | Phases, Decisions, Metrics |
-| docs/README.md | Documentation index | Links, Categories, Resources, Prompts |
+| docs/README.md | Documentation index | Links, Categories, Resources, Prompts, API |
 | docs/TOOLS.md | Tool reference | All 30 tools with examples |
 | docs/SCREENSHOTS.md | Screenshot feature guide | Setup, Usage, Workflows |
+| docs/API.md | HTTP API reference | Endpoints, Validation, Security |
 
 ---
 
-**Last Updated:** 2025-12-15
+**Last Updated:** 2025-12-18
 **Created:** Phase 4 completion
+**Updated:** Phase 6 - Added API documentation

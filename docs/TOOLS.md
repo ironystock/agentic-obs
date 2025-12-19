@@ -2005,9 +2005,10 @@ Prompts use both tools and resources internally:
 
 ---
 
-**Document Version:** 3.0
-**Last Updated:** 2025-12-15
-**agentic-obs Version:** Phase 4 Complete
+**Document Version:** 4.0
+**Last Updated:** 2025-12-18
+**agentic-obs Version:** Phase 6 Complete
 **Total Tools:** 30
 **Total Resources:** 3 types (scenes, screenshots, presets)
 **Total Prompts:** 10
+**Total API Endpoints:** 8

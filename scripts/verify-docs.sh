@@ -17,7 +17,8 @@ NC='\033[0m' # No Color
 EXPECTED_TOOLS=30
 EXPECTED_RESOURCES=3
 EXPECTED_PROMPTS=10
-CURRENT_PHASE=4
+EXPECTED_API_ENDPOINTS=8
+CURRENT_PHASE=6
 
 echo "=========================================="
 echo "Documentation Consistency Verification"
@@ -27,6 +28,7 @@ echo "Expected values:"
 echo "  Tools: $EXPECTED_TOOLS"
 echo "  Resources: $EXPECTED_RESOURCES"
 echo "  Prompts: $EXPECTED_PROMPTS"
+echo "  API Endpoints: $EXPECTED_API_ENDPOINTS"
 echo "  Phase: $CURRENT_PHASE"
 echo ""
 
@@ -69,6 +71,7 @@ echo "--- Metric Consistency ---"
 check_pattern "Incorrect total tool counts" "(Total|total|MCP).*[0-9]+ (tools|Tools)" "$EXPECTED_TOOLS"
 check_pattern "Incorrect resource counts" "[0-9]+ (resources|Resources)" "$EXPECTED_RESOURCES"
 check_pattern "Incorrect prompt counts" "[0-9]+ (prompts|Prompts)" "$EXPECTED_PROMPTS"
+check_pattern "Incorrect API endpoint counts" "[0-9]+ (HTTP )?API endpoints" "$EXPECTED_API_ENDPOINTS"
 
 # Check for unresolved items
 echo ""
@@ -107,11 +110,34 @@ REQUIRED_FILES=(
     "docs/TOOLS.md"
     "docs/SCREENSHOTS.md"
     "docs/QUICKSTART.md"
+    "docs/API.md"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
     echo -n "Checking: $file exists... "
     if [ -f "$file" ]; then
+        echo -e "${GREEN}OK${NC}"
+    else
+        echo -e "${RED}MISSING${NC}"
+        ISSUES_FOUND=1
+    fi
+done
+
+# Check API endpoint documentation matches code
+echo ""
+echo "--- API Documentation Consistency ---"
+API_ENDPOINTS=(
+    "/api/status"
+    "/api/history"
+    "/api/history/stats"
+    "/api/screenshots"
+    "/api/config"
+    "/screenshot/"
+)
+
+for endpoint in "${API_ENDPOINTS[@]}"; do
+    echo -n "Checking: $endpoint documented... "
+    if grep -q "$endpoint" docs/API.md 2>/dev/null; then
         echo -e "${GREEN}OK${NC}"
     else
         echo -e "${RED}MISSING${NC}"

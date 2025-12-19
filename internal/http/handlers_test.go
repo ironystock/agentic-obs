@@ -579,14 +579,14 @@ func TestIsValidHost(t *testing.T) {
 
 	t.Run("rejects invalid hosts", func(t *testing.T) {
 		invalidHosts := []string{
-			"192.168.1.1",  // Private IP
-			"10.0.0.1",     // Private IP
-			"8.8.8.8",      // Public IP
-			"example.com",  // Domain
-			"0.0.0.1",      // Invalid loopback
-			"",             // Empty
-			"LOCALHOST",    // Case sensitive
-			"127.0.0.2",    // Not standard loopback
+			"192.168.1.1", // Private IP
+			"10.0.0.1",    // Private IP
+			"8.8.8.8",     // Public IP
+			"example.com", // Domain
+			"0.0.0.1",     // Invalid loopback
+			"",            // Empty
+			"LOCALHOST",   // Case sensitive
+			"127.0.0.2",   // Not standard loopback
 		}
 		for _, host := range invalidHosts {
 			assert.False(t, isValidHost(host), "host %s should be invalid", host)

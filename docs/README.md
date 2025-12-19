@@ -7,6 +7,7 @@ Complete documentation for controlling OBS Studio with AI through the Model Cont
 - **[Quick Start Guide](QUICKSTART.md)** - Get up and running in 10 minutes
 - **[Tool Reference](TOOLS.md)** - Comprehensive reference for all 30 MCP tools
 - **[Screenshot Guide](SCREENSHOTS.md)** - AI visual monitoring of your stream
+- **[HTTP API Reference](API.md)** - REST API for monitoring and configuration
 
 ## Examples
 
@@ -20,6 +21,7 @@ Complete documentation for controlling OBS Studio with AI through the Model Cont
 | [QUICKSTART.md](QUICKSTART.md) | Step-by-step installation and setup guide |
 | [TOOLS.md](TOOLS.md) | Complete reference for all 30 tools with examples |
 | [SCREENSHOTS.md](SCREENSHOTS.md) | Detailed guide to AI visual monitoring |
+| [API.md](API.md) | HTTP REST API reference for monitoring and config |
 | [../README.md](../README.md) | Project overview and features |
 | [../CLAUDE.md](../CLAUDE.md) | AI assistant context and architecture |
 | [../PROJECT_PLAN.md](../PROJECT_PLAN.md) | Detailed project roadmap and design decisions |
@@ -109,3 +111,22 @@ Prompts provide pre-built workflow templates for common OBS operations:
 | `quick-status` | - | Brief OBS status summary |
 
 **Total: 10 MCP prompts available**
+
+---
+
+## HTTP API
+
+The server includes a REST API for monitoring and configuration:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/status` | GET | Server status |
+| `/api/history` | GET | Action history |
+| `/api/history/stats` | GET | History statistics |
+| `/api/screenshots` | GET | Screenshot sources |
+| `/api/config` | GET/POST | Configuration |
+| `/screenshot/{name}` | GET | Screenshot image |
+
+**Total: 8 HTTP API endpoints available**
+
+See [API.md](API.md) for full documentation.
