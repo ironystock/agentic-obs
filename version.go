@@ -1,23 +1,26 @@
 package main
 
-// Build-time version injection using ldflags.
-// Example: go build -ldflags "-X main.version=1.0.0 -X main.commit=$(git rev-parse HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
+// Build-time variables injected via ldflags.
+// These are set during build with:
+//
+//	go build -ldflags "-X main.version=1.0.0 -X main.commit=abc1234 -X main.date=2025-01-01"
+//
+// If not set, defaults are used for development builds.
 var (
-	// version is the semantic version (set via ldflags)
+	// version is the semantic version (e.g., "1.0.0", "1.0.0-beta.1")
 	version = "dev"
 
-	// commit is the git commit hash (set via ldflags)
+	// commit is the git commit hash (short form)
 	commit = "none"
 
-	// date is the build date in RFC3339 format (set via ldflags)
+	// date is the build date in ISO 8601 format
 	date = "unknown"
 )
 
-// Version returns the full version string including commit and date.
+// Version returns the full version string including build metadata.
 func Version() string {
-	if commit != "none" && len(commit) > 7 {
-		return version + " (" + commit[:7] + ", " + date + ")"
+	if version == "dev" {
+		return "dev (commit: " + commit + ", built: " + date + ")"
 	}
 	return version
 }
@@ -27,7 +30,7 @@ func VersionShort() string {
 	return version
 }
 
-// BuildInfo returns the individual build components.
+// BuildInfo returns detailed build information.
 func BuildInfo() (ver, com, dat string) {
 	return version, commit, date
 }

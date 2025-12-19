@@ -1,2 +1,9 @@
 /.claude/**
 agentic-obs.exe
+
+# MCP project files
+manifest.json
+*.mcpb
+
+# Windows special files
+nul
