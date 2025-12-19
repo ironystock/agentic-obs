@@ -5,7 +5,7 @@ Complete documentation for controlling OBS Studio with AI through the Model Cont
 ## Getting Started
 
 - **[Quick Start Guide](QUICKSTART.md)** - Get up and running in 10 minutes
-- **[Tool Reference](TOOLS.md)** - Comprehensive reference for all 30 MCP tools
+- **[Tool Reference](TOOLS.md)** - Comprehensive reference for all 45 MCP tools
 - **[Screenshot Guide](SCREENSHOTS.md)** - AI visual monitoring of your stream
 - **[HTTP API Reference](API.md)** - REST API for monitoring and configuration
 
@@ -19,12 +19,13 @@ Complete documentation for controlling OBS Studio with AI through the Model Cont
 | Document | Description |
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | Step-by-step installation and setup guide |
-| [TOOLS.md](TOOLS.md) | Complete reference for all 30 tools with examples |
+| [TOOLS.md](TOOLS.md) | Complete reference for all 45 tools with examples |
 | [SCREENSHOTS.md](SCREENSHOTS.md) | Detailed guide to AI visual monitoring |
 | [API.md](API.md) | HTTP REST API reference for monitoring and config |
 | [../README.md](../README.md) | Project overview and features |
 | [../CLAUDE.md](../CLAUDE.md) | AI assistant context and architecture |
 | [../PROJECT_PLAN.md](../PROJECT_PLAN.md) | Detailed project roadmap and design decisions |
+| [../skills/README.md](../skills/README.md) | Claude Skills installation and usage |
 
 ## Quick Links
 
@@ -71,9 +72,15 @@ Enable AI visual monitoring of your stream output - see [SCREENSHOTS.md](SCREENS
 ### Status & Monitoring (1 tool)
 Get comprehensive OBS status and connection info
 
+### Help & Discovery (1 tool)
+Built-in help system with topic-based guidance
+
+### Scene Design (14 tools)
+Create and manipulate sources (text, image, color, browser, media, transforms)
+
 ---
 
-**Total: 30 MCP tools available**
+**Total: 45 MCP tools available**
 
 For detailed information on each tool, see [TOOLS.md](TOOLS.md).
 
@@ -87,9 +94,10 @@ Resources provide structured access to OBS data via URI patterns:
 |----------|-------------|--------------|-------------|
 | **Scenes** | `obs://scene/{name}` | JSON | Scene configuration and sources |
 | **Screenshots** | `obs://screenshot/{name}` | Binary (PNG/JPEG) | Latest captured screenshot |
+| **Screenshot URLs** | `obs://screenshot-url/{name}` | Text | HTTP URL for screenshot access |
 | **Presets** | `obs://preset/{name}` | JSON | Saved source visibility states |
 
-**Total: 3 MCP resources available**
+**Total: 4 MCP resources available** (with autocomplete support)
 
 ---
 
@@ -109,8 +117,11 @@ Prompts provide pre-built workflow templates for common OBS operations:
 | `recording-workflow` | - | Recording session management |
 | `scene-organizer` | - | Scene inventory and organization |
 | `quick-status` | - | Brief OBS status summary |
+| `scene-designer` | scene_name, action (optional) | Visual layout creation with Design tools |
+| `source-management` | scene_name | Manage source visibility and properties |
+| `visual-setup` | monitor_scene (optional) | Configure screenshot monitoring |
 
-**Total: 10 MCP prompts available**
+**Total: 13 MCP prompts available** (with autocomplete for arguments)
 
 ---
 

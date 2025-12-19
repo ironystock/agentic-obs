@@ -109,13 +109,15 @@ func NewServer(config ServerConfig) (*Server, error) {
 	screenshotCfg := screenshot.DefaultConfig()
 	s.screenshotMgr = screenshot.NewManager(obsClient, db, screenshotCfg)
 
-	// Create MCP server
+	// Create MCP server with completion handler
 	mcpServer := mcpsdk.NewServer(
 		&mcpsdk.Implementation{
 			Name:    config.ServerName,
 			Version: config.ServerVersion,
 		},
-		nil, // No additional server options for now
+		&mcpsdk.ServerOptions{
+			CompletionHandler: s.handleCompletion,
+		},
 	)
 	s.mcpServer = mcpServer
 

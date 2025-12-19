@@ -8,7 +8,7 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
-- **44 MCP Tools**: Comprehensive control over OBS Studio operations in 6 tool groups
+- **45 MCP Tools**: Comprehensive control over OBS Studio operations in 6 tool groups
 - **Scene Management**: List, switch, create, and remove OBS scenes
 - **Scene Presets**: Save and restore source visibility configurations
 - **Recording Control**: Start, stop, pause, resume, and monitor recording
@@ -17,9 +17,12 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 - **Audio Control**: Manage input mute and volume levels
 - **Screenshot Sources**: AI visual monitoring with periodic image capture
 - **Agentic Scene Design**: Create and manipulate sources (text, image, color, browser, media)
+- **Help & Discovery**: Built-in help tool with topic-based guidance
 - **Status Monitoring**: Query OBS connection and operational status
-- **3 MCP Resources**: Scenes, screenshots, and presets exposed as resources
-- **10 MCP Prompts**: Pre-built workflows for common tasks and diagnostics
+- **4 MCP Resources**: Scenes, screenshots, screenshot URLs, and presets exposed as resources
+- **13 MCP Prompts**: Pre-built workflows for common tasks and diagnostics
+- **MCP Completions**: Autocomplete for prompt arguments and resource URIs
+- **Claude Skills**: Shareable skill packages for advanced AI orchestration
 - **TUI Dashboard**: Terminal interface for status, config, and history (`--tui` flag)
 - **Web Dashboard**: Browser-based dashboard at `http://localhost:8765/`
 
@@ -194,6 +197,12 @@ Example Claude Desktop configuration (`claude_desktop_config.json`):
 |------|-------------|
 | `get_obs_status` | Get overall OBS status and connection info |
 
+### Help & Discovery (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `help` | Get detailed help on tools, resources, prompts, workflows, or troubleshooting |
+
 ### Scene Design (14 tools)
 
 Enable AI to create and manipulate OBS sources programmatically.
@@ -227,7 +236,7 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `remove_source` | Remove a source from a scene |
 | `list_input_kinds` | List all available input source types |
 
-**Total: 44 tools in 6 groups** (Core, Sources, Audio, Layout, Visual, Design)
+**Total: 45 tools in 6 groups** (Core, Sources, Audio, Layout, Visual, Design) + Help
 
 ## MCP Resources
 
@@ -237,12 +246,14 @@ The server exposes OBS data as MCP resources for efficient access and monitoring
 |---------------|-------------|--------------|-------------|
 | Scenes | `obs://scene/{name}` | `obs-scene` (JSON) | Scene configuration with sources and settings |
 | Screenshots | `obs://screenshot/{name}` | `image/png` or `image/jpeg` | Binary screenshot images from capture sources |
+| Screenshot URLs | `obs://screenshot-url/{name}` | `text/plain` | HTTP URL for screenshot image access |
 | Presets | `obs://preset/{name}` | `obs-preset` (JSON) | Scene preset configurations with source visibility |
 
 **Usage:**
 - `resources/list` - List all available resources
 - `resources/read` - Get detailed resource content
 - Resources support notifications for real-time updates
+- **Completions**: Autocomplete available for resource URI names
 
 ## MCP Prompts
 
@@ -260,8 +271,12 @@ Pre-built workflow prompts guide AI assistants through common OBS tasks:
 | `recording-workflow` | none | Recording session guidance |
 | `scene-organizer` | none | Scene organization and cleanup |
 | `quick-status` | none | Brief status summary |
+| `scene-designer` | scene_name, action (optional) | Visual layout creation with Design tools |
+| `source-management` | scene_name | Manage source visibility and properties |
+| `visual-setup` | monitor_scene (optional) | Configure screenshot monitoring |
 
 Prompts combine multiple tools into cohesive workflows with best practices built-in.
+**Completions**: Autocomplete available for prompt arguments (preset names, screenshot sources, scene names).
 
 ## Development
 
@@ -272,12 +287,13 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (44 tools)
+│   ├── mcp/               # MCP server implementation (45 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard
 │   ├── screenshot/        # Background capture manager
 │   └── tui/               # Terminal UI dashboard
+├── skills/                 # Claude Skills packages
 └── scripts/               # Development helpers
 ```
 
@@ -321,6 +337,19 @@ Configuration is stored in SQLite (`agentic-obs.db`) and includes:
 **Solutions**:
 - Ensure the directory is writable
 - Check file permissions on `agentic-obs.db`
+
+## Claude Skills
+
+The `skills/` directory contains shareable Claude Skills packages that teach AI assistants how to orchestrate agentic-obs tools effectively:
+
+| Skill | Purpose |
+|-------|---------|
+| `streaming-assistant` | Complete streaming workflows (pre-stream, live, teardown) |
+| `scene-designer` | Visual layout creation with 14 Design tools |
+| `audio-engineer` | Audio optimization and troubleshooting |
+| `preset-manager` | Preset lifecycle and organization |
+
+Skills use progressive disclosure for token-efficient guidance. See `skills/README.md` for installation.
 
 ## Future Enhancements
 
