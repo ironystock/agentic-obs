@@ -191,6 +191,10 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 
 // handleUpdateConfig updates configuration from POST body.
 func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
+	// Limit request body size to prevent memory exhaustion attacks (64KB is plenty for config)
+	const maxBodySize = 64 * 1024
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON body"})
