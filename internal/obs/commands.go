@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/andreykaipov/goobs/api/requests/filters"
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/sceneitems"
 	"github.com/andreykaipov/goobs/api/requests/scenes"
 	"github.com/andreykaipov/goobs/api/requests/sources"
+	"github.com/andreykaipov/goobs/api/requests/transitions"
 	"github.com/andreykaipov/goobs/api/typedefs"
 )
 
@@ -916,4 +918,297 @@ func (c *Client) GetInputKindList() ([]string, error) {
 	}
 
 	return resp.InputKinds, nil
+}
+
+// =============================================================================
+// Filter Types and Methods (FB-23)
+// =============================================================================
+
+// FilterInfo represents basic information about a source filter.
+type FilterInfo struct {
+	Name    string `json:"name"`
+	Kind    string `json:"kind"`
+	Index   int    `json:"index"`
+	Enabled bool   `json:"enabled"`
+}
+
+// FilterDetails represents detailed information about a source filter.
+type FilterDetails struct {
+	Name     string                 `json:"name"`
+	Kind     string                 `json:"kind"`
+	Index    int                    `json:"index"`
+	Enabled  bool                   `json:"enabled"`
+	Settings map[string]interface{} `json:"settings"`
+}
+
+// GetSourceFilterList retrieves all filters on a source.
+func (c *Client) GetSourceFilterList(sourceName string) ([]FilterInfo, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Filters.GetSourceFilterList(&filters.GetSourceFilterListParams{
+		SourceName: &sourceName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get filters for source '%s': %w", sourceName, err)
+	}
+
+	result := make([]FilterInfo, len(resp.Filters))
+	for i, f := range resp.Filters {
+		result[i] = FilterInfo{
+			Name:    f.FilterName,
+			Kind:    f.FilterKind,
+			Index:   int(f.FilterIndex),
+			Enabled: f.FilterEnabled,
+		}
+	}
+
+	return result, nil
+}
+
+// GetSourceFilter retrieves details about a specific filter on a source.
+func (c *Client) GetSourceFilter(sourceName, filterName string) (*FilterDetails, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Filters.GetSourceFilter(&filters.GetSourceFilterParams{
+		SourceName: &sourceName,
+		FilterName: &filterName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get filter '%s' on source '%s': %w", filterName, sourceName, err)
+	}
+
+	return &FilterDetails{
+		Name:     filterName,
+		Kind:     resp.FilterKind,
+		Index:    int(resp.FilterIndex),
+		Enabled:  resp.FilterEnabled,
+		Settings: resp.FilterSettings,
+	}, nil
+}
+
+// CreateSourceFilter creates a new filter on a source.
+func (c *Client) CreateSourceFilter(sourceName, filterName, filterKind string, settings map[string]interface{}) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	params := &filters.CreateSourceFilterParams{
+		SourceName: &sourceName,
+		FilterName: &filterName,
+		FilterKind: &filterKind,
+	}
+
+	if settings != nil {
+		params.FilterSettings = settings
+	}
+
+	_, err = client.Filters.CreateSourceFilter(params)
+	if err != nil {
+		return fmt.Errorf("failed to create filter '%s' on source '%s': %w", filterName, sourceName, err)
+	}
+
+	return nil
+}
+
+// RemoveSourceFilter removes a filter from a source.
+func (c *Client) RemoveSourceFilter(sourceName, filterName string) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Filters.RemoveSourceFilter(&filters.RemoveSourceFilterParams{
+		SourceName: &sourceName,
+		FilterName: &filterName,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove filter '%s' from source '%s': %w", filterName, sourceName, err)
+	}
+
+	return nil
+}
+
+// SetSourceFilterEnabled enables or disables a filter on a source.
+func (c *Client) SetSourceFilterEnabled(sourceName, filterName string, enabled bool) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Filters.SetSourceFilterEnabled(&filters.SetSourceFilterEnabledParams{
+		SourceName:    &sourceName,
+		FilterName:    &filterName,
+		FilterEnabled: &enabled,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set filter '%s' enabled=%v on source '%s': %w", filterName, enabled, sourceName, err)
+	}
+
+	return nil
+}
+
+// SetSourceFilterSettings updates the settings of a filter.
+// If overlay is true, settings are merged with existing; otherwise they replace entirely.
+func (c *Client) SetSourceFilterSettings(sourceName, filterName string, settings map[string]interface{}, overlay bool) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Filters.SetSourceFilterSettings(&filters.SetSourceFilterSettingsParams{
+		SourceName:     &sourceName,
+		FilterName:     &filterName,
+		FilterSettings: settings,
+		Overlay:        &overlay,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set settings for filter '%s' on source '%s': %w", filterName, sourceName, err)
+	}
+
+	return nil
+}
+
+// GetSourceFilterKindList retrieves all available filter types.
+func (c *Client) GetSourceFilterKindList() ([]string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Filters.GetSourceFilterKindList(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get filter kind list: %w", err)
+	}
+
+	return resp.SourceFilterKinds, nil
+}
+
+// =============================================================================
+// Transition Types and Methods (FB-24)
+// =============================================================================
+
+// TransitionInfo represents basic information about a scene transition.
+type TransitionInfo struct {
+	Name         string `json:"name"`
+	Kind         string `json:"kind"`
+	Fixed        bool   `json:"fixed"`
+	Configurable bool   `json:"configurable"`
+}
+
+// TransitionDetails represents the current scene transition with settings.
+type TransitionDetails struct {
+	Name         string                 `json:"name"`
+	Kind         string                 `json:"kind"`
+	Duration     int                    `json:"duration_ms"`
+	Configurable bool                   `json:"configurable"`
+	Settings     map[string]interface{} `json:"settings,omitempty"`
+}
+
+// GetSceneTransitionList retrieves all available scene transitions.
+func (c *Client) GetSceneTransitionList() ([]TransitionInfo, string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, "", err
+	}
+
+	resp, err := client.Transitions.GetSceneTransitionList()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get transition list: %w", err)
+	}
+
+	result := make([]TransitionInfo, len(resp.Transitions))
+	for i, t := range resp.Transitions {
+		result[i] = TransitionInfo{
+			Name:         t.TransitionName,
+			Kind:         t.TransitionKind,
+			Fixed:        t.TransitionFixed,
+			Configurable: t.TransitionConfigurable,
+		}
+	}
+
+	return result, resp.CurrentSceneTransitionName, nil
+}
+
+// GetCurrentSceneTransition retrieves the current scene transition details.
+func (c *Client) GetCurrentSceneTransition() (*TransitionDetails, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Transitions.GetCurrentSceneTransition()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current transition: %w", err)
+	}
+
+	return &TransitionDetails{
+		Name:         resp.TransitionName,
+		Kind:         resp.TransitionKind,
+		Duration:     int(resp.TransitionDuration),
+		Configurable: resp.TransitionConfigurable,
+		Settings:     resp.TransitionSettings,
+	}, nil
+}
+
+// SetCurrentSceneTransition sets the current scene transition.
+func (c *Client) SetCurrentSceneTransition(transitionName string) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Transitions.SetCurrentSceneTransition(&transitions.SetCurrentSceneTransitionParams{
+		TransitionName: &transitionName,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set current transition to '%s': %w", transitionName, err)
+	}
+
+	return nil
+}
+
+// SetCurrentSceneTransitionDuration sets the duration of the current scene transition.
+func (c *Client) SetCurrentSceneTransitionDuration(durationMs int) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	duration := float64(durationMs)
+	_, err = client.Transitions.SetCurrentSceneTransitionDuration(&transitions.SetCurrentSceneTransitionDurationParams{
+		TransitionDuration: &duration,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set transition duration to %dms: %w", durationMs, err)
+	}
+
+	return nil
+}
+
+// TriggerStudioModeTransition triggers the current scene transition in studio mode.
+// This executes the transition from preview to program.
+// Returns an error if studio mode is not enabled.
+func (c *Client) TriggerStudioModeTransition() error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Transitions.TriggerStudioModeTransition()
+	if err != nil {
+		// Check if it's because studio mode isn't enabled
+		if strings.Contains(err.Error(), "studio mode") {
+			return fmt.Errorf("studio mode is not enabled. Enable studio mode in OBS to use this feature")
+		}
+		return fmt.Errorf("failed to trigger studio mode transition: %w", err)
+	}
+
+	return nil
 }

@@ -77,6 +77,32 @@ type MockOBSClient struct {
 	ErrorOnDuplicateSceneItem    error
 	ErrorOnRemoveSceneItem       error
 	ErrorOnGetInputKindList      error
+
+	// Filter mock data
+	sourceFilters map[string][]obs.FilterInfo              // source -> filters
+	filterDetails map[string]map[string]*obs.FilterDetails // source -> filter name -> details
+	filterKinds   []string                                 // available filter types
+
+	// Transition mock data
+	transitions       []obs.TransitionInfo
+	currentTransition *obs.TransitionDetails
+	studioModeEnabled bool
+
+	// Error injection for filters
+	ErrorOnGetSourceFilterList     error
+	ErrorOnGetSourceFilter         error
+	ErrorOnCreateSourceFilter      error
+	ErrorOnRemoveSourceFilter      error
+	ErrorOnSetSourceFilterEnabled  error
+	ErrorOnSetSourceFilterSettings error
+	ErrorOnGetSourceFilterKindList error
+
+	// Error injection for transitions
+	ErrorOnGetSceneTransitionList            error
+	ErrorOnGetCurrentSceneTransition         error
+	ErrorOnSetCurrentSceneTransition         error
+	ErrorOnSetCurrentSceneTransitionDuration error
+	ErrorOnTriggerStudioModeTransition       error
 }
 
 // NewMockOBSClient creates a new mock OBS client with default test data.
@@ -137,6 +163,72 @@ func NewMockOBSClient() *MockOBSClient {
 			"dshow_input", "game_capture", "window_capture", "monitor_capture",
 		},
 		nextSceneItemID: 100,
+		// Filter mock data
+		sourceFilters: map[string][]obs.FilterInfo{
+			"Webcam": {
+				{Name: "Color Correction", Kind: "color_filter_v2", Index: 0, Enabled: true},
+				{Name: "Sharpen", Kind: "sharpness_filter_v2", Index: 1, Enabled: true},
+			},
+			"Microphone": {
+				{Name: "Noise Suppression", Kind: "noise_suppress_filter_v2", Index: 0, Enabled: true},
+				{Name: "Compressor", Kind: "compressor_filter", Index: 1, Enabled: false},
+			},
+		},
+		filterDetails: map[string]map[string]*obs.FilterDetails{
+			"Webcam": {
+				"Color Correction": {
+					Name:     "Color Correction",
+					Kind:     "color_filter_v2",
+					Index:    0,
+					Enabled:  true,
+					Settings: map[string]interface{}{"brightness": 0.0, "contrast": 0.0, "saturation": 0.0},
+				},
+				"Sharpen": {
+					Name:     "Sharpen",
+					Kind:     "sharpness_filter_v2",
+					Index:    1,
+					Enabled:  true,
+					Settings: map[string]interface{}{"sharpness": 0.08},
+				},
+			},
+			"Microphone": {
+				"Noise Suppression": {
+					Name:     "Noise Suppression",
+					Kind:     "noise_suppress_filter_v2",
+					Index:    0,
+					Enabled:  true,
+					Settings: map[string]interface{}{"suppress_level": -30, "method": "rnnoise"},
+				},
+				"Compressor": {
+					Name:     "Compressor",
+					Kind:     "compressor_filter",
+					Index:    1,
+					Enabled:  false,
+					Settings: map[string]interface{}{"ratio": 10.0, "threshold": -18.0},
+				},
+			},
+		},
+		filterKinds: []string{
+			"color_filter_v2", "sharpness_filter_v2", "noise_suppress_filter_v2",
+			"compressor_filter", "limiter_filter", "gain_filter", "chroma_key_filter_v2",
+			"luma_key_filter", "mask_filter_v2", "scroll_filter", "crop_filter",
+		},
+		// Transition mock data
+		transitions: []obs.TransitionInfo{
+			{Name: "Cut", Kind: "cut_transition", Fixed: true, Configurable: false},
+			{Name: "Fade", Kind: "fade_transition", Fixed: false, Configurable: true},
+			{Name: "Swipe", Kind: "swipe_transition", Fixed: false, Configurable: true},
+			{Name: "Slide", Kind: "slide_transition", Fixed: false, Configurable: true},
+			{Name: "Stinger", Kind: "obs_stinger_transition", Fixed: false, Configurable: true},
+		},
+		currentTransition: &obs.TransitionDetails{
+			Name:         "Fade",
+			Kind:         "fade_transition",
+			Duration:     300,
+			Configurable: true,
+			Settings:     map[string]interface{}{},
+		},
+		studioModeEnabled: false,
 	}
 }
 
@@ -1268,4 +1360,435 @@ func (m *MockOBSClient) GetInputKindList() ([]string, error) {
 	result := make([]string, len(m.inputKinds))
 	copy(result, m.inputKinds)
 	return result, nil
+}
+
+// =============================================================================
+// Filter mock implementations (FB-23)
+// =============================================================================
+
+// GetSourceFilterList returns filters for a source.
+func (m *MockOBSClient) GetSourceFilterList(sourceName string) ([]obs.FilterInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetSourceFilterList != nil {
+		return nil, m.ErrorOnGetSourceFilterList
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	filters, exists := m.sourceFilters[sourceName]
+	if !exists {
+		// Return empty list for sources without filters
+		return []obs.FilterInfo{}, nil
+	}
+
+	// Return a copy
+	result := make([]obs.FilterInfo, len(filters))
+	copy(result, filters)
+	return result, nil
+}
+
+// GetSourceFilter returns details for a specific filter.
+func (m *MockOBSClient) GetSourceFilter(sourceName, filterName string) (*obs.FilterDetails, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetSourceFilter != nil {
+		return nil, m.ErrorOnGetSourceFilter
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	sourceFilters, exists := m.filterDetails[sourceName]
+	if !exists {
+		return nil, fmt.Errorf("source '%s' not found", sourceName)
+	}
+
+	filter, exists := sourceFilters[filterName]
+	if !exists {
+		return nil, fmt.Errorf("filter '%s' not found on source '%s'", filterName, sourceName)
+	}
+
+	// Return a copy
+	result := *filter
+	return &result, nil
+}
+
+// CreateSourceFilter creates a filter on a source.
+func (m *MockOBSClient) CreateSourceFilter(sourceName, filterName, filterKind string, settings map[string]interface{}) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnCreateSourceFilter != nil {
+		return m.ErrorOnCreateSourceFilter
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	// Check if filter already exists
+	if sourceFilters, exists := m.filterDetails[sourceName]; exists {
+		if _, exists := sourceFilters[filterName]; exists {
+			return fmt.Errorf("filter '%s' already exists on source '%s'", filterName, sourceName)
+		}
+	}
+
+	// Initialize maps if needed
+	if m.sourceFilters == nil {
+		m.sourceFilters = make(map[string][]obs.FilterInfo)
+	}
+	if m.filterDetails == nil {
+		m.filterDetails = make(map[string]map[string]*obs.FilterDetails)
+	}
+	if m.filterDetails[sourceName] == nil {
+		m.filterDetails[sourceName] = make(map[string]*obs.FilterDetails)
+	}
+
+	// Determine index
+	index := len(m.sourceFilters[sourceName])
+
+	// Add to filter list
+	m.sourceFilters[sourceName] = append(m.sourceFilters[sourceName], obs.FilterInfo{
+		Name:    filterName,
+		Kind:    filterKind,
+		Index:   index,
+		Enabled: true,
+	})
+
+	// Add to filter details
+	m.filterDetails[sourceName][filterName] = &obs.FilterDetails{
+		Name:     filterName,
+		Kind:     filterKind,
+		Index:    index,
+		Enabled:  true,
+		Settings: settings,
+	}
+
+	return nil
+}
+
+// RemoveSourceFilter removes a filter from a source.
+func (m *MockOBSClient) RemoveSourceFilter(sourceName, filterName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnRemoveSourceFilter != nil {
+		return m.ErrorOnRemoveSourceFilter
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	// Check if filter exists
+	sourceFilters, exists := m.filterDetails[sourceName]
+	if !exists {
+		return fmt.Errorf("source '%s' not found", sourceName)
+	}
+
+	if _, exists := sourceFilters[filterName]; !exists {
+		return fmt.Errorf("filter '%s' not found on source '%s'", filterName, sourceName)
+	}
+
+	// Remove from filter details
+	delete(m.filterDetails[sourceName], filterName)
+
+	// Remove from filter list
+	filters := m.sourceFilters[sourceName]
+	for i, f := range filters {
+		if f.Name == filterName {
+			m.sourceFilters[sourceName] = append(filters[:i], filters[i+1:]...)
+			break
+		}
+	}
+
+	// Update indices
+	for i := range m.sourceFilters[sourceName] {
+		m.sourceFilters[sourceName][i].Index = i
+		if details, ok := m.filterDetails[sourceName][m.sourceFilters[sourceName][i].Name]; ok {
+			details.Index = i
+		}
+	}
+
+	return nil
+}
+
+// SetSourceFilterEnabled enables or disables a filter.
+func (m *MockOBSClient) SetSourceFilterEnabled(sourceName, filterName string, enabled bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetSourceFilterEnabled != nil {
+		return m.ErrorOnSetSourceFilterEnabled
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	sourceFilters, exists := m.filterDetails[sourceName]
+	if !exists {
+		return fmt.Errorf("source '%s' not found", sourceName)
+	}
+
+	filter, exists := sourceFilters[filterName]
+	if !exists {
+		return fmt.Errorf("filter '%s' not found on source '%s'", filterName, sourceName)
+	}
+
+	filter.Enabled = enabled
+
+	// Update in filter list too
+	for i, f := range m.sourceFilters[sourceName] {
+		if f.Name == filterName {
+			m.sourceFilters[sourceName][i].Enabled = enabled
+			break
+		}
+	}
+
+	return nil
+}
+
+// SetSourceFilterSettings updates filter settings.
+func (m *MockOBSClient) SetSourceFilterSettings(sourceName, filterName string, settings map[string]interface{}, overlay bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetSourceFilterSettings != nil {
+		return m.ErrorOnSetSourceFilterSettings
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	sourceFilters, exists := m.filterDetails[sourceName]
+	if !exists {
+		return fmt.Errorf("source '%s' not found", sourceName)
+	}
+
+	filter, exists := sourceFilters[filterName]
+	if !exists {
+		return fmt.Errorf("filter '%s' not found on source '%s'", filterName, sourceName)
+	}
+
+	if overlay {
+		// Merge settings
+		for k, v := range settings {
+			filter.Settings[k] = v
+		}
+	} else {
+		// Replace settings
+		filter.Settings = settings
+	}
+
+	return nil
+}
+
+// GetSourceFilterKindList returns available filter types.
+func (m *MockOBSClient) GetSourceFilterKindList() ([]string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetSourceFilterKindList != nil {
+		return nil, m.ErrorOnGetSourceFilterKindList
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	// Return a copy
+	result := make([]string, len(m.filterKinds))
+	copy(result, m.filterKinds)
+	return result, nil
+}
+
+// =============================================================================
+// Transition mock implementations (FB-24)
+// =============================================================================
+
+// GetSceneTransitionList returns available transitions and current transition name.
+func (m *MockOBSClient) GetSceneTransitionList() ([]obs.TransitionInfo, string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetSceneTransitionList != nil {
+		return nil, "", m.ErrorOnGetSceneTransitionList
+	}
+
+	if !m.connected {
+		return nil, "", fmt.Errorf("not connected to OBS")
+	}
+
+	// Return a copy
+	result := make([]obs.TransitionInfo, len(m.transitions))
+	copy(result, m.transitions)
+
+	currentName := ""
+	if m.currentTransition != nil {
+		currentName = m.currentTransition.Name
+	}
+
+	return result, currentName, nil
+}
+
+// GetCurrentSceneTransition returns the current transition details.
+func (m *MockOBSClient) GetCurrentSceneTransition() (*obs.TransitionDetails, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetCurrentSceneTransition != nil {
+		return nil, m.ErrorOnGetCurrentSceneTransition
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	if m.currentTransition == nil {
+		return nil, fmt.Errorf("no current transition set")
+	}
+
+	// Return a copy
+	result := *m.currentTransition
+	return &result, nil
+}
+
+// SetCurrentSceneTransition sets the current transition.
+func (m *MockOBSClient) SetCurrentSceneTransition(transitionName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetCurrentSceneTransition != nil {
+		return m.ErrorOnSetCurrentSceneTransition
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	// Find the transition
+	var found *obs.TransitionInfo
+	for _, t := range m.transitions {
+		if t.Name == transitionName {
+			found = &t
+			break
+		}
+	}
+
+	if found == nil {
+		return fmt.Errorf("transition '%s' not found", transitionName)
+	}
+
+	// Update current transition
+	duration := 300
+	if m.currentTransition != nil {
+		duration = m.currentTransition.Duration
+	}
+
+	m.currentTransition = &obs.TransitionDetails{
+		Name:         found.Name,
+		Kind:         found.Kind,
+		Duration:     duration,
+		Configurable: found.Configurable,
+		Settings:     map[string]interface{}{},
+	}
+
+	return nil
+}
+
+// SetCurrentSceneTransitionDuration sets the transition duration.
+func (m *MockOBSClient) SetCurrentSceneTransitionDuration(durationMs int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetCurrentSceneTransitionDuration != nil {
+		return m.ErrorOnSetCurrentSceneTransitionDuration
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if m.currentTransition == nil {
+		return fmt.Errorf("no current transition set")
+	}
+
+	m.currentTransition.Duration = durationMs
+	return nil
+}
+
+// TriggerStudioModeTransition triggers the studio mode transition.
+func (m *MockOBSClient) TriggerStudioModeTransition() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnTriggerStudioModeTransition != nil {
+		return m.ErrorOnTriggerStudioModeTransition
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if !m.studioModeEnabled {
+		return fmt.Errorf("studio mode is not enabled")
+	}
+
+	// In a real implementation, this would swap preview and program scenes
+	return nil
+}
+
+// Helper methods for test setup
+
+// SetStudioModeEnabled sets the studio mode state for testing.
+func (m *MockOBSClient) SetStudioModeEnabled(enabled bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.studioModeEnabled = enabled
+}
+
+// AddFilter adds a filter to a source for testing.
+func (m *MockOBSClient) AddFilter(sourceName string, filter obs.FilterDetails) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.sourceFilters == nil {
+		m.sourceFilters = make(map[string][]obs.FilterInfo)
+	}
+	if m.filterDetails == nil {
+		m.filterDetails = make(map[string]map[string]*obs.FilterDetails)
+	}
+	if m.filterDetails[sourceName] == nil {
+		m.filterDetails[sourceName] = make(map[string]*obs.FilterDetails)
+	}
+
+	m.sourceFilters[sourceName] = append(m.sourceFilters[sourceName], obs.FilterInfo{
+		Name:    filter.Name,
+		Kind:    filter.Kind,
+		Index:   filter.Index,
+		Enabled: filter.Enabled,
+	})
+	m.filterDetails[sourceName][filter.Name] = &filter
+}
+
+// AddTransition adds a transition for testing.
+func (m *MockOBSClient) AddTransition(transition obs.TransitionInfo) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.transitions = append(m.transitions, transition)
+}
+
+// SetCurrentTransitionDirect sets the current transition directly for testing.
+func (m *MockOBSClient) SetCurrentTransitionDirect(transition *obs.TransitionDetails) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.currentTransition = transition
 }

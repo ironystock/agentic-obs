@@ -1006,6 +1006,308 @@ var toolHelpContent = map[string]string{
 }
 
 **Use Case**: Discover available source types for your OBS installation.`,
+
+	// Filters (FB-23)
+	"list_source_filters": `# list_source_filters
+
+**Category**: Filters
+
+**Description**: List all filters applied to a source.
+
+**Input**:
+- source_name (string, required): Name of the source to list filters for
+
+**Output**:
+- source_name: Source name
+- filters: Array of filter objects (name, kind, index, enabled)
+- count: Total number of filters
+
+**Example Input**:
+{
+  "source_name": "Webcam"
+}
+
+**Example Output**:
+{
+  "source_name": "Webcam",
+  "filters": [
+    {"name": "Color Correction", "kind": "color_filter_v2", "index": 0, "enabled": true},
+    {"name": "Sharpen", "kind": "sharpness_filter_v2", "index": 1, "enabled": true}
+  ],
+  "count": 2
+}`,
+
+	"get_source_filter": `# get_source_filter
+
+**Category**: Filters
+
+**Description**: Get detailed information about a specific filter on a source.
+
+**Input**:
+- source_name (string, required): Name of the source containing the filter
+- filter_name (string, required): Name of the filter to get details for
+
+**Output**:
+- source_name: Source name
+- filter: Filter details (name, kind, index, enabled, settings)
+
+**Example Input**:
+{
+  "source_name": "Webcam",
+  "filter_name": "Color Correction"
+}
+
+**Use Case**: Inspect filter configuration before modifying settings.`,
+
+	"create_source_filter": `# create_source_filter
+
+**Category**: Filters
+
+**Description**: Add a new filter to a source (e.g., color correction, noise suppression).
+
+**Input**:
+- source_name (string, required): Name of the source to add the filter to
+- filter_name (string, required): Name for the new filter
+- filter_kind (string, required): Type of filter (use list_filter_kinds to see available types)
+- filter_settings (object, optional): Initial settings for the filter
+
+**Output**:
+- source_name: Source name
+- filter_name: Filter name
+- filter_kind: Filter type
+- message: Success confirmation
+
+**Example Input**:
+{
+  "source_name": "Webcam",
+  "filter_name": "My Color Correction",
+  "filter_kind": "color_filter_v2",
+  "filter_settings": {"brightness": 0.1, "contrast": 0.05}
+}
+
+**Common Filter Types**:
+- color_filter_v2: Color correction (brightness, contrast, saturation)
+- sharpness_filter_v2: Image sharpening
+- noise_suppress_filter_v2: Audio noise suppression
+- compressor_filter: Audio compressor
+- chroma_key_filter_v2: Green screen removal`,
+
+	"remove_source_filter": `# remove_source_filter
+
+**Category**: Filters
+
+**Description**: Remove a filter from a source.
+
+**Input**:
+- source_name (string, required): Name of the source containing the filter
+- filter_name (string, required): Name of the filter to remove
+
+**Output**:
+- source_name: Source name
+- filter_name: Filter name
+- message: Success confirmation
+
+**Example Input**:
+{
+  "source_name": "Webcam",
+  "filter_name": "Old Filter"
+}
+
+**Warning**: This action cannot be undone. The filter configuration will be lost.`,
+
+	"toggle_source_filter": `# toggle_source_filter
+
+**Category**: Filters
+
+**Description**: Enable or disable a filter on a source.
+
+**Input**:
+- source_name (string, required): Name of the source containing the filter
+- filter_name (string, required): Name of the filter to toggle
+- filter_enabled (bool, optional): Set to true/false to enable/disable; omit to toggle
+
+**Output**:
+- source_name: Source name
+- filter_name: Filter name
+- filter_enabled: New enabled state
+- message: Success confirmation
+
+**Example Input** (toggle):
+{
+  "source_name": "Webcam",
+  "filter_name": "Color Correction"
+}
+
+**Example Input** (explicit):
+{
+  "source_name": "Webcam",
+  "filter_name": "Color Correction",
+  "filter_enabled": false
+}
+
+**Use Case**: Quickly enable/disable effects without removing the filter.`,
+
+	"set_source_filter_settings": `# set_source_filter_settings
+
+**Category**: Filters
+
+**Description**: Modify the configuration settings of a filter.
+
+**Input**:
+- source_name (string, required): Name of the source containing the filter
+- filter_name (string, required): Name of the filter to update
+- filter_settings (object, required): Settings to apply to the filter
+- overlay (bool, optional): If true, merge with existing settings; if false, replace entirely (default: true)
+
+**Output**:
+- source_name: Source name
+- filter_name: Filter name
+- overlay: Whether overlay mode was used
+- message: Success confirmation
+
+**Example Input**:
+{
+  "source_name": "Webcam",
+  "filter_name": "Color Correction",
+  "filter_settings": {"brightness": 0.2, "saturation": 0.1},
+  "overlay": true
+}
+
+**Note**: Use overlay=true to update specific settings while keeping others unchanged.`,
+
+	"list_filter_kinds": `# list_filter_kinds
+
+**Category**: Filters
+
+**Description**: List all available filter types in OBS.
+
+**Input**: None
+
+**Output**:
+- filter_kinds: Array of available filter type IDs
+- count: Total number of types
+
+**Example Output**:
+{
+  "filter_kinds": [
+    "color_filter_v2",
+    "sharpness_filter_v2",
+    "noise_suppress_filter_v2",
+    "compressor_filter",
+    "limiter_filter",
+    "gain_filter",
+    "chroma_key_filter_v2"
+  ],
+  "count": 15
+}
+
+**Use Case**: Discover available filter types before creating filters with create_source_filter.`,
+
+	// Transitions (FB-24)
+	"list_transitions": `# list_transitions
+
+**Category**: Transitions
+
+**Description**: List all available scene transitions and identify the current one.
+
+**Input**: None
+
+**Output**:
+- transitions: Array of transition objects (name, kind, fixed, configurable)
+- current_transition: Name of currently active transition
+- count: Total number of transitions
+
+**Example Output**:
+{
+  "transitions": [
+    {"name": "Cut", "kind": "cut_transition", "fixed": true, "configurable": false},
+    {"name": "Fade", "kind": "fade_transition", "fixed": false, "configurable": true},
+    {"name": "Swipe", "kind": "swipe_transition", "fixed": false, "configurable": true}
+  ],
+  "current_transition": "Fade",
+  "count": 3
+}`,
+
+	"get_current_transition": `# get_current_transition
+
+**Category**: Transitions
+
+**Description**: Get details about the current scene transition including duration and settings.
+
+**Input**: None
+
+**Output**:
+- name: Transition name
+- kind: Transition type
+- duration_ms: Transition duration in milliseconds
+- configurable: Whether transition has configurable settings
+- settings: Current transition settings (if configurable)
+
+**Example Output**:
+{
+  "name": "Fade",
+  "kind": "fade_transition",
+  "duration_ms": 300,
+  "configurable": true,
+  "settings": {}
+}`,
+
+	"set_current_transition": `# set_current_transition
+
+**Category**: Transitions
+
+**Description**: Change the active scene transition (e.g., Cut, Fade, Swipe).
+
+**Input**:
+- transition_name (string, required): Name of the transition to set as current
+
+**Output**:
+- transition_name: Transition name
+- message: Success confirmation
+
+**Example Input**:
+{
+  "transition_name": "Fade"
+}
+
+**Use Case**: Change how scenes transition during scene switches.`,
+
+	"set_transition_duration": `# set_transition_duration
+
+**Category**: Transitions
+
+**Description**: Set the duration of the current scene transition in milliseconds.
+
+**Input**:
+- transition_duration (int, required): Duration in milliseconds
+
+**Output**:
+- duration_ms: New duration value
+- message: Success confirmation
+
+**Example Input**:
+{
+  "transition_duration": 500
+}
+
+**Note**: Typical durations range from 100ms (quick) to 1000ms (slow). Cut transition ignores duration.`,
+
+	"trigger_transition": `# trigger_transition
+
+**Category**: Transitions
+
+**Description**: Trigger the current transition in studio mode (swaps preview and program scenes).
+
+**Input**: None
+
+**Output**:
+- message: Success confirmation
+
+**Requirements**: OBS must be in Studio Mode for this to work.
+
+**Use Case**: Manually trigger scene changes in studio mode workflow.
+
+**Error Handling**: Returns error if studio mode is not enabled.`,
 }
 
 // GetToolHelpContent returns the help text for a specific tool, or empty if not found.

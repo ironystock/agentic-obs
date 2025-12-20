@@ -8,7 +8,7 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
-- **45 MCP Tools**: Comprehensive control over OBS Studio operations in 6 tool groups
+- **57 MCP Tools**: Comprehensive control over OBS Studio operations in 8 tool groups
 - **Scene Management**: List, switch, create, and remove OBS scenes
 - **Scene Presets**: Save and restore source visibility configurations
 - **Recording Control**: Start, stop, pause, resume, and monitor recording
@@ -242,7 +242,29 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `remove_source` | Remove a source from a scene |
 | `list_input_kinds` | List all available input source types |
 
-**Total: 45 tools in 6 groups** (Core, Sources, Audio, Layout, Visual, Design) + Help
+### Filters (7 tools)
+
+| Tool | Description |
+|------|-------------|
+| `list_source_filters` | List all filters applied to a source |
+| `get_source_filter` | Get filter details and settings |
+| `create_source_filter` | Add a new filter to a source (color correction, noise suppression, etc.) |
+| `remove_source_filter` | Remove a filter from a source |
+| `toggle_source_filter` | Enable/disable a filter |
+| `set_source_filter_settings` | Modify filter configuration |
+| `list_filter_kinds` | List all available filter types |
+
+### Transitions (5 tools)
+
+| Tool | Description |
+|------|-------------|
+| `list_transitions` | List all available transitions and current one |
+| `get_current_transition` | Get current transition details |
+| `set_current_transition` | Change the active transition (Cut, Fade, Swipe, etc.) |
+| `set_transition_duration` | Set transition duration in milliseconds |
+| `trigger_transition` | Trigger studio mode transition (preview to program) |
+
+**Total: 57 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Help
 
 ## MCP Resources
 
@@ -293,7 +315,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (45 tools)
+│   ├── mcp/               # MCP server implementation (57 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard

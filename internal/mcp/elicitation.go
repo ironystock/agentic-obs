@@ -70,6 +70,12 @@ func ElicitDeleteConfirmation(ctx context.Context, session *mcpsdk.ServerSession
 		fmt.Sprintf("You are about to permanently delete %s '%s'. This cannot be undone. Continue?", itemType, itemName))
 }
 
+// ElicitFilterRemovalConfirmation requests confirmation before removing a filter from a source.
+func ElicitFilterRemovalConfirmation(ctx context.Context, session *mcpsdk.ServerSession, sourceName, filterName string) (bool, error) {
+	return ElicitConfirmation(ctx, session,
+		fmt.Sprintf("You are about to remove filter '%s' from source '%s'. This cannot be undone. Continue?", filterName, sourceName))
+}
+
 // CancelledResult returns a result indicating the action was cancelled by the user.
 func CancelledResult(action string) SimpleResult {
 	return SimpleResult{Message: fmt.Sprintf("%s cancelled by user", action)}

@@ -19,6 +19,6 @@ This directory contains architecture documents, design decisions, and roadmap fo
 
 ## Quick Links
 
-**Current Status:** 45 Tools | 4 Resources | 13 Prompts
+**Current Status:** 57 Tools | 4 Resources | 13 Prompts
 
 See [decisions/](decisions/) for the rationale behind key architectural choices.

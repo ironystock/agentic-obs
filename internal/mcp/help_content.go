@@ -21,18 +21,20 @@ import "fmt"
 //
 // ============================================================================
 const (
-	HelpToolCount     = 45 // Total MCP tools (including help)
+	HelpToolCount     = 57 // Total MCP tools (including help)
 	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
 	HelpPromptCount   = 13 // Workflow prompts
 
 	// Tool counts by category (should sum to HelpToolCount)
-	HelpCoreToolCount    = 13 // Scene management, recording, streaming, status
-	HelpHelpToolCount    = 1  // The help tool itself
-	HelpSourcesToolCount = 3  // Source management
-	HelpAudioToolCount   = 4  // Audio control
-	HelpLayoutToolCount  = 6  // Scene presets
-	HelpVisualToolCount  = 4  // Screenshot monitoring
-	HelpDesignToolCount  = 14 // Source creation and layout
+	HelpCoreToolCount        = 13 // Scene management, recording, streaming, status
+	HelpHelpToolCount        = 1  // The help tool itself
+	HelpSourcesToolCount     = 3  // Source management
+	HelpAudioToolCount       = 4  // Audio control
+	HelpLayoutToolCount      = 6  // Scene presets
+	HelpVisualToolCount      = 4  // Screenshot monitoring
+	HelpDesignToolCount      = 14 // Source creation and layout
+	HelpFiltersToolCount     = 7  // Filter management (FB-23)
+	HelpTransitionsToolCount = 5  // Transition control (FB-24)
 )
 
 // GetOverviewHelp returns high-level overview of agentic-obs
@@ -51,7 +53,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 
 ## Key Features
 
-- **%d Tools** across 6 categories (Core, Sources, Audio, Layout, Visual, Design) + Help
+- **%d Tools** across 8 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Help
 - **%d Resource Types** (scenes, screenshots, screenshot URLs, presets)
 - **%d Workflow Prompts** for common streaming/recording tasks
 - **Real-time Monitoring** via screenshot sources for AI visual inspection
@@ -69,6 +71,8 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 **Layout Tools** (%d tools): Scene preset save/restore/manage
 **Visual Tools** (%d tools): Screenshot source creation and monitoring
 **Design Tools** (%d tools): Source creation, transforms, positioning
+**Filters Tools** (%d tools): Filter creation, toggle, settings
+**Transitions Tools** (%d tools): Transition selection, duration, trigger
 
 ## Common Workflows
 
@@ -85,7 +89,8 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 - topic="prompts" - Discover pre-built workflow prompts
 - topic="troubleshooting" - Common issues and solutions
 `, HelpCoreToolCount, HelpSourcesToolCount, HelpAudioToolCount,
-			HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount)
+			HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
+			HelpFiltersToolCount, HelpTransitionsToolCount)
 	}
 
 	return help
@@ -172,8 +177,27 @@ func GetToolsHelp(verbose bool) string {
 - duplicate_source - Copy source within/between scenes
 - remove_source - Delete source from scene
 - list_input_kinds - List all available OBS source types
+
+## Filters Tools (%d tools) - Filter Management
+
+- list_source_filters - List all filters on a source
+- get_source_filter - Get filter details and settings
+- create_source_filter - Add a new filter (color correction, noise suppression, etc.)
+- remove_source_filter - Remove a filter from source
+- toggle_source_filter - Enable/disable a filter
+- set_source_filter_settings - Modify filter configuration
+- list_filter_kinds - List all available filter types
+
+## Transitions Tools (%d tools) - Scene Transition Control
+
+- list_transitions - List available transitions and current one
+- get_current_transition - Get current transition details
+- set_current_transition - Change active transition (Cut, Fade, Swipe, etc.)
+- set_transition_duration - Set transition duration in milliseconds
+- trigger_transition - Trigger studio mode transition (preview to program)
 `, HelpToolCount, HelpCoreToolCount, HelpHelpToolCount, HelpSourcesToolCount,
-		HelpAudioToolCount, HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount)
+		HelpAudioToolCount, HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
+		HelpFiltersToolCount, HelpTransitionsToolCount)
 
 	if verbose {
 		help += `
@@ -191,6 +215,8 @@ Tools are organized by capability. You can:
 - Use Visual tools to let AI "see" your stream
 - Use Layout tools to save/restore complex setups
 - Use Design tools to build scenes programmatically
+- Use Filters tools to manage source effects (color correction, noise suppression)
+- Use Transitions tools to control scene change animations
 `
 	}
 

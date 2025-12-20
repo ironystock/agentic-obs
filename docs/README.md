@@ -5,7 +5,7 @@ Complete documentation for controlling OBS Studio with AI through the Model Cont
 ## Getting Started
 
 - **[Quick Start Guide](QUICKSTART.md)** - Get up and running in 10 minutes
-- **[Tool Reference](TOOLS.md)** - Comprehensive reference for all 45 MCP tools
+- **[Tool Reference](TOOLS.md)** - Comprehensive reference for all 57 MCP tools
 - **[Screenshot Guide](SCREENSHOTS.md)** - AI visual monitoring of your stream
 - **[HTTP API Reference](API.md)** - REST API for monitoring and configuration
 
@@ -19,7 +19,7 @@ Complete documentation for controlling OBS Studio with AI through the Model Cont
 | Document | Description |
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | Step-by-step installation and setup guide |
-| [TOOLS.md](TOOLS.md) | Complete reference for all 45 tools with examples |
+| [TOOLS.md](TOOLS.md) | Complete reference for all 57 tools with examples |
 | [SCREENSHOTS.md](SCREENSHOTS.md) | Detailed guide to AI visual monitoring |
 | [API.md](API.md) | HTTP REST API reference for monitoring and config |
 | [../README.md](../README.md) | Project overview and features |
@@ -78,9 +78,15 @@ Built-in help system with topic-based guidance
 ### Scene Design (14 tools)
 Create and manipulate sources (text, image, color, browser, media, transforms)
 
+### Filters (7 tools)
+Manage source filters - color correction, noise suppression, and other effects
+
+### Transitions (5 tools)
+Control scene transitions - list, set, configure duration, and trigger
+
 ---
 
-**Total: 45 MCP tools available**
+**Total: 57 MCP tools available**
 
 For detailed information on each tool, see [TOOLS.md](TOOLS.md).
 

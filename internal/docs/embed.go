@@ -30,7 +30,7 @@ var docMeta = map[string]struct {
 	description string
 }{
 	"README":          {"Getting Started", "Project overview, features, and installation"},
-	"TOOLS":           {"Tool Reference", "Complete reference for all 45 MCP tools"},
+	"TOOLS":           {"Tool Reference", "Complete reference for all 57 MCP tools"},
 	"TROUBLESHOOTING": {"Troubleshooting", "Common issues and solutions"},
 	"QUICKSTART":      {"Quick Start Guide", "Step-by-step setup instructions"},
 	"BUILD":           {"Building from Source", "Build, test, and release instructions"},
