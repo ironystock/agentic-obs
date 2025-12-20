@@ -49,12 +49,17 @@ This installs the `agentic-obs` binary to your `$GOPATH/bin` directory.
 git clone https://github.com/ironystock/agentic-obs.git
 cd agentic-obs
 
-# Install dependencies
-go mod download
+# Build with Make (recommended - includes version info)
+make build
 
-# Build the server
-go build -o agentic-obs main.go
+# Or build directly with Go
+go build -o agentic-obs .
+
+# Verify the build
+./agentic-obs --version
 ```
+
+For cross-platform builds, release automation, and advanced build options, see [docs/BUILD.md](docs/BUILD.md).
 
 ### Configure OBS Studio
 

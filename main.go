@@ -18,9 +18,6 @@ import (
 
 const appName = "agentic-obs"
 
-// appVersion uses the build-time injected version from version.go
-var appVersion = version
-
 func main() {
 	// Parse command-line flags
 	tuiMode := flag.Bool("tui", false, "Run in TUI dashboard mode instead of MCP server mode")
@@ -160,7 +157,7 @@ func loadConfig(ctx context.Context) (*config.Config, error) {
 	// Get default config to determine database path
 	defaultCfg := config.DefaultConfig()
 	defaultCfg.ServerName = appName
-	defaultCfg.ServerVersion = appVersion
+	defaultCfg.ServerVersion = version
 
 	// Check if this is first run (before loading from storage)
 	isFirstRun, err := checkFirstRun(ctx, defaultCfg.DBPath)
@@ -178,7 +175,7 @@ func loadConfig(ctx context.Context) (*config.Config, error) {
 
 	// Ensure server name and version are set correctly
 	cfg.ServerName = appName
-	cfg.ServerVersion = appVersion
+	cfg.ServerVersion = version
 
 	// Apply environment variable overrides (takes precedence over stored config)
 	cfg.ApplyEnvOverrides()
@@ -304,7 +301,7 @@ func runTUIMode(ctx context.Context, cfg *config.Config) error {
 	defer db.Close()
 
 	// Create and run TUI
-	app := tui.New(db, cfg, appName, appVersion)
+	app := tui.New(db, cfg, appName, version)
 	return app.Run()
 }
 

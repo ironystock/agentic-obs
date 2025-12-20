@@ -39,9 +39,11 @@ build-windows:
 .PHONY: build-all
 build-all:
 	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-linux-amd64 .
+	GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-linux-arm64 .
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-darwin-amd64 .
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-darwin-arm64 .
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_WINDOWS) .
+	GOOS=windows GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-windows-arm64.exe .
 
 # Run tests
 .PHONY: test
@@ -99,7 +101,9 @@ deps:
 .PHONY: clean
 clean:
 	rm -f $(BINARY_NAME) $(BINARY_WINDOWS)
-	rm -f $(BINARY_NAME)-linux-amd64 $(BINARY_NAME)-darwin-amd64 $(BINARY_NAME)-darwin-arm64
+	rm -f $(BINARY_NAME)-linux-amd64 $(BINARY_NAME)-linux-arm64
+	rm -f $(BINARY_NAME)-darwin-amd64 $(BINARY_NAME)-darwin-arm64
+	rm -f $(BINARY_NAME)-windows-arm64.exe
 	rm -f coverage.out coverage.html
 	rm -rf dist/
 

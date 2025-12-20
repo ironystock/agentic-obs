@@ -164,6 +164,7 @@ Tracked features with unique identifiers for reference.
 | FB-17 | Config Sync | High | Medium | - | Env vars, version management, validation |
 | FB-16 | Skills Completion | Medium | Low | - | Missing SKILL.md files for audio-engineer, preset-manager |
 | FB-18 | Build System | Medium | Medium | FB-17 | Makefile, goreleaser, version injection |
+| FB-19 | Release Automation | Medium | Low | FB-18 | GitHub Actions workflow for automated releases |
 | FB-14 | Brand & Design | Medium | Medium | UX-SPEC | Visual identity implementation (blocked by UX-SPEC.md) |
 | FB-1 | Embedded Docs | Medium | Low-Med | - | Docs in HTTP/TUI via go:embed |
 | FB-3 | Elucidation | High | High | FB-2 ✅ | Intent disambiguation framework |

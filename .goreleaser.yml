@@ -23,9 +23,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -98,10 +95,12 @@ release:
     ### Installation
 
     **Download the appropriate archive for your platform:**
-    - Windows: `agentic-obs_{{ .Version }}_Windows_x86_64.zip`
+    - Windows (x64): `agentic-obs_{{ .Version }}_Windows_x86_64.zip`
+    - Windows (ARM64): `agentic-obs_{{ .Version }}_Windows_arm64.zip`
     - macOS (Intel): `agentic-obs_{{ .Version }}_Darwin_x86_64.tar.gz`
     - macOS (Apple Silicon): `agentic-obs_{{ .Version }}_Darwin_arm64.tar.gz`
-    - Linux: `agentic-obs_{{ .Version }}_Linux_x86_64.tar.gz`
+    - Linux (x64): `agentic-obs_{{ .Version }}_Linux_x86_64.tar.gz`
+    - Linux (ARM64): `agentic-obs_{{ .Version }}_Linux_arm64.tar.gz`
 
     **Configure in Claude Desktop:**
     ```json
