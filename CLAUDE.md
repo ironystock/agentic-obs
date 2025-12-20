@@ -187,6 +187,7 @@ For detailed rationale, see [design/decisions/](design/decisions/).
 |----------|---------|
 | [README.md](README.md) | User documentation |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [docs/BUILD.md](docs/BUILD.md) | Build, test, release |
 | [design/ARCHITECTURE.md](design/ARCHITECTURE.md) | System diagrams |
 | [design/ROADMAP.md](design/ROADMAP.md) | Future plans |
 | [design/decisions/](design/decisions/) | ADRs |
