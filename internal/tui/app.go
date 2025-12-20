@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ironystock/agentic-obs/config"
+	"github.com/ironystock/agentic-obs/internal/docs"
 	"github.com/ironystock/agentic-obs/internal/storage"
 )
 
@@ -20,7 +21,11 @@ const (
 	ViewStatus ViewType = iota
 	ViewConfig
 	ViewHistory
+	ViewDocs
 )
+
+// Number of views for tab cycling
+const numViews = 4
 
 // App represents the TUI application
 type App struct {
@@ -71,6 +76,12 @@ type Model struct {
 	actions       []storage.ActionRecord
 	historyOffset int
 
+	// Docs data
+	docsList       []docs.Doc
+	selectedDocIdx int
+	docsContent    string
+	docsOffset     int
+
 	// UI components
 	spinner spinner.Model
 
@@ -104,6 +115,12 @@ type statusUpdateMsg struct {
 type historyUpdateMsg struct {
 	actions []storage.ActionRecord
 }
+type docsListMsg struct {
+	docs []docs.Doc
+}
+type docsContentMsg struct {
+	content string
+}
 type errMsg struct {
 	err error
 }
@@ -132,16 +149,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "3":
 			m.currentView = ViewHistory
 			return m, fetchHistoryCmd(m.db, historyFetchLimit)
+		case "4":
+			m.currentView = ViewDocs
+			return m, fetchDocsListCmd()
 		case "tab", "right":
-			m.currentView = (m.currentView + 1) % 3
-			if m.currentView == ViewHistory {
-				return m, fetchHistoryCmd(m.db, historyFetchLimit)
-			}
+			m.currentView = (m.currentView + 1) % numViews
+			return m, m.fetchViewDataCmd()
 		case "shift+tab", "left":
-			m.currentView = (m.currentView + 2) % 3
-			if m.currentView == ViewHistory {
-				return m, fetchHistoryCmd(m.db, historyFetchLimit)
-			}
+			m.currentView = (m.currentView + numViews - 1) % numViews
+			return m, m.fetchViewDataCmd()
 		case "r":
 			// Refresh current view
 			return m, tea.Batch(fetchStatusCmd(m.db), fetchHistoryCmd(m.db, historyFetchLimit))
@@ -149,9 +165,69 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentView == ViewHistory && m.historyOffset < len(m.actions)-scrollMargin {
 				m.historyOffset++
 			}
+			if m.currentView == ViewDocs {
+				if m.docsContent == "" && len(m.docsList) > 0 {
+					// In list view: navigate selection
+					if m.selectedDocIdx < len(m.docsList)-1 {
+						m.selectedDocIdx++
+					}
+				} else if m.docsOffset < maxDocsScrollOffset(m.docsContent, m.height) {
+					// In content view: scroll
+					m.docsOffset++
+				}
+			}
 		case "k", "up":
 			if m.currentView == ViewHistory && m.historyOffset > 0 {
 				m.historyOffset--
+			}
+			if m.currentView == ViewDocs {
+				if m.docsContent == "" && len(m.docsList) > 0 {
+					// In list view: navigate selection
+					if m.selectedDocIdx > 0 {
+						m.selectedDocIdx--
+					}
+				} else if m.docsOffset > 0 {
+					// In content view: scroll
+					m.docsOffset--
+				}
+			}
+		case "pgdown", "ctrl+d", "d":
+			// Page down - scroll by half page
+			if m.currentView == ViewDocs && m.docsContent != "" {
+				pageSize := (m.height - uiChromeHeight) / 2
+				maxOffset := maxDocsScrollOffset(m.docsContent, m.height)
+				m.docsOffset += pageSize
+				if m.docsOffset > maxOffset {
+					m.docsOffset = maxOffset
+				}
+			}
+		case "pgup", "ctrl+u", "u":
+			// Page up - scroll by half page
+			if m.currentView == ViewDocs && m.docsContent != "" {
+				pageSize := (m.height - uiChromeHeight) / 2
+				m.docsOffset -= pageSize
+				if m.docsOffset < 0 {
+					m.docsOffset = 0
+				}
+			}
+		case "home", "g":
+			// Go to top
+			if m.currentView == ViewDocs && m.docsContent != "" {
+				m.docsOffset = 0
+			}
+		case "end", "G":
+			// Go to bottom
+			if m.currentView == ViewDocs && m.docsContent != "" {
+				m.docsOffset = maxDocsScrollOffset(m.docsContent, m.height)
+			}
+		case "enter":
+			if m.currentView == ViewDocs && m.docsContent == "" && len(m.docsList) > 0 {
+				return m, fetchDocsContentCmd(m.docsList[m.selectedDocIdx].Name, m.width)
+			}
+		case "esc", "backspace":
+			if m.currentView == ViewDocs && m.docsContent != "" {
+				m.docsContent = ""
+				m.docsOffset = 0
 			}
 		}
 
@@ -171,6 +247,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case historyUpdateMsg:
 		m.actions = msg.actions
+		m.lastError = nil
+
+	case docsListMsg:
+		m.docsList = msg.docs
+		m.lastError = nil
+
+	case docsContentMsg:
+		m.docsContent = msg.content
+		m.docsOffset = 0
 		m.lastError = nil
 
 	case errMsg:
@@ -200,6 +285,8 @@ func (m Model) View() string {
 		content = m.renderConfigView()
 	case ViewHistory:
 		content = m.renderHistoryView()
+	case ViewDocs:
+		content = m.renderDocsView()
 	}
 
 	// Compose final view
@@ -243,6 +330,7 @@ func (m Model) renderTabs() string {
 		{TabIconStatus, "Status"},
 		{TabIconConfig, "Config"},
 		{TabIconHistory, "History"},
+		{TabIconDocs, "Docs"},
 	}
 
 	var rendered []string
@@ -380,7 +468,7 @@ func (m Model) renderConfigView() string {
 	)
 }
 
-// renderHistoryView renders the history view with dynamic columns and zebra striping
+// renderHistoryView renders the history view with dynamic columns
 func (m Model) renderHistoryView() string {
 	box := styleBox.Copy().Width(m.width - boxWidthOffset)
 
@@ -395,13 +483,20 @@ func (m Model) renderHistoryView() string {
 		colTool = colWidthToolMin
 	}
 
-	// Header
-	header := fmt.Sprintf("%-*s  %-*s  %-*s  %*s",
-		colWidthTimestamp, styleTableHeader.Render("Timestamp"),
-		colTool, styleTableHeader.Render("Tool"),
-		colWidthStatus, styleTableHeader.Render("Status"),
-		colWidthDuration, styleTableHeader.Render("Duration"),
-	)
+	// Helper to pad styled text to display width
+	padStyled := func(s string, width int) string {
+		displayWidth := lipgloss.Width(s)
+		if displayWidth >= width {
+			return s
+		}
+		return s + strings.Repeat(" ", width-displayWidth)
+	}
+
+	// Header - pad AFTER styling
+	header := padStyled(styleTableHeader.Render("Timestamp"), colWidthTimestamp) + "  " +
+		padStyled(styleTableHeader.Render("Tool"), colTool) + "  " +
+		padStyled(styleTableHeader.Render("Status"), colWidthStatus) + "  " +
+		styleTableHeader.Render("Duration")
 
 	// Separator
 	separator := styleDim.Render(repeatChar("─", availableWidth))
@@ -422,9 +517,12 @@ func (m Model) renderHistoryView() string {
 		end = len(m.actions)
 	}
 
-	for i, action := range m.actions[start:end] {
-		status := styleSuccess.Render("OK")
-		if !action.Success {
+	for _, action := range m.actions[start:end] {
+		// Format status with consistent width
+		var status string
+		if action.Success {
+			status = styleSuccess.Render("OK  ")
+		} else {
 			status = styleError.Render("FAIL")
 		}
 
@@ -434,18 +532,15 @@ func (m Model) renderHistoryView() string {
 			toolName = toolName[:colTool-ellipsisLen] + "..."
 		}
 
-		// Zebra striping
-		rowStyle := styleTableRow
-		if i%2 == 1 {
-			rowStyle = styleTableRowAlt
-		}
+		// Format duration
+		duration := fmt.Sprintf("%dms", action.DurationMs)
 
-		row := fmt.Sprintf("%-*s  %-*s  %-*s  %*dms",
-			colWidthTimestamp, styleDim.Render(action.CreatedAt.Format("2006-01-02 15:04:05")),
-			colTool, rowStyle.Render(toolName),
-			colWidthStatus, status,
-			colWidthDuration-2, action.DurationMs,
-		)
+		// Build row with proper padding
+		row := padStyled(styleDim.Render(action.CreatedAt.Format("2006-01-02 15:04:05")), colWidthTimestamp) + "  " +
+			padStyled(toolName, colTool) + "  " +
+			padStyled(status, colWidthStatus) + "  " +
+			duration
+
 		rows = append(rows, row)
 	}
 
@@ -460,10 +555,73 @@ func (m Model) renderHistoryView() string {
 	return box.Render(content)
 }
 
+// renderDocsView renders the documentation view
+func (m Model) renderDocsView() string {
+	box := styleBox.Copy().Width(m.width - boxWidthOffset)
+
+	// If viewing a specific document
+	if m.docsContent != "" {
+		lines := strings.Split(m.docsContent, "\n")
+		maxVisible := m.height - uiChromeHeight
+		if maxVisible < minVisibleRows {
+			maxVisible = minVisibleRows
+		}
+
+		start := m.docsOffset
+		end := start + maxVisible
+		if end > len(lines) {
+			end = len(lines)
+		}
+		if start > end {
+			start = 0
+		}
+
+		visibleLines := lines[start:end]
+		content := strings.Join(visibleLines, "\n")
+
+		scrollInfo := ""
+		if len(lines) > maxVisible {
+			scrollInfo = fmt.Sprintf("\n\n%s",
+				styleMuted.Render(fmt.Sprintf("Lines %d-%d of %d │ ↑/↓ j/k scroll │ d/u page │ g/G top/bottom │ Esc back", start+1, end, len(lines))))
+		}
+
+		return box.Render(content + scrollInfo)
+	}
+
+	// Show docs list
+	if len(m.docsList) == 0 {
+		return box.Render(styleTitle.Render("Documentation") + "\n\n" + styleMuted.Render("Loading..."))
+	}
+
+	var items []string
+	items = append(items, styleTitle.Render("Documentation"))
+	items = append(items, "")
+	items = append(items, styleMuted.Render("Select a document and press Enter to view:"))
+	items = append(items, "")
+
+	for i, doc := range m.docsList {
+		prefix := "  "
+		if i == m.selectedDocIdx {
+			prefix = styleAccent.Render("▶ ")
+		}
+		title := doc.Title
+		if i == m.selectedDocIdx {
+			title = styleAccent.Render(doc.Title)
+		}
+		desc := styleMuted.Render(" - " + doc.Description)
+		items = append(items, prefix+title+desc)
+	}
+
+	items = append(items, "")
+	items = append(items, styleMuted.Render("Use ↑/↓ to navigate, Enter to open, Esc to close"))
+
+	return box.Render(lipgloss.JoinVertical(lipgloss.Left, items...))
+}
+
 // renderHelp renders the help bar with enhanced formatting
 func (m Model) renderHelp() string {
 	help := fmt.Sprintf("%s Tab • %s Refresh • %s Scroll • %s Quit",
-		styleHelpKey.Render("[1-3]"),
+		styleHelpKey.Render("[1-4]"),
 		styleHelpKey.Render("[r]"),
 		styleHelpKey.Render("[↑/↓]"),
 		styleHelpKey.Render("[q]"),
@@ -517,3 +675,52 @@ func fetchHistoryCmd(db *storage.DB, limit int) tea.Cmd {
 		return historyUpdateMsg{actions: actions}
 	}
 }
+
+func fetchDocsListCmd() tea.Cmd {
+	return func() tea.Msg {
+		docsList, err := docs.List()
+		if err != nil {
+			return errMsg{err}
+		}
+		return docsListMsg{docs: docsList}
+	}
+}
+
+func fetchDocsContentCmd(name string, width int) tea.Cmd {
+	return func() tea.Msg {
+		content, err := docs.RenderTerminal(name, width-boxWidthOffset-4)
+		if err != nil {
+			return errMsg{err}
+		}
+		return docsContentMsg{content: content}
+	}
+}
+
+// fetchViewDataCmd returns the appropriate fetch command for the current view
+func (m Model) fetchViewDataCmd() tea.Cmd {
+	switch m.currentView {
+	case ViewHistory:
+		return fetchHistoryCmd(m.db, historyFetchLimit)
+	case ViewDocs:
+		return fetchDocsListCmd()
+	default:
+		return nil
+	}
+}
+
+// maxDocsScrollOffset calculates the maximum scroll offset for docs
+func maxDocsScrollOffset(content string, height int) int {
+	lines := strings.Count(content, "\n") + 1
+	maxVisible := height - uiChromeHeight
+	if maxVisible < minVisibleRows {
+		maxVisible = minVisibleRows
+	}
+	offset := lines - maxVisible
+	if offset < 0 {
+		return 0
+	}
+	return offset
+}
+
+// styleAccent is used for highlighting in docs view
+var styleAccent = lipgloss.NewStyle().Foreground(colorAccent)

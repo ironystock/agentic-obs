@@ -59,7 +59,7 @@ go build -o agentic-obs .
 ./agentic-obs --version
 ```
 
-For cross-platform builds, release automation, and advanced build options, see [docs/BUILD.md](docs/BUILD.md).
+For cross-platform builds, release automation, and advanced build options, see the BUILD documentation.
 
 ### Configure OBS Studio
 

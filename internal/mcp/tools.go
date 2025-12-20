@@ -644,7 +644,18 @@ func (s *Server) handleCreateScene(ctx context.Context, request *mcpsdk.CallTool
 
 func (s *Server) handleRemoveScene(ctx context.Context, request *mcpsdk.CallToolRequest, input SceneNameInput) (*mcpsdk.CallToolResult, any, error) {
 	start := time.Now()
-	log.Printf("Removing scene: %s", input.SceneName)
+	log.Printf("Removing scene: %s - requesting confirmation", input.SceneName)
+
+	// Request user confirmation before deleting scene
+	confirmed, err := ElicitDeleteConfirmation(ctx, getSession(request), "scene", input.SceneName)
+	if err != nil {
+		log.Printf("Elicitation error: %v", err)
+		// Continue without confirmation if elicitation fails
+	} else if !confirmed {
+		result := CancelledResult("Scene removal")
+		s.recordAction("remove_scene", "Remove scene (cancelled)", input, result, false, time.Since(start))
+		return nil, result, nil
+	}
 
 	if err := s.obsClient.RemoveScene(input.SceneName); err != nil {
 		s.recordAction("remove_scene", "Remove scene", input, nil, false, time.Since(start))
@@ -701,7 +712,18 @@ func (s *Server) handleGetRecordingStatus(ctx context.Context, request *mcpsdk.C
 
 func (s *Server) handleStartStreaming(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
 	start := time.Now()
-	log.Println("Starting streaming")
+	log.Println("Starting streaming - requesting confirmation")
+
+	// Request user confirmation before starting stream
+	confirmed, err := ElicitStreamingConfirmation(ctx, getSession(request))
+	if err != nil {
+		log.Printf("Elicitation error: %v", err)
+		// Continue without confirmation if elicitation fails
+	} else if !confirmed {
+		result := CancelledResult("Streaming start")
+		s.recordAction("start_streaming", "Start streaming (cancelled)", nil, result, false, time.Since(start))
+		return nil, result, nil
+	}
 
 	if err := s.obsClient.StartStreaming(); err != nil {
 		s.recordAction("start_streaming", "Start streaming", nil, nil, false, time.Since(start))
@@ -715,7 +737,18 @@ func (s *Server) handleStartStreaming(ctx context.Context, request *mcpsdk.CallT
 
 func (s *Server) handleStopStreaming(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
 	start := time.Now()
-	log.Println("Stopping streaming")
+	log.Println("Stopping streaming - requesting confirmation")
+
+	// Request user confirmation before stopping stream
+	confirmed, err := ElicitStopStreamingConfirmation(ctx, getSession(request))
+	if err != nil {
+		log.Printf("Elicitation error: %v", err)
+		// Continue without confirmation if elicitation fails
+	} else if !confirmed {
+		result := CancelledResult("Streaming stop")
+		s.recordAction("stop_streaming", "Stop streaming (cancelled)", nil, result, false, time.Since(start))
+		return nil, result, nil
+	}
 
 	if err := s.obsClient.StopStreaming(); err != nil {
 		s.recordAction("stop_streaming", "Stop streaming", nil, nil, false, time.Since(start))
@@ -957,7 +990,18 @@ func (s *Server) handleGetPresetDetails(ctx context.Context, request *mcpsdk.Cal
 // Returns a success message or an error if the preset does not exist.
 func (s *Server) handleDeleteScenePreset(ctx context.Context, request *mcpsdk.CallToolRequest, input PresetNameInput) (*mcpsdk.CallToolResult, any, error) {
 	start := time.Now()
-	log.Printf("Deleting scene preset: %s", input.PresetName)
+	log.Printf("Deleting scene preset: %s - requesting confirmation", input.PresetName)
+
+	// Request user confirmation before deleting preset
+	confirmed, err := ElicitDeleteConfirmation(ctx, getSession(request), "preset", input.PresetName)
+	if err != nil {
+		log.Printf("Elicitation error: %v", err)
+		// Continue without confirmation if elicitation fails
+	} else if !confirmed {
+		result := CancelledResult("Preset deletion")
+		s.recordAction("delete_scene_preset", "Delete scene preset (cancelled)", input, result, false, time.Since(start))
+		return nil, result, nil
+	}
 
 	if err := s.storage.DeleteScenePreset(ctx, input.PresetName); err != nil {
 		s.recordAction("delete_scene_preset", "Delete scene preset", input, nil, false, time.Since(start))

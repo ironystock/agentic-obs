@@ -1,0 +1,60 @@
+<svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Define gradients and patterns -->
+  <defs>
+    <!-- Accent gradient for icon depth -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e94560;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Subtle glow for icon -->
+    <filter id="accentGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Icon: Stylized "A" with neural network concept -->
+  <!-- This represents the "Agentic" intelligence and automation aspects -->
+  <g id="icon" filter="url(#accentGlow)">
+    <!-- Main triangle forming the "A" -->
+    <path d="M 16 8 L 8 24 L 24 24 Z" fill="url(#accentGradient)" stroke="none"/>
+
+    <!-- Horizontal bar across the "A" -->
+    <rect x="9" y="17" width="14" height="2" fill="#e94560" rx="1"/>
+
+    <!-- Three neural nodes at the vertices -->
+    <!-- Top node -->
+    <circle cx="16" cy="8" r="2.5" fill="#ff6b6b"/>
+
+    <!-- Bottom left node -->
+    <circle cx="8" cy="24" r="2.5" fill="#e94560"/>
+
+    <!-- Bottom right node -->
+    <circle cx="24" cy="24" r="2.5" fill="#e94560"/>
+
+    <!-- Connecting lines (subtle neural connections) -->
+    <line x1="16" y1="10.5" x2="9.5" y2="21.5" stroke="rgba(233, 69, 96, 0.4)" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="16" y1="10.5" x2="22.5" y2="21.5" stroke="rgba(233, 69, 96, 0.4)" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="8" y1="24" x2="24" y2="24" stroke="rgba(233, 69, 96, 0.3)" stroke-width="1" stroke-linecap="round"/>
+  </g>
+
+  <!-- Slight border/frame around icon for visual containment -->
+  <circle cx="16" cy="16" r="14" fill="none" stroke="rgba(233, 69, 96, 0.2)" stroke-width="1.5"/>
+
+  <!-- Text: "agentic" in accent color -->
+  <text x="36" y="22" font-family="'Segoe UI', 'Helvetica Neue', sans-serif" font-size="16" font-weight="700" fill="#e94560" letter-spacing="-0.3">
+    agentic
+  </text>
+
+  <!-- Text: "-obs" in light gray -->
+  <text x="130" y="22" font-family="'Segoe UI', 'Helvetica Neue', sans-serif" font-size="16" font-weight="700" fill="#eaeaea" letter-spacing="-0.3">
+    -obs
+  </text>
+
+  <!-- Subtle baseline indicator for balance -->
+  <line x1="36" y1="28" x2="180" y2="28" stroke="rgba(234, 234, 234, 0.08)" stroke-width="1"/>
+</svg>
