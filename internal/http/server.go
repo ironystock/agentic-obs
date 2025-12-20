@@ -159,6 +159,11 @@ func (s *Server) setupRoutes() *http.ServeMux {
 		mux.HandleFunc("/ui/action", s.uiHandlers.HandleUIAction)
 	}
 
+	// Documentation endpoints
+	mux.HandleFunc("/docs", s.handleDocsIndex)
+	mux.HandleFunc("/docs/", s.handleDocView)
+	mux.HandleFunc("/api/docs", s.handleDocsAPI)
+
 	// Serve static files for the web dashboard
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {

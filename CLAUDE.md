@@ -21,16 +21,18 @@ agentic-obs/
 │   │   ├── resources.go    # Resource handlers (4 types)
 │   │   ├── prompts.go      # Prompt definitions (13 prompts)
 │   │   ├── completions.go  # Autocomplete handler
+│   │   ├── elicitation.go  # User confirmation for high-risk tools
 │   │   ├── help.go         # Help tool
 │   │   └── interfaces.go   # OBSClient interface
 │   ├── obs/
 │   │   ├── client.go       # WebSocket client
 │   │   ├── commands.go     # OBS command implementations
 │   │   └── events.go       # Event handling
+│   ├── docs/               # Embedded documentation (go:embed)
 │   ├── storage/            # SQLite persistence
-│   ├── http/               # Web dashboard & API
+│   ├── http/               # Web dashboard & API (/docs/ endpoints)
 │   ├── screenshot/         # Background capture
-│   └── tui/                # Terminal dashboard
+│   └── tui/                # Terminal dashboard (4 views)
 ├── skills/                 # Claude Skills (4 packages)
 ├── examples/               # Usage examples
 ├── docs/                   # Additional documentation
@@ -45,6 +47,8 @@ agentic-obs/
 | OBS Client | `github.com/andreykaipov/goobs` | 1.5.6 |
 | SQLite | `modernc.org/sqlite` | latest |
 | TUI | `github.com/charmbracelet/bubbletea` | 1.3.3 |
+| Markdown (HTML) | `github.com/yuin/goldmark` | 1.7.x |
+| Markdown (Terminal) | `github.com/charmbracelet/glamour` | 0.8.x |
 
 ## Communication Flow
 

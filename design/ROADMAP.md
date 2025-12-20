@@ -156,20 +156,27 @@ Tracked features with unique identifiers for reference.
 | FB-12 | MCP-UI Go SDK | Protocol implementation (SEP-1865) | Phase 8 |
 | FB-13 | MCP-UI Integration | Rich UI resources for agentic-obs (4 phases) | Phase 8 |
 | FB-15 | SDK Extraction | mcpui-go as standalone package v0.1.0 | Post-Phase 8 |
+| FB-16 | Skills Completion | SKILL.md files for all 4 skill packages | Post-Phase 8 |
+| FB-17 | Config Sync | Env vars, version injection, ApplyEnvOverrides() | Post-Phase 8 |
+| FB-18 | Build System | Makefile, goreleaser, version.go, BUILD.md | Post-Phase 8 |
+| FB-14 | Brand & Design | Logo, favicon, ASCII banners, design system colors | Phase 9 |
+| FB-1 | Embedded Docs | Docs in HTTP/TUI via go:embed, goldmark/glamour rendering | Phase 9 |
+| FB-3 | MCP Elicitation | User confirmation for high-risk tools (streaming, delete) | Phase 9 |
 
 ### Active Backlog
 
 | ID | Name | Priority | Complexity | Dependencies | Description |
 |----|------|----------|------------|--------------|-------------|
-| FB-17 | Config Sync | High | Medium | - | Env vars, version management, validation |
-| FB-16 | Skills Completion | Medium | Low | - | Missing SKILL.md files for audio-engineer, preset-manager |
-| FB-18 | Build System | Medium | Medium | FB-17 | Makefile, goreleaser, version injection |
-| FB-19 | Release Automation | Medium | Low | FB-18 | GitHub Actions workflow for automated releases |
-| FB-14 | Brand & Design | Medium | Medium | UX-SPEC | Visual identity implementation (blocked by UX-SPEC.md) |
-| FB-1 | Embedded Docs | Medium | Low-Med | - | Docs in HTTP/TUI via go:embed |
-| FB-3 | Elucidation | High | High | FB-2 ✅ | Intent disambiguation framework |
+| FB-23 | Filters Tool Group | High | Medium | - | 7 tools for source filter management |
+| FB-24 | Transitions | High | Low | - | 5 tools for scene transition control |
+| FB-20 | Automation Rules | High | Medium | - | Event-triggered actions and macros |
+| FB-25 | Virtual Cam & Replay | Medium | Low | - | 6 tools for virtual camera and replay buffer |
+| FB-26 | Studio Mode & Hotkeys | Medium | Low | - | 5 tools for studio mode and hotkey control |
+| FB-19 | Release Automation | Medium | Low | FB-18 ✅ | GitHub Actions workflow for automated releases |
 | FB-4 | SDK Migration | Medium | Medium | - | Process for tracking go-sdk updates |
-| FB-5 | Static Website | Low | Medium | FB-14 | Project documentation site |
+| FB-21 | Additional Resources | Medium | Low-Med | - | Sources, filters, audio as MCP resources |
+| FB-22 | Docker Container | Medium | Low | - | Containerized deployment option |
+| FB-5 | Static Website | Low | Medium | FB-14 ✅ | Project documentation site |
 | FB-6 | Network API | Low | High | - | Non-localhost HTTP exposure |
 | FB-7 | Multi-Instance | Medium | Very High | - | Multiple OBS support |
 | FB-8 | Remote Hosted | Low | Very High | FB-6, FB-7 | Cloud-hosted server |

@@ -20,7 +20,7 @@ var (
 var (
 	// Text styles
 	styleTitle   = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
-	styleLabel   = lipgloss.NewStyle().Foreground(colorSubtle).Width(18)
+	styleLabel   = lipgloss.NewStyle().Foreground(colorSubtle).Width(20)
 	styleValue   = lipgloss.NewStyle().Foreground(colorText)
 	styleSuccess = lipgloss.NewStyle().Foreground(colorSuccess)
 	styleError   = lipgloss.NewStyle().Foreground(colorError)
@@ -84,6 +84,7 @@ const (
 	TabIconStatus  = "📊"
 	TabIconConfig  = "⚙️"
 	TabIconHistory = "📜"
+	TabIconDocs    = "📖"
 )
 
 // Layout constants
