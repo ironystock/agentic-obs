@@ -1308,6 +1308,228 @@ var toolHelpContent = map[string]string{
 **Use Case**: Manually trigger scene changes in studio mode workflow.
 
 **Error Handling**: Returns error if studio mode is not enabled.`,
+
+	// =========================================================================
+	// Virtual Camera Tools (FB-25)
+	// =========================================================================
+
+	"get_virtual_cam_status": `# get_virtual_cam_status
+
+**Category**: Core (Virtual Camera)
+
+**Description**: Check if the virtual camera is currently active.
+
+**Input**: None
+
+**Output**:
+- active: Boolean indicating if virtual camera is running
+- message: Human-readable status
+
+**Use Case**: Check virtual camera state before starting a video call or application that uses the OBS virtual camera.`,
+
+	"toggle_virtual_cam": `# toggle_virtual_cam
+
+**Category**: Core (Virtual Camera)
+
+**Description**: Start or stop the OBS virtual camera.
+
+**Input**: None
+
+**Output**:
+- active: Boolean indicating new virtual camera state
+- message: Human-readable result
+
+**Use Case**: Enable virtual camera for video conferencing apps (Zoom, Teams, etc.) that can use OBS as a camera source.
+
+**Note**: Virtual camera must be configured in OBS settings before use.`,
+
+	// =========================================================================
+	// Replay Buffer Tools (FB-25)
+	// =========================================================================
+
+	"get_replay_buffer_status": `# get_replay_buffer_status
+
+**Category**: Core (Replay Buffer)
+
+**Description**: Check if the replay buffer is currently active.
+
+**Input**: None
+
+**Output**:
+- active: Boolean indicating if replay buffer is running
+- message: Human-readable status
+
+**Use Case**: Check replay buffer state before attempting to save clips.`,
+
+	"toggle_replay_buffer": `# toggle_replay_buffer
+
+**Category**: Core (Replay Buffer)
+
+**Description**: Start or stop the replay buffer.
+
+**Input**: None
+
+**Output**:
+- active: Boolean indicating new replay buffer state
+- message: Human-readable result
+
+**Use Case**: Enable replay buffer to capture the last N seconds of gameplay for highlights.
+
+**Note**: Replay buffer duration and settings must be configured in OBS settings.`,
+
+	"save_replay_buffer": `# save_replay_buffer
+
+**Category**: Core (Replay Buffer)
+
+**Description**: Save the current replay buffer contents to disk.
+
+**Input**: None
+
+**Output**:
+- message: Success confirmation
+
+**Requirements**: Replay buffer must be active.
+
+**Use Case**: Capture a highlight moment - saves the last N seconds of recorded content.
+
+**Error Handling**: Returns error if replay buffer is not active.`,
+
+	"get_last_replay": `# get_last_replay
+
+**Category**: Core (Replay Buffer)
+
+**Description**: Get the file path of the last saved replay buffer.
+
+**Input**: None
+
+**Output**:
+- saved_replay_path: Full path to the saved replay file
+- message: Human-readable result
+
+**Use Case**: Retrieve the location of the most recent saved replay for review or sharing.`,
+
+	// =========================================================================
+	// Studio Mode Tools (FB-26)
+	// =========================================================================
+
+	"get_studio_mode_enabled": `# get_studio_mode_enabled
+
+**Category**: Core (Studio Mode)
+
+**Description**: Check if studio mode is currently enabled in OBS.
+
+**Input**: None
+
+**Output**:
+- studio_mode_enabled: Boolean indicating if studio mode is active
+- message: Human-readable status
+
+**Use Case**: Determine current mode before using preview scene features.
+
+**Note**: Studio mode provides separate preview and program outputs, allowing scene setup before going live.`,
+
+	"toggle_studio_mode": `# toggle_studio_mode
+
+**Category**: Core (Studio Mode)
+
+**Description**: Enable or disable studio mode in OBS.
+
+**Input**:
+- studio_mode_enabled (bool, required): True to enable, false to disable
+
+**Output**:
+- studio_mode_enabled: New studio mode state
+- message: Success confirmation
+
+**Example Input**:
+{
+  "studio_mode_enabled": true
+}
+
+**Use Case**: Enable studio mode for professional streaming workflows with preview capabilities.`,
+
+	"get_preview_scene": `# get_preview_scene
+
+**Category**: Core (Studio Mode)
+
+**Description**: Get the current preview scene in studio mode.
+
+**Input**: None
+
+**Output**:
+- preview_scene: Name of the current preview scene
+- message: Human-readable result
+
+**Requirements**: Studio mode must be enabled.
+
+**Error Handling**: Returns error if studio mode is not enabled.`,
+
+	"set_preview_scene": `# set_preview_scene
+
+**Category**: Core (Studio Mode)
+
+**Description**: Set the preview scene in studio mode.
+
+**Input**:
+- scene_name (string, required): Name of the scene to preview
+
+**Output**:
+- preview_scene: Name of the new preview scene
+- message: Success confirmation
+
+**Example Input**:
+{
+  "scene_name": "Starting Soon"
+}
+
+**Requirements**: Studio mode must be enabled.
+
+**Use Case**: Queue up the next scene without switching live output.
+
+**Error Handling**: Returns error if studio mode is not enabled or scene doesn't exist.`,
+
+	// =========================================================================
+	// Hotkey Tools (FB-26)
+	// =========================================================================
+
+	"trigger_hotkey_by_name": `# trigger_hotkey_by_name
+
+**Category**: Core (Hotkeys)
+
+**Description**: Trigger an OBS hotkey by its registered name.
+
+**Input**:
+- hotkey_name (string, required): Name of the hotkey to trigger
+
+**Output**:
+- hotkey_name: The triggered hotkey name
+- message: Success confirmation
+
+**Example Input**:
+{
+  "hotkey_name": "OBSBasic.StartRecording"
+}
+
+**Use Case**: Trigger OBS actions that have hotkey bindings, including custom plugin hotkeys.
+
+**Note**: Use list_hotkeys to discover available hotkey names.`,
+
+	"list_hotkeys": `# list_hotkeys
+
+**Category**: Core (Hotkeys)
+
+**Description**: List all available OBS hotkey names.
+
+**Input**: None
+
+**Output**:
+- hotkeys: Array of available hotkey names
+- count: Number of hotkeys found
+- message: Human-readable summary
+
+**Use Case**: Discover available hotkeys for automation or to find the correct name for trigger_hotkey_by_name.
+
+**Note**: Hotkey names follow the pattern "Context.Action" (e.g., "OBSBasic.StartRecording").`,
 }
 
 // GetToolHelpContent returns the help text for a specific tool, or empty if not found.

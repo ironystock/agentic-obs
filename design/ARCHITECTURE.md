@@ -4,7 +4,7 @@ This document describes the system architecture of agentic-obs.
 
 ## System Overview
 
-agentic-obs is an MCP (Model Context Protocol) server that bridges AI assistants with OBS Studio. It provides 57 tools, 4 resource types, and 13 prompts for programmatic OBS control.
+agentic-obs is an MCP (Model Context Protocol) server that bridges AI assistants with OBS Studio. It provides 69 tools, 4 resource types, and 13 prompts for programmatic OBS control.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

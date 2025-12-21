@@ -6,7 +6,7 @@ Context for AI assistants working on the agentic-obs project.
 
 **agentic-obs** is an MCP (Model Context Protocol) server providing AI assistants with programmatic control over OBS Studio via the WebSocket API.
 
-**Current Status:** 57 Tools | 4 Resources | 13 Prompts | 4 Skills
+**Current Status:** 69 Tools | 4 Resources | 13 Prompts | 4 Skills
 
 ## Project Structure
 
@@ -17,7 +17,7 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/
 │   │   ├── server.go       # MCP server lifecycle
-│   │   ├── tools.go        # Tool registration (57 tools)
+│   │   ├── tools.go        # Tool registration (69 tools)
 │   │   ├── resources.go    # Resource handlers (4 types)
 │   │   ├── prompts.go      # Prompt definitions (13 prompts)
 │   │   ├── completions.go  # Autocomplete handler
@@ -56,7 +56,7 @@ agentic-obs/
 AI Assistant (Claude)
     ↕ stdio (JSON-RPC)
 MCP Server (agentic-obs)
-    ├─ Tools (57) ─────────┐
+    ├─ Tools (69) ─────────┐
     ├─ Resources (4) ──────┼─→ OBS Client ─→ OBS Studio
     ├─ Prompts (13) ───────┘      ↕ WebSocket (4455)
     └─ Storage ─────────────→ SQLite
@@ -150,11 +150,11 @@ go mod tidy
 
 ## MCP Capabilities Summary
 
-### Tools (57 in 8 groups)
+### Tools (69 in 8 groups)
 
 | Group | Count | Examples |
 |-------|-------|----------|
-| Core | 13 | `list_scenes`, `start_recording`, `get_obs_status` |
+| Core | 25 | `list_scenes`, `start_recording`, `get_obs_status`, `toggle_virtual_cam`, `save_replay_buffer`, `toggle_studio_mode`, `trigger_hotkey_by_name` |
 | Sources | 3 | `list_sources`, `toggle_source_visibility` |
 | Audio | 4 | `toggle_input_mute`, `set_input_volume` |
 | Layout | 6 | `save_scene_preset`, `apply_scene_preset` |

@@ -253,6 +253,29 @@ type SetTransitionDurationInput struct {
 	TransitionDuration int `json:"transition_duration" jsonschema:"Transition duration in milliseconds"`
 }
 
+// Virtual Camera and Replay Buffer input types (FB-25)
+
+// (no input needed for get_virtual_cam_status, toggle_virtual_cam, get_replay_buffer_status, toggle_replay_buffer, save_replay_buffer, get_last_replay)
+
+// Studio Mode input types (FB-26)
+
+// SetStudioModeInput is the input for enabling/disabling studio mode
+type SetStudioModeInput struct {
+	StudioModeEnabled bool `json:"studio_mode_enabled" jsonschema:"True to enable studio mode, false to disable"`
+}
+
+// SetPreviewSceneInput is the input for setting the preview scene in studio mode
+type SetPreviewSceneInput struct {
+	SceneName string `json:"scene_name" jsonschema:"Name of the scene to set as preview"`
+}
+
+// Hotkey input types (FB-26)
+
+// TriggerHotkeyInput is the input for triggering a hotkey by name
+type TriggerHotkeyInput struct {
+	HotkeyName string `json:"hotkey_name" jsonschema:"Name of the hotkey to trigger (use list_hotkeys to see available hotkeys)"`
+}
+
 // registerToolHandlers registers MCP tool handlers based on enabled tool groups
 func (s *Server) registerToolHandlers() {
 	toolCount := 0
@@ -367,8 +390,108 @@ func (s *Server) registerToolHandlers() {
 			s.handleGetOBSStatus,
 		)
 
-		toolCount += 13
-		log.Println("Core tools registered (13 tools)")
+		// Virtual camera tools (FB-25)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_virtual_cam_status",
+				Description: "Check if the virtual camera is currently active",
+			},
+			s.handleGetVirtualCamStatus,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "toggle_virtual_cam",
+				Description: "Start or stop the virtual camera",
+			},
+			s.handleToggleVirtualCam,
+		)
+
+		// Replay buffer tools (FB-25)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_replay_buffer_status",
+				Description: "Check if the replay buffer is currently active",
+			},
+			s.handleGetReplayBufferStatus,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "toggle_replay_buffer",
+				Description: "Start or stop the replay buffer",
+			},
+			s.handleToggleReplayBuffer,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "save_replay_buffer",
+				Description: "Save the current replay buffer to disk (replay buffer must be active)",
+			},
+			s.handleSaveReplayBuffer,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_last_replay",
+				Description: "Get the file path of the last saved replay buffer",
+			},
+			s.handleGetLastReplay,
+		)
+
+		// Studio mode tools (FB-26)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_studio_mode_enabled",
+				Description: "Check if studio mode is currently enabled in OBS",
+			},
+			s.handleGetStudioModeEnabled,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "toggle_studio_mode",
+				Description: "Enable or disable studio mode in OBS",
+			},
+			s.handleToggleStudioMode,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_preview_scene",
+				Description: "Get the current preview scene in studio mode",
+			},
+			s.handleGetPreviewScene,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "set_preview_scene",
+				Description: "Set the preview scene in studio mode",
+			},
+			s.handleSetPreviewScene,
+		)
+
+		// Hotkey tools (FB-26)
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "trigger_hotkey_by_name",
+				Description: "Trigger an OBS hotkey by its name (use list_hotkeys to see available hotkeys)",
+			},
+			s.handleTriggerHotkeyByName,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_hotkeys",
+				Description: "List all available OBS hotkey names",
+			},
+			s.handleListHotkeys,
+		)
+
+		toolCount += 25
+		log.Println("Core tools registered (25 tools)")
 	}
 
 	// Source tools
@@ -2222,5 +2345,239 @@ func (s *Server) handleTriggerTransition(ctx context.Context, request *mcpsdk.Ca
 
 	result := SimpleResult{Message: "Successfully triggered studio mode transition"}
 	s.recordAction("trigger_transition", "Trigger transition", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// =============================================================================
+// Virtual Camera and Replay Buffer handlers (FB-25)
+// =============================================================================
+
+// handleGetVirtualCamStatus returns the virtual camera status
+func (s *Server) handleGetVirtualCamStatus(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Getting virtual camera status")
+
+	status, err := s.obsClient.GetVirtualCamStatus()
+	if err != nil {
+		s.recordAction("get_virtual_cam_status", "Get virtual camera status", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get virtual camera status: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"active":  status.Active,
+		"message": fmt.Sprintf("Virtual camera is %s", map[bool]string{true: "active", false: "inactive"}[status.Active]),
+	}
+	s.recordAction("get_virtual_cam_status", "Get virtual camera status", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleToggleVirtualCam toggles the virtual camera on/off
+func (s *Server) handleToggleVirtualCam(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Toggling virtual camera")
+
+	active, err := s.obsClient.ToggleVirtualCam()
+	if err != nil {
+		s.recordAction("toggle_virtual_cam", "Toggle virtual camera", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to toggle virtual camera: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"active":  active,
+		"message": fmt.Sprintf("Virtual camera is now %s", map[bool]string{true: "active", false: "inactive"}[active]),
+	}
+	s.recordAction("toggle_virtual_cam", "Toggle virtual camera", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleGetReplayBufferStatus returns the replay buffer status
+func (s *Server) handleGetReplayBufferStatus(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Getting replay buffer status")
+
+	status, err := s.obsClient.GetReplayBufferStatus()
+	if err != nil {
+		s.recordAction("get_replay_buffer_status", "Get replay buffer status", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get replay buffer status: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"active":  status.Active,
+		"message": fmt.Sprintf("Replay buffer is %s", map[bool]string{true: "active", false: "inactive"}[status.Active]),
+	}
+	s.recordAction("get_replay_buffer_status", "Get replay buffer status", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleToggleReplayBuffer toggles the replay buffer on/off
+func (s *Server) handleToggleReplayBuffer(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Toggling replay buffer")
+
+	active, err := s.obsClient.ToggleReplayBuffer()
+	if err != nil {
+		s.recordAction("toggle_replay_buffer", "Toggle replay buffer", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to toggle replay buffer: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"active":  active,
+		"message": fmt.Sprintf("Replay buffer is now %s", map[bool]string{true: "active", false: "inactive"}[active]),
+	}
+	s.recordAction("toggle_replay_buffer", "Toggle replay buffer", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleSaveReplayBuffer saves the current replay buffer
+func (s *Server) handleSaveReplayBuffer(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Saving replay buffer")
+
+	if err := s.obsClient.SaveReplayBuffer(); err != nil {
+		s.recordAction("save_replay_buffer", "Save replay buffer", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to save replay buffer: %w", err)
+	}
+
+	result := SimpleResult{Message: "Successfully saved replay buffer"}
+	s.recordAction("save_replay_buffer", "Save replay buffer", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleGetLastReplay returns the path to the last saved replay
+func (s *Server) handleGetLastReplay(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Getting last replay path")
+
+	path, err := s.obsClient.GetLastReplayBufferReplay()
+	if err != nil {
+		s.recordAction("get_last_replay", "Get last replay", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get last replay path: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"saved_replay_path": path,
+		"message":           fmt.Sprintf("Last replay saved to: %s", path),
+	}
+	s.recordAction("get_last_replay", "Get last replay", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// =============================================================================
+// Studio Mode handlers (FB-26)
+// =============================================================================
+
+// handleGetStudioModeEnabled returns whether studio mode is enabled
+func (s *Server) handleGetStudioModeEnabled(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Getting studio mode status")
+
+	enabled, err := s.obsClient.GetStudioModeEnabled()
+	if err != nil {
+		s.recordAction("get_studio_mode_enabled", "Get studio mode status", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get studio mode status: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"studio_mode_enabled": enabled,
+		"message":             fmt.Sprintf("Studio mode is %s", map[bool]string{true: "enabled", false: "disabled"}[enabled]),
+	}
+	s.recordAction("get_studio_mode_enabled", "Get studio mode status", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleToggleStudioMode enables or disables studio mode
+func (s *Server) handleToggleStudioMode(ctx context.Context, request *mcpsdk.CallToolRequest, input SetStudioModeInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Setting studio mode enabled=%v", input.StudioModeEnabled)
+
+	if err := s.obsClient.SetStudioModeEnabled(input.StudioModeEnabled); err != nil {
+		s.recordAction("toggle_studio_mode", "Toggle studio mode", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to set studio mode: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"studio_mode_enabled": input.StudioModeEnabled,
+		"message":             fmt.Sprintf("Studio mode is now %s", map[bool]string{true: "enabled", false: "disabled"}[input.StudioModeEnabled]),
+	}
+	s.recordAction("toggle_studio_mode", "Toggle studio mode", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleGetPreviewScene returns the current preview scene in studio mode
+func (s *Server) handleGetPreviewScene(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Getting preview scene")
+
+	sceneName, err := s.obsClient.GetCurrentPreviewScene()
+	if err != nil {
+		s.recordAction("get_preview_scene", "Get preview scene", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get preview scene: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"preview_scene": sceneName,
+		"message":       fmt.Sprintf("Current preview scene: %s", sceneName),
+	}
+	s.recordAction("get_preview_scene", "Get preview scene", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleSetPreviewScene sets the preview scene in studio mode
+func (s *Server) handleSetPreviewScene(ctx context.Context, request *mcpsdk.CallToolRequest, input SetPreviewSceneInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Setting preview scene to: %s", input.SceneName)
+
+	if err := s.obsClient.SetCurrentPreviewScene(input.SceneName); err != nil {
+		s.recordAction("set_preview_scene", "Set preview scene", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to set preview scene: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"preview_scene": input.SceneName,
+		"message":       fmt.Sprintf("Preview scene set to: %s", input.SceneName),
+	}
+	s.recordAction("set_preview_scene", "Set preview scene", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// =============================================================================
+// Hotkey handlers (FB-26)
+// =============================================================================
+
+// handleTriggerHotkeyByName triggers an OBS hotkey by its name
+func (s *Server) handleTriggerHotkeyByName(ctx context.Context, request *mcpsdk.CallToolRequest, input TriggerHotkeyInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Triggering hotkey: %s", input.HotkeyName)
+
+	if err := s.obsClient.TriggerHotkeyByName(input.HotkeyName); err != nil {
+		s.recordAction("trigger_hotkey_by_name", "Trigger hotkey", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to trigger hotkey: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"hotkey_name": input.HotkeyName,
+		"message":     fmt.Sprintf("Successfully triggered hotkey: %s", input.HotkeyName),
+	}
+	s.recordAction("trigger_hotkey_by_name", "Trigger hotkey", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleListHotkeys lists all available OBS hotkey names
+func (s *Server) handleListHotkeys(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Listing hotkeys")
+
+	hotkeys, err := s.obsClient.GetHotkeyList()
+	if err != nil {
+		s.recordAction("list_hotkeys", "List hotkeys", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to list hotkeys: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"hotkeys": hotkeys,
+		"count":   len(hotkeys),
+		"message": fmt.Sprintf("Found %d available hotkeys", len(hotkeys)),
+	}
+	s.recordAction("list_hotkeys", "List hotkeys", nil, result, true, time.Since(start))
 	return nil, result, nil
 }

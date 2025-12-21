@@ -162,13 +162,13 @@ Tracked features with unique identifiers for reference.
 | FB-14 | Brand & Design | Logo, favicon, ASCII banners, design system colors | Phase 9 |
 | FB-1 | Embedded Docs | Docs in HTTP/TUI via go:embed, goldmark/glamour rendering | Phase 9 |
 | FB-3 | MCP Elicitation | User confirmation for high-risk tools (streaming, delete) | Phase 9 |
+| FB-23 | Filters Tool Group | 7 tools for source filter management | Phase 10 |
+| FB-24 | Transitions | 5 tools for scene transition control | Phase 10 |
 
 ### Active Backlog
 
 | ID | Name | Priority | Complexity | Dependencies | Description |
 |----|------|----------|------------|--------------|-------------|
-| FB-23 | Filters Tool Group | High | Medium | - | 7 tools for source filter management |
-| FB-24 | Transitions | High | Low | - | 5 tools for scene transition control |
 | FB-20 | Automation Rules | High | Medium | - | Event-triggered actions and macros |
 | FB-25 | Virtual Cam & Replay | Medium | Low | - | 6 tools for virtual camera and replay buffer |
 | FB-26 | Studio Mode & Hotkeys | Medium | Low | - | 5 tools for studio mode and hotkey control |

@@ -21,12 +21,12 @@ import "fmt"
 //
 // ============================================================================
 const (
-	HelpToolCount     = 57 // Total MCP tools (including help)
+	HelpToolCount     = 69 // Total MCP tools (including help)
 	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
 	HelpPromptCount   = 13 // Workflow prompts
 
 	// Tool counts by category (should sum to HelpToolCount)
-	HelpCoreToolCount        = 13 // Scene management, recording, streaming, status
+	HelpCoreToolCount        = 25 // Scene management, recording, streaming, status, virtual cam, replay buffer, studio mode, hotkeys
 	HelpHelpToolCount        = 1  // The help tool itself
 	HelpSourcesToolCount     = 3  // Source management
 	HelpAudioToolCount       = 4  // Audio control

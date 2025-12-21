@@ -90,6 +90,30 @@ type OBSClient interface {
 	SetCurrentSceneTransitionDuration(durationMs int) error
 	TriggerStudioModeTransition() error
 
+	// Virtual camera operations
+	GetVirtualCamStatus() (*obs.VirtualCamStatus, error)
+	ToggleVirtualCam() (bool, error)
+	StartVirtualCam() error
+	StopVirtualCam() error
+
+	// Replay buffer operations
+	GetReplayBufferStatus() (*obs.ReplayBufferStatus, error)
+	ToggleReplayBuffer() (bool, error)
+	StartReplayBuffer() error
+	StopReplayBuffer() error
+	SaveReplayBuffer() error
+	GetLastReplayBufferReplay() (string, error)
+
+	// Studio mode operations
+	GetStudioModeEnabled() (bool, error)
+	SetStudioModeEnabled(enabled bool) error
+	GetCurrentPreviewScene() (string, error)
+	SetCurrentPreviewScene(sceneName string) error
+
+	// Hotkey operations
+	TriggerHotkeyByName(hotkeyName string) error
+	GetHotkeyList() ([]string, error)
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }
