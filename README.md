@@ -286,7 +286,7 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `list_hotkeys` | List all available OBS hotkeys |
 | `trigger_hotkey_by_name` | Trigger a hotkey by name |
 
-**Total: 69 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Help
+**Total: 72 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Meta (4 always-enabled tools)
 
 ## MCP Resources
 
@@ -337,7 +337,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (69 tools)
+│   ├── mcp/               # MCP server implementation (72 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard

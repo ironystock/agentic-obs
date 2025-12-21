@@ -4,7 +4,7 @@ This document describes the system architecture of agentic-obs.
 
 ## System Overview
 
-agentic-obs is an MCP (Model Context Protocol) server that bridges AI assistants with OBS Studio. It provides 69 tools, 4 resource types, and 13 prompts for programmatic OBS control.
+agentic-obs is an MCP (Model Context Protocol) server that bridges AI assistants with OBS Studio. It provides 72 tools, 4 resource types, and 13 prompts for programmatic OBS control.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -19,7 +19,7 @@ agentic-obs is an MCP (Model Context Protocol) server that bridges AI assistants
 │  │                    MCP Layer                             │    │
 │  │  ┌──────────┐  ┌───────────┐  ┌─────────┐  ┌──────────┐ │    │
 │  │  │  Tools   │  │ Resources │  │ Prompts │  │Completions│ │    │
-│  │  │  (45)    │  │   (4)     │  │  (13)   │  │          │ │    │
+│  │  │  (72)    │  │   (4)     │  │  (13)   │  │          │ │    │
 │  │  └────┬─────┘  └─────┬─────┘  └────┬────┘  └────┬─────┘ │    │
 │  └───────┼──────────────┼─────────────┼───────────┼────────┘    │
 │          │              │             │           │              │
@@ -55,7 +55,7 @@ agentic-obs is an MCP (Model Context Protocol) server that bridges AI assistants
 | Component | Package | Responsibility |
 |-----------|---------|----------------|
 | **MCP Server** | `internal/mcp/server.go` | Lifecycle, stdio transport, notification dispatch |
-| **Tools** | `internal/mcp/tools.go` | 45 tool handlers organized in 6 groups |
+| **Tools** | `internal/mcp/tools.go` | 72 tool handlers organized in 8 groups + meta |
 | **Resources** | `internal/mcp/resources.go` | Scene, screenshot, preset resource handlers |
 | **Prompts** | `internal/mcp/prompts.go` | 13 workflow prompt definitions |
 | **Completions** | `internal/mcp/completions.go` | Autocomplete for arguments and URIs |
@@ -131,17 +131,19 @@ main.go
 
 ## MCP Protocol Integration
 
-### Tools (45 total)
+### Tools (72 total)
 
 | Group | Tools | Description |
 |-------|-------|-------------|
-| **Core** | 13 | Scene management, recording, streaming, status |
+| **Core** | 25 | Scene management, recording, streaming, virtual cam, replay buffer, studio mode, hotkeys |
 | **Sources** | 3 | Source visibility and settings |
 | **Audio** | 4 | Volume and mute control |
 | **Layout** | 6 | Scene preset management |
 | **Visual** | 4 | Screenshot source control |
 | **Design** | 14 | Source creation and transforms |
-| **Help** | 1 | Documentation (always enabled) |
+| **Filters** | 7 | Filter creation and management |
+| **Transitions** | 5 | Scene transition control |
+| **Meta** | 4 | Help, tool config (always enabled) |
 
 ### Resources (4 types)
 

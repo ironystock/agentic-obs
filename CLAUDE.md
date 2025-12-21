@@ -56,7 +56,7 @@ agentic-obs/
 AI Assistant (Claude)
     ↕ stdio (JSON-RPC)
 MCP Server (agentic-obs)
-    ├─ Tools (69) ─────────┐
+    ├─ Tools (72) ─────────┐
     ├─ Resources (4) ──────┼─→ OBS Client ─→ OBS Studio
     ├─ Prompts (13) ───────┘      ↕ WebSocket (4455)
     └─ Storage ─────────────→ SQLite
