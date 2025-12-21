@@ -1530,6 +1530,94 @@ var toolHelpContent = map[string]string{
 **Use Case**: Discover available hotkeys for automation or to find the correct name for trigger_hotkey_by_name.
 
 **Note**: Hotkey names follow the pattern "Context.Action" (e.g., "OBSBasic.StartRecording").`,
+
+	// Meta Tools - Tool Configuration
+	"get_tool_config": `# get_tool_config
+
+**Category**: Meta Tools
+
+**Description**: Get current tool group configuration showing which tool groups are enabled or disabled.
+
+**Input**:
+- group (string, optional): Filter by specific group name (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions)
+- verbose (boolean, optional): Include list of tool names in each group (default: false)
+
+**Output**:
+- groups: Array of tool group info (name, description, enabled, tool_count, tools)
+- total_tools: Total number of tools across all groups
+- enabled_tools: Number of currently enabled tools
+- meta_tools: List of meta-tools that cannot be disabled (help, get_tool_config, set_tool_config, list_tool_groups)
+- message: Human-readable summary
+
+**Example Input**:
+{
+  "group": "Audio",
+  "verbose": true
+}
+
+**Use Case**: Check which tool categories are available and their enabled state. Useful for understanding available capabilities.`,
+
+	"set_tool_config": `# set_tool_config
+
+**Category**: Meta Tools
+
+**Description**: Enable or disable a tool group at runtime. Changes are session-only by default.
+
+**Input**:
+- group (string, required): Tool group name to configure (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions)
+- enabled (boolean, required): True to enable the group, false to disable
+- persist (boolean, optional): Save configuration to database for future sessions (default: false)
+
+**Output**:
+- group: The configured group name
+- previous_state: Previous enabled state (true/false)
+- new_state: New enabled state (true/false)
+- tools_affected: Number of tools affected by this change
+- persisted: Whether the change was saved to database
+- message: Human-readable confirmation
+
+**Example Input**:
+{
+  "group": "Visual",
+  "enabled": false,
+  "persist": true
+}
+
+**Use Case**: Temporarily disable tool categories you don't need to reduce cognitive load, or permanently configure your preferred tool setup.
+
+**Note**: Meta-tools (help, get_tool_config, set_tool_config, list_tool_groups) cannot be disabled.`,
+
+	"list_tool_groups": `# list_tool_groups
+
+**Category**: Meta Tools
+
+**Description**: List all available tool groups with their descriptions and enabled status.
+
+**Input**:
+- include_disabled (boolean, optional): Include disabled groups in listing (default: true)
+
+**Output**:
+- groups: Array of tool group info (name, description, enabled, tool_count)
+- count: Number of groups in response
+- meta_tools: List of meta-tools that are always available
+- message: Human-readable summary
+
+**Example Input**:
+{
+  "include_disabled": false
+}
+
+**Use Case**: Quick overview of tool categories without detailed tool lists. Use get_tool_config with verbose=true for full tool lists.
+
+**Tool Groups**:
+- Core (25 tools): Scene management, recording, streaming, virtual camera, replay buffer, studio mode, hotkeys
+- Sources (3 tools): Source visibility and settings
+- Audio (4 tools): Audio input muting and volume control
+- Layout (6 tools): Scene preset management
+- Visual (4 tools): Screenshot capture for AI visual analysis
+- Design (14 tools): Source creation and transform control
+- Filters (7 tools): Source filter management
+- Transitions (5 tools): Scene transition control`,
 }
 
 // GetToolHelpContent returns the help text for a specific tool, or empty if not found.

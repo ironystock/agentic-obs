@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Comprehensive documentation for all 69 Model Context Protocol (MCP) tools provided by the agentic-obs server.
+Comprehensive documentation for all 72 Model Context Protocol (MCP) tools provided by the agentic-obs server.
 
 ## Table of Contents
 
@@ -45,6 +45,10 @@ Comprehensive documentation for all 69 Model Context Protocol (MCP) tools provid
   - [get_obs_status](#get_obs_status)
 - [Help & Discovery](#help--discovery)
   - [help](#help)
+- [Tool Configuration](#tool-configuration)
+  - [get_tool_config](#get_tool_config)
+  - [set_tool_config](#set_tool_config)
+  - [list_tool_groups](#list_tool_groups)
 - [Scene Design](#scene-design)
   - [create_text_source](#create_text_source)
   - [create_image_source](#create_image_source)
@@ -1630,7 +1634,7 @@ The Help tool provides built-in documentation and guidance for using agentic-obs
 | Topic | Description |
 |-------|-------------|
 | `overview` | Quick start guide and feature summary |
-| `tools` | List of all 45 tools by category |
+| `tools` | List of all 72 tools by category |
 | `resources` | MCP resource types and URI patterns |
 | `prompts` | Available workflow prompts |
 | `workflows` | Common workflow patterns and best practices |
@@ -1659,6 +1663,134 @@ The Help tool provides built-in documentation and guidance for using agentic-obs
 - Use `topic="<tool_name>"` for specific tool documentation
 - Enable `verbose=true` for examples and detailed explanations
 - Use `topic="troubleshooting"` when encountering issues
+
+---
+
+## Tool Configuration
+
+Tool Configuration meta-tools allow runtime control over which tool groups are enabled. These tools are **always enabled** and cannot be disabled.
+
+### get_tool_config
+
+**Purpose:** Get current tool group configuration showing which tool groups are enabled or disabled.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| group | string | No | Filter by specific group name (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) |
+| verbose | boolean | No | Include list of tool names in each group (default: false) |
+
+**Return Value Schema:**
+```json
+{
+  "groups": [
+    {
+      "name": "Core",
+      "description": "Core OBS tools: scenes, recording, streaming, status, virtual camera, replay buffer, studio mode, and hotkeys",
+      "enabled": true,
+      "tool_count": 25,
+      "tools": ["list_scenes", "set_current_scene", "..."]
+    }
+  ],
+  "total_tools": 72,
+  "enabled_tools": 72,
+  "meta_tools": ["help", "get_tool_config", "set_tool_config", "list_tool_groups"],
+  "message": "72 of 72 tools enabled across 8 groups"
+}
+```
+
+**Example Request:**
+```json
+{
+  "group": "Audio",
+  "verbose": true
+}
+```
+
+**Best Practices:**
+- Use without parameters to get overview of all groups
+- Use `verbose=true` to see specific tool names in each group
+- Filter by group name when interested in a specific category
+
+### set_tool_config
+
+**Purpose:** Enable or disable a tool group at runtime. Changes are session-only by default.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| group | string | Yes | Tool group name (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) |
+| enabled | boolean | Yes | True to enable, false to disable |
+| persist | boolean | No | Save to database for future sessions (default: false) |
+
+**Return Value Schema:**
+```json
+{
+  "group": "Audio",
+  "previous_state": true,
+  "new_state": false,
+  "tools_affected": 4,
+  "persisted": false,
+  "message": "Tool group 'Audio' (4 tools) disabled"
+}
+```
+
+**Example Request:**
+```json
+{
+  "group": "Visual",
+  "enabled": false,
+  "persist": true
+}
+```
+
+**Best Practices:**
+- Use session-only (persist=false) for temporary changes
+- Use persist=true to remember preferences across restarts
+- Meta-tools cannot be disabled
+
+### list_tool_groups
+
+**Purpose:** List all available tool groups with their descriptions and enabled status.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| include_disabled | boolean | No | Include disabled groups in listing (default: true) |
+
+**Return Value Schema:**
+```json
+{
+  "groups": [
+    {
+      "name": "Core",
+      "description": "Core OBS tools: scenes, recording, streaming, status, virtual camera, replay buffer, studio mode, and hotkeys",
+      "enabled": true,
+      "tool_count": 25
+    }
+  ],
+  "count": 8,
+  "meta_tools": ["help", "get_tool_config", "set_tool_config", "list_tool_groups"],
+  "message": "Found 8 tool groups"
+}
+```
+
+**Tool Groups Overview:**
+| Group | Count | Description |
+|-------|-------|-------------|
+| Core | 25 | Scene management, recording, streaming, virtual camera, replay buffer, studio mode, hotkeys |
+| Sources | 3 | Source visibility and settings |
+| Audio | 4 | Audio input muting and volume control |
+| Layout | 6 | Scene preset management |
+| Visual | 4 | Screenshot capture for AI visual analysis |
+| Design | 14 | Source creation and transform control |
+| Filters | 7 | Source filter management |
+| Transitions | 5 | Scene transition control |
+
+**Best Practices:**
+- Use with `include_disabled=false` to see only active groups
+- Quick way to understand available capabilities
+- Use `get_tool_config` with `verbose=true` for detailed tool lists
 
 ---
 

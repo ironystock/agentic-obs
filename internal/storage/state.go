@@ -24,12 +24,14 @@ const (
 
 // Tool group state keys - control which tool categories are enabled
 const (
-	StateKeyToolsCore    = "tools_enabled_core"    // Core OBS tools (scenes, recording, streaming, status)
-	StateKeyToolsVisual  = "tools_enabled_visual"  // Visual monitoring tools (screenshots)
-	StateKeyToolsLayout  = "tools_enabled_layout"  // Layout management tools (scene presets)
-	StateKeyToolsAudio   = "tools_enabled_audio"   // Audio control tools
-	StateKeyToolsSources = "tools_enabled_sources" // Source management tools
-	StateKeyToolsDesign  = "tools_enabled_design"  // Scene design tools (source creation, transforms)
+	StateKeyToolsCore        = "tools_enabled_core"        // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
+	StateKeyToolsVisual      = "tools_enabled_visual"      // Visual monitoring tools (screenshots)
+	StateKeyToolsLayout      = "tools_enabled_layout"      // Layout management tools (scene presets)
+	StateKeyToolsAudio       = "tools_enabled_audio"       // Audio control tools
+	StateKeyToolsSources     = "tools_enabled_sources"     // Source management tools
+	StateKeyToolsDesign      = "tools_enabled_design"      // Scene design tools (source creation, transforms)
+	StateKeyToolsFilters     = "tools_enabled_filters"     // Filter management tools
+	StateKeyToolsTransitions = "tools_enabled_transitions" // Transition control tools
 )
 
 // Webserver configuration keys
@@ -310,23 +312,27 @@ func (db *DB) GetAppVersion(ctx context.Context) (string, error) {
 
 // ToolGroupConfig represents the enabled/disabled state of each tool group.
 type ToolGroupConfig struct {
-	Core    bool // Core OBS tools (scenes, recording, streaming, status)
-	Visual  bool // Visual monitoring tools (screenshots)
-	Layout  bool // Layout management tools (scene presets)
-	Audio   bool // Audio control tools
-	Sources bool // Source management tools
-	Design  bool // Scene design tools (source creation, transforms)
+	Core        bool // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
+	Visual      bool // Visual monitoring tools (screenshots)
+	Layout      bool // Layout management tools (scene presets)
+	Audio       bool // Audio control tools
+	Sources     bool // Source management tools
+	Design      bool // Scene design tools (source creation, transforms)
+	Filters     bool // Filter management tools
+	Transitions bool // Transition control tools
 }
 
 // DefaultToolGroupConfig returns tool group config with all groups enabled.
 func DefaultToolGroupConfig() ToolGroupConfig {
 	return ToolGroupConfig{
-		Core:    true,
-		Visual:  true,
-		Layout:  true,
-		Audio:   true,
-		Sources: true,
-		Design:  true,
+		Core:        true,
+		Visual:      true,
+		Layout:      true,
+		Audio:       true,
+		Sources:     true,
+		Design:      true,
+		Filters:     true,
+		Transitions: true,
 	}
 }
 
@@ -356,6 +362,12 @@ func (db *DB) SaveToolGroupConfig(ctx context.Context, cfg ToolGroupConfig) erro
 	}
 	if err := db.SetState(ctx, StateKeyToolsDesign, boolToStr(cfg.Design)); err != nil {
 		return fmt.Errorf("failed to save design tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsFilters, boolToStr(cfg.Filters)); err != nil {
+		return fmt.Errorf("failed to save filters tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsTransitions, boolToStr(cfg.Transitions)); err != nil {
+		return fmt.Errorf("failed to save transitions tools preference: %w", err)
 	}
 
 	return nil
@@ -388,6 +400,12 @@ func (db *DB) LoadToolGroupConfig(ctx context.Context) (ToolGroupConfig, error) 
 	}
 	if val, err := db.GetState(ctx, StateKeyToolsDesign); err == nil {
 		cfg.Design = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsFilters); err == nil {
+		cfg.Filters = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsTransitions); err == nil {
+		cfg.Transitions = strToBool(val)
 	}
 
 	return cfg, nil

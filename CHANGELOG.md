@@ -20,6 +20,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.12.0] - 2025-12-21
+
+### Phase 12: Dynamic Tool Configuration
+
+**Summary:** FB-27 - Runtime tool group enable/disable via MCP meta-tools.
+
+### Added
+- **Dynamic Tool Configuration** (FB-27, 3 tools):
+  - `get_tool_config` - Query tool group configuration (enabled/disabled state, tool counts)
+  - `set_tool_config` - Enable/disable tool groups at runtime (session-only or persistent)
+  - `list_tool_groups` - List all tool groups with descriptions and status
+- **Meta-tools category** - 4 always-enabled tools that cannot be disabled:
+  - `help`, `get_tool_config`, `set_tool_config`, `list_tool_groups`
+- Thread-safe tool configuration with `sync.RWMutex`
+- Tool group metadata with tool counts and tool name lists
+- Persistence option for tool configuration via SQLite
+
+### Changed
+- "Help" category renamed to "Meta" tools for clarity
+- Help content updated to describe meta-tools functionality
+
+### Tests
+- 32 test cases across 9 test functions for tool config handlers
+- Tests for getGroupEnabled, setGroupEnabled, convertToStorageConfig helpers
+- Tool group metadata validation tests
+
+### Metrics
+- **Tools:** 72 (+3)
+- **Resources:** 4 (unchanged)
+- **Prompts:** 13 (unchanged)
+- **Skills:** 4 (unchanged)
+
+---
+
 ## [0.11.0] - 2025-12-21
 
 ### Phase 11: Virtual Camera, Replay Buffer, Studio Mode & Hotkeys
