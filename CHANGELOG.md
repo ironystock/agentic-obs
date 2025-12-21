@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Phase 12: Dynamic Tool Configuration
 
-**Summary:** FB-27 - Runtime tool group enable/disable via MCP meta-tools.
+**Summary:** FB-27 (Dynamic Tool Config) and FB-28 (Skills Update).
 
 ### Added
 - **Dynamic Tool Configuration** (FB-27, 3 tools):
@@ -40,6 +40,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - "Help" category renamed to "Meta" tools for clarity
 - Help content updated to describe meta-tools functionality
+- **streaming-assistant skill** (FB-28): Added FB-25/26 tools and workflows:
+  - Virtual camera management (start/stop for video calls)
+  - Replay buffer highlight capture workflows
+  - Studio mode preview/program transitions
+  - Hotkey automation guidance
+  - Updated cleanup recommendations
 
 ### Tests
 - 32 test cases across 9 test functions for tool config handlers
