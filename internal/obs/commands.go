@@ -1309,7 +1309,7 @@ func (c *Client) SaveReplayBuffer() error {
 
 	_, err = client.Outputs.SaveReplayBuffer()
 	if err != nil {
-		return fmt.Errorf("failed to save replay buffer: %w. Replay buffer may not be active", err)
+		return fmt.Errorf("failed to save replay buffer: %w", err)
 	}
 
 	return nil

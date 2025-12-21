@@ -91,12 +91,18 @@ type OBSClient interface {
 	TriggerStudioModeTransition() error
 
 	// Virtual camera operations
+	// Note: Start/Stop methods are kept internal for programmatic use cases.
+	// MCP tools expose only Toggle for simplicity - AI agents can check status
+	// first if they need idempotent behavior.
 	GetVirtualCamStatus() (*obs.VirtualCamStatus, error)
 	ToggleVirtualCam() (bool, error)
 	StartVirtualCam() error
 	StopVirtualCam() error
 
 	// Replay buffer operations
+	// Note: Start/Stop methods are kept internal for programmatic use cases.
+	// MCP tools expose only Toggle for simplicity - AI agents can check status
+	// first if they need idempotent behavior.
 	GetReplayBufferStatus() (*obs.ReplayBufferStatus, error)
 	ToggleReplayBuffer() (bool, error)
 	StartReplayBuffer() error
