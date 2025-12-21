@@ -443,7 +443,7 @@ func TestGetOverviewHelp(t *testing.T) {
 		assert.Contains(t, help, "What is agentic-obs")
 		assert.Contains(t, help, "Quick Start")
 		assert.Contains(t, help, "Key Features")
-		assert.Contains(t, help, "45 Tools")
+		assert.Contains(t, help, "57 Tools")
 		assert.Contains(t, help, "4 Resource Types")
 	})
 
@@ -454,6 +454,8 @@ func TestGetOverviewHelp(t *testing.T) {
 		assert.Contains(t, help, "Next Steps")
 		assert.Contains(t, help, "Core Tools")
 		assert.Contains(t, help, "Design Tools")
+		assert.Contains(t, help, "Filters Tools")
+		assert.Contains(t, help, "Transitions Tools")
 	})
 }
 
@@ -469,12 +471,16 @@ func TestGetToolsHelp(t *testing.T) {
 		assert.Contains(t, help, "Layout Tools")
 		assert.Contains(t, help, "Visual Tools")
 		assert.Contains(t, help, "Design Tools")
+		assert.Contains(t, help, "Filters Tools")
+		assert.Contains(t, help, "Transitions Tools")
 
 		// Check a few tool names
 		assert.Contains(t, help, "list_scenes")
 		assert.Contains(t, help, "start_recording")
 		assert.Contains(t, help, "create_screenshot_source")
 		assert.Contains(t, help, "save_scene_preset")
+		assert.Contains(t, help, "list_source_filters")
+		assert.Contains(t, help, "list_transitions")
 	})
 
 	t.Run("verbose tools help includes guidance", func(t *testing.T) {
@@ -662,7 +668,7 @@ func TestHelpContentCompleteness(t *testing.T) {
 	})
 
 	t.Run("all tool names have help entries", func(t *testing.T) {
-		// List of all 45 tools that should have help
+		// List of all 57 tools that should have help
 		allTools := []string{
 			// Core (13 tools)
 			"list_scenes", "set_current_scene", "create_scene", "remove_scene",
@@ -685,6 +691,13 @@ func TestHelpContentCompleteness(t *testing.T) {
 			"set_source_transform", "get_source_transform", "set_source_crop",
 			"set_source_bounds", "set_source_order",
 			"set_source_locked", "duplicate_source", "remove_source", "list_input_kinds",
+			// Filters (7 tools)
+			"list_source_filters", "get_source_filter", "create_source_filter",
+			"remove_source_filter", "toggle_source_filter", "set_source_filter_settings",
+			"list_filter_kinds",
+			// Transitions (5 tools)
+			"list_transitions", "get_current_transition", "set_current_transition",
+			"set_transition_duration", "trigger_transition",
 		}
 
 		for _, toolName := range allTools {

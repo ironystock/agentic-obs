@@ -74,6 +74,22 @@ type OBSClient interface {
 	// Scene design - input kinds
 	GetInputKindList() ([]string, error)
 
+	// Filter operations
+	GetSourceFilterList(sourceName string) ([]obs.FilterInfo, error)
+	GetSourceFilter(sourceName, filterName string) (*obs.FilterDetails, error)
+	CreateSourceFilter(sourceName, filterName, filterKind string, settings map[string]interface{}) error
+	RemoveSourceFilter(sourceName, filterName string) error
+	SetSourceFilterEnabled(sourceName, filterName string, enabled bool) error
+	SetSourceFilterSettings(sourceName, filterName string, settings map[string]interface{}, overlay bool) error
+	GetSourceFilterKindList() ([]string, error)
+
+	// Transition operations
+	GetSceneTransitionList() ([]obs.TransitionInfo, string, error)
+	GetCurrentSceneTransition() (*obs.TransitionDetails, error)
+	SetCurrentSceneTransition(transitionName string) error
+	SetCurrentSceneTransitionDuration(durationMs int) error
+	TriggerStudioModeTransition() error
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }

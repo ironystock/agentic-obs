@@ -14,11 +14,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Current expected values - UPDATE THESE AFTER EACH PHASE
-EXPECTED_TOOLS=45
+EXPECTED_TOOLS=57
 EXPECTED_RESOURCES=4
 EXPECTED_PROMPTS=13
 EXPECTED_API_ENDPOINTS=8
-CURRENT_PHASE=7
+CURRENT_PHASE=10
 
 echo "=========================================="
 echo "Documentation Consistency Verification"

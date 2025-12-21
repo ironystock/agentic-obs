@@ -199,6 +199,60 @@ type RemoveSourceInput struct {
 	SceneItemID int    `json:"scene_item_id" jsonschema:"Scene item ID of the source to remove"`
 }
 
+// Filter tool input types (FB-23)
+
+// ListSourceFiltersInput is the input for listing filters on a source
+type ListSourceFiltersInput struct {
+	SourceName string `json:"source_name" jsonschema:"Name of the source to list filters for"`
+}
+
+// GetSourceFilterInput is the input for getting a specific filter's details
+type GetSourceFilterInput struct {
+	SourceName string `json:"source_name" jsonschema:"Name of the source containing the filter"`
+	FilterName string `json:"filter_name" jsonschema:"Name of the filter to get details for"`
+}
+
+// CreateSourceFilterInput is the input for creating a new filter on a source
+type CreateSourceFilterInput struct {
+	SourceName     string                 `json:"source_name" jsonschema:"Name of the source to add the filter to"`
+	FilterName     string                 `json:"filter_name" jsonschema:"Name for the new filter"`
+	FilterKind     string                 `json:"filter_kind" jsonschema:"Type of filter (use list_filter_kinds to see available types)"`
+	FilterSettings map[string]interface{} `json:"filter_settings,omitempty" jsonschema:"Optional initial settings for the filter"`
+}
+
+// RemoveSourceFilterInput is the input for removing a filter from a source
+type RemoveSourceFilterInput struct {
+	SourceName string `json:"source_name" jsonschema:"Name of the source containing the filter"`
+	FilterName string `json:"filter_name" jsonschema:"Name of the filter to remove"`
+}
+
+// ToggleSourceFilterInput is the input for enabling/disabling a filter
+type ToggleSourceFilterInput struct {
+	SourceName    string `json:"source_name" jsonschema:"Name of the source containing the filter"`
+	FilterName    string `json:"filter_name" jsonschema:"Name of the filter to toggle"`
+	FilterEnabled *bool  `json:"filter_enabled,omitempty" jsonschema:"Set to true/false to enable/disable; omit to toggle"`
+}
+
+// SetSourceFilterSettingsInput is the input for updating filter settings
+type SetSourceFilterSettingsInput struct {
+	SourceName     string                 `json:"source_name" jsonschema:"Name of the source containing the filter"`
+	FilterName     string                 `json:"filter_name" jsonschema:"Name of the filter to update"`
+	FilterSettings map[string]interface{} `json:"filter_settings" jsonschema:"Settings to apply to the filter"`
+	Overlay        bool                   `json:"overlay,omitempty" jsonschema:"If true, merge with existing settings; if false, replace entirely (default: true)"`
+}
+
+// Transition tool input types (FB-24)
+
+// SetCurrentTransitionInput is the input for setting the current scene transition
+type SetCurrentTransitionInput struct {
+	TransitionName string `json:"transition_name" jsonschema:"Name of the transition to set as current"`
+}
+
+// SetTransitionDurationInput is the input for setting the transition duration
+type SetTransitionDurationInput struct {
+	TransitionDuration int `json:"transition_duration" jsonschema:"Transition duration in milliseconds"`
+}
+
 // registerToolHandlers registers MCP tool handlers based on enabled tool groups
 func (s *Server) registerToolHandlers() {
 	toolCount := 0
@@ -596,6 +650,114 @@ func (s *Server) registerToolHandlers() {
 
 		toolCount += 14
 		log.Println("Design tools registered (14 tools)")
+	}
+
+	// Filter tools (FB-23)
+	if s.toolGroups.Filters {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_source_filters",
+				Description: "List all filters applied to a source",
+			},
+			s.handleListSourceFilters,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_source_filter",
+				Description: "Get detailed information about a specific filter on a source",
+			},
+			s.handleGetSourceFilter,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "create_source_filter",
+				Description: "Add a new filter to a source (e.g., color correction, noise suppression)",
+			},
+			s.handleCreateSourceFilter,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "remove_source_filter",
+				Description: "Remove a filter from a source",
+			},
+			s.handleRemoveSourceFilter,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "toggle_source_filter",
+				Description: "Enable or disable a filter on a source",
+			},
+			s.handleToggleSourceFilter,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "set_source_filter_settings",
+				Description: "Modify the configuration settings of a filter",
+			},
+			s.handleSetSourceFilterSettings,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_filter_kinds",
+				Description: "List all available filter types in OBS",
+			},
+			s.handleListFilterKinds,
+		)
+
+		toolCount += 7
+		log.Println("Filter tools registered (7 tools)")
+	}
+
+	// Transition tools (FB-24)
+	if s.toolGroups.Transitions {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_transitions",
+				Description: "List all available scene transitions and identify the current one",
+			},
+			s.handleListTransitions,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_current_transition",
+				Description: "Get details about the current scene transition including duration and settings",
+			},
+			s.handleGetCurrentTransition,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "set_current_transition",
+				Description: "Change the active scene transition (e.g., Cut, Fade, Swipe)",
+			},
+			s.handleSetCurrentTransition,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "set_transition_duration",
+				Description: "Set the duration of the current scene transition in milliseconds",
+			},
+			s.handleSetTransitionDuration,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "trigger_transition",
+				Description: "Trigger the current transition in studio mode (swaps preview and program scenes)",
+			},
+			s.handleTriggerTransition,
+		)
+
+		toolCount += 5
+		log.Println("Transition tools registered (5 tools)")
 	}
 
 	// Help tool - always enabled (not part of any tool group)
@@ -1776,5 +1938,289 @@ func (s *Server) handleListInputKinds(ctx context.Context, request *mcpsdk.CallT
 		"count":       len(kinds),
 	}
 	s.recordAction("list_input_kinds", "List input kinds", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// =============================================================================
+// Filter tool handlers (FB-23)
+// =============================================================================
+
+// handleListSourceFilters lists all filters on a source
+func (s *Server) handleListSourceFilters(ctx context.Context, request *mcpsdk.CallToolRequest, input ListSourceFiltersInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Listing filters for source: %s", input.SourceName)
+
+	filters, err := s.obsClient.GetSourceFilterList(input.SourceName)
+	if err != nil {
+		s.recordAction("list_source_filters", "List source filters", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to list filters: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"source_name": input.SourceName,
+		"filters":     filters,
+		"count":       len(filters),
+	}
+	s.recordAction("list_source_filters", "List source filters", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleGetSourceFilter gets details about a specific filter
+func (s *Server) handleGetSourceFilter(ctx context.Context, request *mcpsdk.CallToolRequest, input GetSourceFilterInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Getting filter '%s' on source '%s'", input.FilterName, input.SourceName)
+
+	filter, err := s.obsClient.GetSourceFilter(input.SourceName, input.FilterName)
+	if err != nil {
+		s.recordAction("get_source_filter", "Get source filter", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get filter: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"source_name": input.SourceName,
+		"filter":      filter,
+	}
+	s.recordAction("get_source_filter", "Get source filter", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleCreateSourceFilter creates a new filter on a source
+func (s *Server) handleCreateSourceFilter(ctx context.Context, request *mcpsdk.CallToolRequest, input CreateSourceFilterInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Creating filter '%s' of type '%s' on source '%s'", input.FilterName, input.FilterKind, input.SourceName)
+
+	if err := s.obsClient.CreateSourceFilter(input.SourceName, input.FilterName, input.FilterKind, input.FilterSettings); err != nil {
+		s.recordAction("create_source_filter", "Create source filter", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to create filter: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"source_name": input.SourceName,
+		"filter_name": input.FilterName,
+		"filter_kind": input.FilterKind,
+		"message":     fmt.Sprintf("Successfully created filter '%s' on source '%s'", input.FilterName, input.SourceName),
+	}
+	s.recordAction("create_source_filter", "Create source filter", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleRemoveSourceFilter removes a filter from a source
+func (s *Server) handleRemoveSourceFilter(ctx context.Context, request *mcpsdk.CallToolRequest, input RemoveSourceFilterInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Removing filter '%s' from source '%s' - requesting confirmation", input.FilterName, input.SourceName)
+
+	// Request user confirmation before removing filter
+	confirmed, err := ElicitFilterRemovalConfirmation(ctx, getSession(request), input.SourceName, input.FilterName)
+	if err != nil {
+		log.Printf("Elicitation error: %v", err)
+		// Continue without confirmation if elicitation fails
+	} else if !confirmed {
+		result := CancelledResult("Filter removal")
+		s.recordAction("remove_source_filter", "Remove source filter (cancelled)", input, result, false, time.Since(start))
+		return nil, result, nil
+	}
+
+	if err := s.obsClient.RemoveSourceFilter(input.SourceName, input.FilterName); err != nil {
+		s.recordAction("remove_source_filter", "Remove source filter", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to remove filter: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"source_name": input.SourceName,
+		"filter_name": input.FilterName,
+		"message":     fmt.Sprintf("Successfully removed filter '%s' from source '%s'", input.FilterName, input.SourceName),
+	}
+	s.recordAction("remove_source_filter", "Remove source filter", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleToggleSourceFilter enables or disables a filter
+func (s *Server) handleToggleSourceFilter(ctx context.Context, request *mcpsdk.CallToolRequest, input ToggleSourceFilterInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Toggling filter '%s' on source '%s'", input.FilterName, input.SourceName)
+
+	var enabled bool
+	if input.FilterEnabled != nil {
+		// Explicit enable/disable
+		enabled = *input.FilterEnabled
+	} else {
+		// Toggle: get current state and flip it
+		filter, err := s.obsClient.GetSourceFilter(input.SourceName, input.FilterName)
+		if err != nil {
+			s.recordAction("toggle_source_filter", "Toggle source filter", input, nil, false, time.Since(start))
+			return nil, nil, fmt.Errorf("failed to get filter state: %w", err)
+		}
+		enabled = !filter.Enabled
+	}
+
+	if err := s.obsClient.SetSourceFilterEnabled(input.SourceName, input.FilterName, enabled); err != nil {
+		s.recordAction("toggle_source_filter", "Toggle source filter", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to toggle filter: %w", err)
+	}
+
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+
+	result := map[string]interface{}{
+		"source_name":    input.SourceName,
+		"filter_name":    input.FilterName,
+		"filter_enabled": enabled,
+		"message":        fmt.Sprintf("Filter '%s' is now %s", input.FilterName, status),
+	}
+	s.recordAction("toggle_source_filter", "Toggle source filter", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleSetSourceFilterSettings updates filter settings
+func (s *Server) handleSetSourceFilterSettings(ctx context.Context, request *mcpsdk.CallToolRequest, input SetSourceFilterSettingsInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Setting filter settings for '%s' on source '%s'", input.FilterName, input.SourceName)
+
+	// Default to overlay mode (merge settings)
+	overlay := true
+	if !input.Overlay {
+		overlay = false
+	}
+
+	if err := s.obsClient.SetSourceFilterSettings(input.SourceName, input.FilterName, input.FilterSettings, overlay); err != nil {
+		s.recordAction("set_source_filter_settings", "Set source filter settings", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to set filter settings: %w", err)
+	}
+
+	mode := "merged with"
+	if !overlay {
+		mode = "replaced"
+	}
+
+	result := map[string]interface{}{
+		"source_name": input.SourceName,
+		"filter_name": input.FilterName,
+		"overlay":     overlay,
+		"message":     fmt.Sprintf("Settings %s existing settings for filter '%s'", mode, input.FilterName),
+	}
+	s.recordAction("set_source_filter_settings", "Set source filter settings", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleListFilterKinds lists all available filter types
+func (s *Server) handleListFilterKinds(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Listing available filter kinds")
+
+	kinds, err := s.obsClient.GetSourceFilterKindList()
+	if err != nil {
+		s.recordAction("list_filter_kinds", "List filter kinds", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to list filter kinds: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"filter_kinds": kinds,
+		"count":        len(kinds),
+	}
+	s.recordAction("list_filter_kinds", "List filter kinds", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// =============================================================================
+// Transition tool handlers (FB-24)
+// =============================================================================
+
+// handleListTransitions lists all available scene transitions
+func (s *Server) handleListTransitions(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Listing scene transitions")
+
+	transitions, currentName, err := s.obsClient.GetSceneTransitionList()
+	if err != nil {
+		s.recordAction("list_transitions", "List transitions", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to list transitions: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"transitions":        transitions,
+		"current_transition": currentName,
+		"count":              len(transitions),
+	}
+	s.recordAction("list_transitions", "List transitions", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleGetCurrentTransition gets the current scene transition details
+func (s *Server) handleGetCurrentTransition(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Getting current scene transition")
+
+	transition, err := s.obsClient.GetCurrentSceneTransition()
+	if err != nil {
+		s.recordAction("get_current_transition", "Get current transition", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get current transition: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"name":         transition.Name,
+		"kind":         transition.Kind,
+		"duration_ms":  transition.Duration,
+		"configurable": transition.Configurable,
+		"settings":     transition.Settings,
+	}
+	s.recordAction("get_current_transition", "Get current transition", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleSetCurrentTransition sets the current scene transition
+func (s *Server) handleSetCurrentTransition(ctx context.Context, request *mcpsdk.CallToolRequest, input SetCurrentTransitionInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Setting current transition to: %s", input.TransitionName)
+
+	if err := s.obsClient.SetCurrentSceneTransition(input.TransitionName); err != nil {
+		s.recordAction("set_current_transition", "Set current transition", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to set current transition: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"transition_name": input.TransitionName,
+		"message":         fmt.Sprintf("Successfully set transition to '%s'", input.TransitionName),
+	}
+	s.recordAction("set_current_transition", "Set current transition", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleSetTransitionDuration sets the duration of the current scene transition
+func (s *Server) handleSetTransitionDuration(ctx context.Context, request *mcpsdk.CallToolRequest, input SetTransitionDurationInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Setting transition duration to: %dms", input.TransitionDuration)
+
+	if input.TransitionDuration <= 0 {
+		s.recordAction("set_transition_duration", "Set transition duration", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("transition_duration must be greater than 0")
+	}
+
+	if err := s.obsClient.SetCurrentSceneTransitionDuration(input.TransitionDuration); err != nil {
+		s.recordAction("set_transition_duration", "Set transition duration", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to set transition duration: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"duration_ms": input.TransitionDuration,
+		"message":     fmt.Sprintf("Successfully set transition duration to %dms", input.TransitionDuration),
+	}
+	s.recordAction("set_transition_duration", "Set transition duration", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleTriggerTransition triggers the current transition in studio mode
+func (s *Server) handleTriggerTransition(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Triggering studio mode transition")
+
+	if err := s.obsClient.TriggerStudioModeTransition(); err != nil {
+		s.recordAction("trigger_transition", "Trigger transition", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to trigger transition: %w", err)
+	}
+
+	result := SimpleResult{Message: "Successfully triggered studio mode transition"}
+	s.recordAction("trigger_transition", "Trigger transition", nil, result, true, time.Since(start))
 	return nil, result, nil
 }

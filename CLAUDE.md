@@ -6,7 +6,7 @@ Context for AI assistants working on the agentic-obs project.
 
 **agentic-obs** is an MCP (Model Context Protocol) server providing AI assistants with programmatic control over OBS Studio via the WebSocket API.
 
-**Current Status:** 45 Tools | 4 Resources | 13 Prompts | 4 Skills
+**Current Status:** 57 Tools | 4 Resources | 13 Prompts | 4 Skills
 
 ## Project Structure
 
@@ -17,7 +17,7 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/
 │   │   ├── server.go       # MCP server lifecycle
-│   │   ├── tools.go        # Tool registration (45 tools)
+│   │   ├── tools.go        # Tool registration (57 tools)
 │   │   ├── resources.go    # Resource handlers (4 types)
 │   │   ├── prompts.go      # Prompt definitions (13 prompts)
 │   │   ├── completions.go  # Autocomplete handler
@@ -56,7 +56,7 @@ agentic-obs/
 AI Assistant (Claude)
     ↕ stdio (JSON-RPC)
 MCP Server (agentic-obs)
-    ├─ Tools (45) ─────────┐
+    ├─ Tools (57) ─────────┐
     ├─ Resources (4) ──────┼─→ OBS Client ─→ OBS Studio
     ├─ Prompts (13) ───────┘      ↕ WebSocket (4455)
     └─ Storage ─────────────→ SQLite
@@ -150,7 +150,7 @@ go mod tidy
 
 ## MCP Capabilities Summary
 
-### Tools (45 in 6 groups)
+### Tools (57 in 8 groups)
 
 | Group | Count | Examples |
 |-------|-------|----------|
@@ -160,6 +160,8 @@ go mod tidy
 | Layout | 6 | `save_scene_preset`, `apply_scene_preset` |
 | Visual | 4 | `create_screenshot_source`, `list_screenshot_sources` |
 | Design | 14 | `create_text_source`, `set_source_transform` |
+| Filters | 7 | `list_source_filters`, `toggle_source_filter` |
+| Transitions | 5 | `list_transitions`, `set_current_transition` |
 | Help | 1 | `help` (always enabled) |
 
 ### Resources (4 types)
@@ -182,7 +184,7 @@ For detailed rationale, see [design/decisions/](design/decisions/).
 1. **Pure Go SQLite** (`modernc.org/sqlite`) - No CGO for easy cross-compilation
 2. **Persistent OBS Connection** - Single 1:1 connection with auto-reconnect
 3. **Scenes as Resources** - Enable MCP notifications for state synchronization
-4. **Tool Groups** - Configurable categories (Core, Visual, Layout, Audio, Sources, Design)
+4. **Tool Groups** - Configurable categories (Core, Visual, Layout, Audio, Sources, Design, Filters, Transitions)
 5. **Interface Pattern** - StatusProvider/ActionExecutor for web UI decoupling
 
 ## Documentation Links
