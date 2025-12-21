@@ -90,6 +90,36 @@ type OBSClient interface {
 	SetCurrentSceneTransitionDuration(durationMs int) error
 	TriggerStudioModeTransition() error
 
+	// Virtual camera operations
+	// Note: Start/Stop methods are kept internal for programmatic use cases.
+	// MCP tools expose only Toggle for simplicity - AI agents can check status
+	// first if they need idempotent behavior.
+	GetVirtualCamStatus() (*obs.VirtualCamStatus, error)
+	ToggleVirtualCam() (bool, error)
+	StartVirtualCam() error
+	StopVirtualCam() error
+
+	// Replay buffer operations
+	// Note: Start/Stop methods are kept internal for programmatic use cases.
+	// MCP tools expose only Toggle for simplicity - AI agents can check status
+	// first if they need idempotent behavior.
+	GetReplayBufferStatus() (*obs.ReplayBufferStatus, error)
+	ToggleReplayBuffer() (bool, error)
+	StartReplayBuffer() error
+	StopReplayBuffer() error
+	SaveReplayBuffer() error
+	GetLastReplayBufferReplay() (string, error)
+
+	// Studio mode operations
+	GetStudioModeEnabled() (bool, error)
+	SetStudioModeEnabled(enabled bool) error
+	GetCurrentPreviewScene() (string, error)
+	SetCurrentPreviewScene(sceneName string) error
+
+	// Hotkey operations
+	TriggerHotkeyByName(hotkeyName string) error
+	GetHotkeyList() ([]string, error)
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }

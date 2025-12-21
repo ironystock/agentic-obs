@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Comprehensive documentation for all 45 Model Context Protocol (MCP) tools provided by the agentic-obs server.
+Comprehensive documentation for all 69 Model Context Protocol (MCP) tools provided by the agentic-obs server.
 
 ## Table of Contents
 
@@ -60,6 +60,34 @@ Comprehensive documentation for all 45 Model Context Protocol (MCP) tools provid
   - [duplicate_source](#duplicate_source)
   - [remove_source](#remove_source)
   - [list_input_kinds](#list_input_kinds)
+- [Filters](#filters)
+  - [list_source_filters](#list_source_filters)
+  - [get_source_filter](#get_source_filter)
+  - [create_source_filter](#create_source_filter)
+  - [remove_source_filter](#remove_source_filter)
+  - [toggle_source_filter](#toggle_source_filter)
+  - [set_source_filter_settings](#set_source_filter_settings)
+  - [list_filter_kinds](#list_filter_kinds)
+- [Transitions](#transitions)
+  - [list_transitions](#list_transitions)
+  - [get_current_transition](#get_current_transition)
+  - [set_current_transition](#set_current_transition)
+  - [set_transition_duration](#set_transition_duration)
+  - [trigger_transition](#trigger_transition)
+- [Virtual Camera & Replay Buffer](#virtual-camera--replay-buffer)
+  - [get_virtual_cam_status](#get_virtual_cam_status)
+  - [toggle_virtual_cam](#toggle_virtual_cam)
+  - [get_replay_buffer_status](#get_replay_buffer_status)
+  - [toggle_replay_buffer](#toggle_replay_buffer)
+  - [save_replay_buffer](#save_replay_buffer)
+  - [get_last_replay](#get_last_replay)
+- [Studio Mode & Hotkeys](#studio-mode--hotkeys)
+  - [get_studio_mode_enabled](#get_studio_mode_enabled)
+  - [toggle_studio_mode](#toggle_studio_mode)
+  - [get_preview_scene](#get_preview_scene)
+  - [set_preview_scene](#set_preview_scene)
+  - [list_hotkeys](#list_hotkeys)
+  - [trigger_hotkey_by_name](#trigger_hotkey_by_name)
 - [Common Patterns](#common-patterns)
 - [Error Handling](#error-handling)
 
@@ -67,7 +95,7 @@ Comprehensive documentation for all 45 Model Context Protocol (MCP) tools provid
 
 ## Overview
 
-The agentic-obs MCP server provides 57 tools organized into 12 categories (8 tool groups + help) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
+The agentic-obs MCP server provides 69 tools organized into 14 categories (8 tool groups + help) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
 
 | Category | Tools | Description | Tool Group |
 |----------|-------|-------------|------------|
@@ -83,6 +111,8 @@ The agentic-obs MCP server provides 57 tools organized into 12 categories (8 too
 | Scene Design | 14 | Source creation and manipulation | Design |
 | Filters | 7 | Filter creation, toggle, settings | Filters |
 | Transitions | 5 | Transition control and configuration | Transitions |
+| Virtual Cam & Replay | 6 | Virtual camera and replay buffer control | Core |
+| Studio Mode & Hotkeys | 6 | Studio mode preview and hotkey triggers | Core |
 
 **General Prerequisites:**
 - OBS Studio 28+ running with WebSocket server enabled
@@ -1913,6 +1943,312 @@ Scene Design tools enable AI assistants to programmatically create and manipulat
 
 ---
 
+## Virtual Camera & Replay Buffer
+
+Tools for controlling OBS virtual camera output and replay buffer functionality.
+
+### get_virtual_cam_status
+
+**Purpose:** Check if the virtual camera output is currently active.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "active": true,
+  "message": "Virtual camera is active"
+}
+```
+
+**Use Cases:**
+- Check virtual camera state before toggling
+- Verify virtual camera is running for video calls
+- Monitor output status in dashboards
+
+---
+
+### toggle_virtual_cam
+
+**Purpose:** Toggle the virtual camera on or off.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "active": true,
+  "message": "Virtual camera is now active"
+}
+```
+
+**Use Cases:**
+- Start/stop virtual camera for video calls
+- Toggle as part of stream start/stop workflow
+- Enable OBS output for external applications
+
+---
+
+### get_replay_buffer_status
+
+**Purpose:** Check if the replay buffer is currently active.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "active": true,
+  "message": "Replay buffer is active"
+}
+```
+
+**Use Cases:**
+- Verify replay buffer is running before saving
+- Check buffer status during gameplay sessions
+- Monitor replay readiness
+
+---
+
+### toggle_replay_buffer
+
+**Purpose:** Start or stop the replay buffer.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "active": true,
+  "message": "Replay buffer is now active"
+}
+```
+
+**Use Cases:**
+- Enable replay buffer at stream start
+- Disable to save system resources
+- Part of gaming session workflow
+
+---
+
+### save_replay_buffer
+
+**Purpose:** Save the current replay buffer contents to disk.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "message": "Successfully saved replay buffer"
+}
+```
+
+**Prerequisites:**
+- Replay buffer must be active
+
+**Use Cases:**
+- Capture highlight moments during gameplay
+- Save instant replays on demand
+- Triggered by hotkeys or AI detection
+
+---
+
+### get_last_replay
+
+**Purpose:** Get the file path of the last saved replay buffer.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "saved_replay_path": "/recordings/replay-2024-01-15_14-30-00.mkv",
+  "message": "Last replay saved to: /recordings/replay-2024-01-15_14-30-00.mkv"
+}
+```
+
+**Use Cases:**
+- Retrieve path for post-processing
+- Verify replay was saved successfully
+- Build replay management workflows
+
+---
+
+## Studio Mode & Hotkeys
+
+Tools for controlling OBS studio mode (preview/program) and triggering hotkeys.
+
+### get_studio_mode_enabled
+
+**Purpose:** Check if studio mode is currently enabled.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "studio_mode_enabled": true,
+  "message": "Studio mode is enabled"
+}
+```
+
+**Use Cases:**
+- Check mode before preview operations
+- Verify workflow prerequisites
+- Monitor studio mode state
+
+---
+
+### toggle_studio_mode
+
+**Purpose:** Enable or disable studio mode.
+
+**Input:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `studio_mode_enabled` | boolean | Yes | True to enable, false to disable |
+
+**Example Request:**
+```json
+{
+  "studio_mode_enabled": true
+}
+```
+
+**Returns:**
+```json
+{
+  "studio_mode_enabled": true,
+  "message": "Studio mode is now enabled"
+}
+```
+
+**Use Cases:**
+- Enable for professional production workflows
+- Switch between simple and advanced modes
+- Prepare for multi-scene transitions
+
+---
+
+### get_preview_scene
+
+**Purpose:** Get the current preview scene in studio mode.
+
+**Input:** None
+
+**Prerequisites:**
+- Studio mode must be enabled
+
+**Returns:**
+```json
+{
+  "preview_scene": "Gaming",
+  "message": "Current preview scene: Gaming"
+}
+```
+
+**Use Cases:**
+- Check what scene is queued for transition
+- Verify preview before going live
+- Build preview/program UI
+
+---
+
+### set_preview_scene
+
+**Purpose:** Set the preview scene in studio mode.
+
+**Input:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `scene_name` | string | Yes | Name of the scene to preview |
+
+**Example Request:**
+```json
+{
+  "scene_name": "BRB"
+}
+```
+
+**Prerequisites:**
+- Studio mode must be enabled
+- Scene must exist
+
+**Returns:**
+```json
+{
+  "preview_scene": "BRB",
+  "message": "Preview scene set to: BRB"
+}
+```
+
+**Use Cases:**
+- Queue next scene for transition
+- Prepare scene switches in advance
+- Build professional production workflows
+
+---
+
+### list_hotkeys
+
+**Purpose:** List all available OBS hotkey names.
+
+**Input:** None
+
+**Returns:**
+```json
+{
+  "hotkeys": [
+    "OBSBasic.StartRecording",
+    "OBSBasic.StopRecording",
+    "OBSBasic.StartStreaming",
+    "OBSBasic.StopStreaming",
+    "OBSBasic.Screenshot"
+  ],
+  "count": 5,
+  "message": "Found 5 available hotkeys"
+}
+```
+
+**Use Cases:**
+- Discover available automation triggers
+- Build hotkey reference documentation
+- Find specific hotkey names for triggering
+
+---
+
+### trigger_hotkey_by_name
+
+**Purpose:** Trigger an OBS hotkey by its name.
+
+**Input:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `hotkey_name` | string | Yes | Name of the hotkey to trigger |
+
+**Example Request:**
+```json
+{
+  "hotkey_name": "OBSBasic.Screenshot"
+}
+```
+
+**Returns:**
+```json
+{
+  "hotkey_name": "OBSBasic.Screenshot",
+  "message": "Successfully triggered hotkey: OBSBasic.Screenshot"
+}
+```
+
+**Use Cases:**
+- Trigger screenshots programmatically
+- Automate custom OBS actions
+- Execute user-defined hotkey sequences
+
+---
+
 ## Common Patterns
 
 ### Pre-Flight Checks
@@ -2357,10 +2693,10 @@ Prompts use both tools and resources internally:
 
 ---
 
-**Document Version:** 5.0
-**Last Updated:** 2025-12-18
-**agentic-obs Version:** Phase 6.3 Complete
-**Total Tools:** 44 (6 tool groups)
-**Total Resources:** 3 types (scenes, screenshots, presets)
-**Total Prompts:** 10
+**Document Version:** 6.0
+**Last Updated:** 2025-12-21
+**agentic-obs Version:** Phase 11 Complete
+**Total Tools:** 69 (8 tool groups)
+**Total Resources:** 4 types (scenes, screenshots, screenshot-url, presets)
+**Total Prompts:** 13
 **Total API Endpoints:** 8

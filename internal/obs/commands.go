@@ -5,11 +5,13 @@ import (
 	"strings"
 
 	"github.com/andreykaipov/goobs/api/requests/filters"
+	"github.com/andreykaipov/goobs/api/requests/general"
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/sceneitems"
 	"github.com/andreykaipov/goobs/api/requests/scenes"
 	"github.com/andreykaipov/goobs/api/requests/sources"
 	"github.com/andreykaipov/goobs/api/requests/transitions"
+	"github.com/andreykaipov/goobs/api/requests/ui"
 	"github.com/andreykaipov/goobs/api/typedefs"
 )
 
@@ -1208,6 +1210,294 @@ func (c *Client) TriggerStudioModeTransition() error {
 			return fmt.Errorf("studio mode is not enabled. Enable studio mode in OBS to use this feature")
 		}
 		return fmt.Errorf("failed to trigger studio mode transition: %w", err)
+	}
+
+	return nil
+}
+
+// =============================================================================
+// Virtual Camera Types and Methods (FB-25)
+// =============================================================================
+
+// VirtualCamStatus represents the current virtual camera state.
+type VirtualCamStatus struct {
+	Active bool `json:"active"`
+}
+
+// GetVirtualCamStatus retrieves the current virtual camera status.
+func (c *Client) GetVirtualCamStatus() (*VirtualCamStatus, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Outputs.GetVirtualCamStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get virtual camera status: %w", err)
+	}
+
+	return &VirtualCamStatus{
+		Active: resp.OutputActive,
+	}, nil
+}
+
+// ToggleVirtualCam toggles the virtual camera on or off.
+// Returns the new active state.
+func (c *Client) ToggleVirtualCam() (bool, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := client.Outputs.ToggleVirtualCam()
+	if err != nil {
+		return false, fmt.Errorf("failed to toggle virtual camera: %w", err)
+	}
+
+	return resp.OutputActive, nil
+}
+
+// =============================================================================
+// Replay Buffer Types and Methods (FB-25)
+// =============================================================================
+
+// ReplayBufferStatus represents the current replay buffer state.
+type ReplayBufferStatus struct {
+	Active bool `json:"active"`
+}
+
+// GetReplayBufferStatus retrieves the current replay buffer status.
+func (c *Client) GetReplayBufferStatus() (*ReplayBufferStatus, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Outputs.GetReplayBufferStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get replay buffer status: %w", err)
+	}
+
+	return &ReplayBufferStatus{
+		Active: resp.OutputActive,
+	}, nil
+}
+
+// ToggleReplayBuffer toggles the replay buffer on or off.
+// Returns the new active state.
+func (c *Client) ToggleReplayBuffer() (bool, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := client.Outputs.ToggleReplayBuffer()
+	if err != nil {
+		return false, fmt.Errorf("failed to toggle replay buffer: %w", err)
+	}
+
+	return resp.OutputActive, nil
+}
+
+// SaveReplayBuffer saves the current replay buffer to disk.
+// The replay buffer must be active for this to succeed.
+func (c *Client) SaveReplayBuffer() error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Outputs.SaveReplayBuffer()
+	if err != nil {
+		return fmt.Errorf("failed to save replay buffer: %w", err)
+	}
+
+	return nil
+}
+
+// GetLastReplayBufferReplay retrieves the path to the last saved replay.
+func (c *Client) GetLastReplayBufferReplay() (string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Outputs.GetLastReplayBufferReplay()
+	if err != nil {
+		return "", fmt.Errorf("failed to get last replay path: %w", err)
+	}
+
+	return resp.SavedReplayPath, nil
+}
+
+// =============================================================================
+// Studio Mode Types and Methods (FB-26)
+// =============================================================================
+
+// GetStudioModeEnabled retrieves whether studio mode is enabled.
+func (c *Client) GetStudioModeEnabled() (bool, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return false, err
+	}
+
+	resp, err := client.Ui.GetStudioModeEnabled()
+	if err != nil {
+		return false, fmt.Errorf("failed to get studio mode status: %w", err)
+	}
+
+	return resp.StudioModeEnabled, nil
+}
+
+// SetStudioModeEnabled enables or disables studio mode.
+func (c *Client) SetStudioModeEnabled(enabled bool) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Ui.SetStudioModeEnabled(&ui.SetStudioModeEnabledParams{
+		StudioModeEnabled: &enabled,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set studio mode enabled=%v: %w", enabled, err)
+	}
+
+	return nil
+}
+
+// GetCurrentPreviewScene retrieves the current preview scene in studio mode.
+// Returns an error if studio mode is not enabled.
+func (c *Client) GetCurrentPreviewScene() (string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Scenes.GetCurrentPreviewScene()
+	if err != nil {
+		if strings.Contains(err.Error(), "studio mode") {
+			return "", fmt.Errorf("studio mode is not enabled. Enable studio mode in OBS to use preview scenes")
+		}
+		return "", fmt.Errorf("failed to get current preview scene: %w", err)
+	}
+
+	return resp.CurrentPreviewSceneName, nil
+}
+
+// SetCurrentPreviewScene sets the current preview scene in studio mode.
+// Returns an error if studio mode is not enabled.
+func (c *Client) SetCurrentPreviewScene(sceneName string) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Scenes.SetCurrentPreviewScene(&scenes.SetCurrentPreviewSceneParams{
+		SceneName: &sceneName,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "studio mode") {
+			return fmt.Errorf("studio mode is not enabled. Enable studio mode in OBS to use preview scenes")
+		}
+		return fmt.Errorf("failed to set preview scene to '%s': %w", sceneName, err)
+	}
+
+	return nil
+}
+
+// =============================================================================
+// Hotkey Methods (FB-26)
+// =============================================================================
+
+// TriggerHotkeyByName triggers a hotkey by its name.
+// Use GetHotkeyList() to discover available hotkey names.
+func (c *Client) TriggerHotkeyByName(hotkeyName string) error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.General.TriggerHotkeyByName(&general.TriggerHotkeyByNameParams{
+		HotkeyName: &hotkeyName,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to trigger hotkey '%s': %w", hotkeyName, err)
+	}
+
+	return nil
+}
+
+// GetHotkeyList retrieves all available hotkey names.
+func (c *Client) GetHotkeyList() ([]string, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.General.GetHotkeyList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get hotkey list: %w", err)
+	}
+
+	return resp.Hotkeys, nil
+}
+
+// StartVirtualCam starts the virtual camera.
+func (c *Client) StartVirtualCam() error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Outputs.StartVirtualCam()
+	if err != nil {
+		return fmt.Errorf("failed to start virtual camera: %w", err)
+	}
+
+	return nil
+}
+
+// StopVirtualCam stops the virtual camera.
+func (c *Client) StopVirtualCam() error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Outputs.StopVirtualCam()
+	if err != nil {
+		return fmt.Errorf("failed to stop virtual camera: %w", err)
+	}
+
+	return nil
+}
+
+// StartReplayBuffer starts the replay buffer.
+func (c *Client) StartReplayBuffer() error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Outputs.StartReplayBuffer()
+	if err != nil {
+		return fmt.Errorf("failed to start replay buffer: %w", err)
+	}
+
+	return nil
+}
+
+// StopReplayBuffer stops the replay buffer.
+func (c *Client) StopReplayBuffer() error {
+	client, err := c.getClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Outputs.StopReplayBuffer()
+	if err != nil {
+		return fmt.Errorf("failed to stop replay buffer: %w", err)
 	}
 
 	return nil

@@ -20,6 +20,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.11.0] - 2025-12-21
+
+### Phase 11: Virtual Camera, Replay Buffer, Studio Mode & Hotkeys
+
+**Summary:** FB-25 and FB-26 - Advanced OBS output control and preview features.
+
+### Added
+- **Virtual Camera & Replay Buffer** (FB-25, 6 tools):
+  - `get_virtual_cam_status`, `toggle_virtual_cam` - Virtual camera control
+  - `get_replay_buffer_status`, `toggle_replay_buffer` - Replay buffer state
+  - `save_replay_buffer`, `get_last_replay` - Capture highlights
+- **Studio Mode & Hotkeys** (FB-26, 6 tools):
+  - `get_studio_mode_enabled`, `toggle_studio_mode` - Studio mode control
+  - `get_preview_scene`, `set_preview_scene` - Preview/program workflow
+  - `list_hotkeys`, `trigger_hotkey_by_name` - Hotkey automation
+
+### Changed
+- `stream-teardown` prompt: Scene switch now happens BEFORE stopping stream (proper ordering)
+- `health-check` prompt: Added virtual cam, replay buffer, studio mode, and hotkey checks
+- `recording-workflow` prompt: Integrated replay buffer for highlight capture
+
+### Tests
+- 15 new test functions with 36 test cases for FB-25/FB-26 handlers
+- 3 integration workflow tests (virtual cam, studio mode, hotkeys)
+
+### Metrics
+- **Tools:** 69 (+12)
+- **Resources:** 4 (unchanged)
+- **Prompts:** 13 (unchanged)
+
+---
+
+## [0.10.0] - 2025-12-20
+
+### Phase 10: Filters & Transitions
+
+**Summary:** FB-23 and FB-24 - Source filter management and scene transition control.
+
+### Added
+- **Filters Tool Group** (FB-23, 7 tools):
+  - `list_source_filters`, `get_source_filter` - Query filters
+  - `create_source_filter`, `remove_source_filter` - Manage filters
+  - `toggle_source_filter`, `set_source_filter_settings` - Configure filters
+  - `list_filter_kinds` - Discover available filter types
+- **Transitions Tool Group** (FB-24, 5 tools):
+  - `list_transitions`, `get_current_transition` - Query transitions
+  - `set_current_transition`, `set_transition_duration` - Configure transitions
+  - `trigger_transition` - Trigger studio mode transition
+
+### Metrics
+- **Tools:** 57 (+12)
+- **Resources:** 4 (unchanged)
+- **Prompts:** 13 (unchanged)
+
+---
+
 ## [0.7.0] - 2025-12-18
 
 ### Phase 7: MCP Completions, Help Tool & Claude Skills

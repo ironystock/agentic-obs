@@ -162,16 +162,21 @@ Tracked features with unique identifiers for reference.
 | FB-14 | Brand & Design | Logo, favicon, ASCII banners, design system colors | Phase 9 |
 | FB-1 | Embedded Docs | Docs in HTTP/TUI via go:embed, goldmark/glamour rendering | Phase 9 |
 | FB-3 | MCP Elicitation | User confirmation for high-risk tools (streaming, delete) | Phase 9 |
+| FB-23 | Filters Tool Group | 7 tools for source filter management | Phase 10 |
+| FB-24 | Transitions | 5 tools for scene transition control | Phase 10 |
+| FB-25 | Virtual Cam & Replay | 6 tools for virtual camera and replay buffer | Phase 11 |
+| FB-26 | Studio Mode & Hotkeys | 6 tools for studio mode and hotkey control | Phase 11 |
 
 ### Active Backlog
 
 | ID | Name | Priority | Complexity | Dependencies | Description |
 |----|------|----------|------------|--------------|-------------|
-| FB-23 | Filters Tool Group | High | Medium | - | 7 tools for source filter management |
-| FB-24 | Transitions | High | Low | - | 5 tools for scene transition control |
 | FB-20 | Automation Rules | High | Medium | - | Event-triggered actions and macros |
-| FB-25 | Virtual Cam & Replay | Medium | Low | - | 6 tools for virtual camera and replay buffer |
-| FB-26 | Studio Mode & Hotkeys | Medium | Low | - | 5 tools for studio mode and hotkey control |
+| FB-27 | Dynamic Tool Config | High | Medium | - | Runtime tool group enable/disable via MCP tools |
+| FB-28 | Skills Update | High | Low | FB-25, FB-26 ✅ | Update streaming-assistant with virtual cam, replay, studio mode |
+| FB-29 | New Prompts | Medium | Low | FB-25, FB-26 ✅ | Add virtual-cam-control, replay-management prompts |
+| FB-30 | Scene Designer Filters | Medium | Low | FB-23 ✅ | Add filter section to scene-designer skill |
+| FB-31 | Studio Mode Skill | Medium | Medium | FB-26 ✅ | New studio-mode-operator skill for preview/program workflow |
 | FB-19 | Release Automation | Medium | Low | FB-18 ✅ | GitHub Actions workflow for automated releases |
 | FB-4 | SDK Migration | Medium | Medium | - | Process for tracking go-sdk updates |
 | FB-21 | Additional Resources | Medium | Low-Med | - | Sources, filters, audio as MCP resources |

@@ -1,8 +1,8 @@
 # agentic-obs Project Status
 
 **Status:** Active Development
-**Version:** 0.7.0
-**Updated:** 2025-12-19
+**Version:** 0.11.0
+**Updated:** 2025-12-21
 
 ---
 
@@ -23,7 +23,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **MCP Tools** | 45 |
+| **MCP Tools** | 69 |
 | **MCP Resources** | 4 |
 | **MCP Prompts** | 13 |
 | **Claude Skills** | 4 |

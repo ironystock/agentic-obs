@@ -8,7 +8,7 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
-- **57 MCP Tools**: Comprehensive control over OBS Studio operations in 8 tool groups
+- **69 MCP Tools**: Comprehensive control over OBS Studio operations in 8 tool groups
 - **Scene Management**: List, switch, create, and remove OBS scenes
 - **Scene Presets**: Save and restore source visibility configurations
 - **Recording Control**: Start, stop, pause, resume, and monitor recording
@@ -264,7 +264,29 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `set_transition_duration` | Set transition duration in milliseconds |
 | `trigger_transition` | Trigger studio mode transition (preview to program) |
 
-**Total: 57 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Help
+### Virtual Cam & Replay Buffer (6 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_virtual_cam_status` | Check if virtual camera output is active |
+| `toggle_virtual_cam` | Toggle virtual camera on/off |
+| `get_replay_buffer_status` | Check if replay buffer is active |
+| `toggle_replay_buffer` | Toggle replay buffer on/off |
+| `save_replay_buffer` | Save current replay buffer to file |
+| `get_last_replay` | Get the file path of the last saved replay |
+
+### Studio Mode & Hotkeys (6 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_studio_mode_enabled` | Check if studio mode is enabled |
+| `toggle_studio_mode` | Enable or disable studio mode |
+| `get_preview_scene` | Get the current preview scene (studio mode) |
+| `set_preview_scene` | Set the preview scene (studio mode) |
+| `list_hotkeys` | List all available OBS hotkeys |
+| `trigger_hotkey_by_name` | Trigger a hotkey by name |
+
+**Total: 69 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Help
 
 ## MCP Resources
 
@@ -315,7 +337,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (57 tools)
+│   ├── mcp/               # MCP server implementation (69 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard

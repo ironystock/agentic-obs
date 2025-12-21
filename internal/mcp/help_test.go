@@ -443,7 +443,7 @@ func TestGetOverviewHelp(t *testing.T) {
 		assert.Contains(t, help, "What is agentic-obs")
 		assert.Contains(t, help, "Quick Start")
 		assert.Contains(t, help, "Key Features")
-		assert.Contains(t, help, "57 Tools")
+		assert.Contains(t, help, "69 Tools")
 		assert.Contains(t, help, "4 Resource Types")
 	})
 

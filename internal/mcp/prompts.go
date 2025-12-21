@@ -219,21 +219,22 @@ func (s *Server) handleStreamTeardown(ctx context.Context, req *mcpsdk.GetPrompt
 
 	promptText := `Help me properly end my stream with these cleanup steps:
 
-1. **Stop Active Streaming**
+1. **Switch to Offline Scene FIRST**
+   - Use list_scenes to identify available scenes
+   - Look for scenes named "Offline", "BRB", "End Screen", or similar
+   - If an offline scene exists, use set_current_scene to switch to it IMMEDIATELY
+   - This ensures viewers see a clean "goodbye" screen before disconnection
+   - If no offline scene exists, note this for future improvement
+
+2. **Stop Active Streaming**
    - Use get_streaming_status to check if streaming is active
    - If streaming, use stop_streaming to end the stream
    - Confirm streaming has stopped successfully
 
-2. **Stop Active Recording**
+3. **Stop Active Recording**
    - Use get_recording_status to check if recording is active
    - If recording, use stop_recording to save the recording
    - Report the output file path where the recording was saved
-
-3. **Switch to Offline Scene**
-   - Use list_scenes to identify available scenes
-   - Look for scenes named "Offline", "BRB", "End Screen", or similar
-   - If an offline scene exists, use set_current_scene to switch to it
-   - If no offline scene exists, suggest creating one for future use
 
 4. **Mute All Audio Inputs**
    - Use list_sources to find all audio inputs
@@ -241,11 +242,22 @@ func (s *Server) handleStreamTeardown(ctx context.Context, req *mcpsdk.GetPrompt
    - If any inputs are unmuted, use toggle_input_mute to mute them
    - Confirm all audio is muted
 
-5. **Final Status Confirmation**
+5. **Disable Virtual Camera (if active)**
+   - Use get_virtual_cam_status to check if virtual camera is running
+   - If active, use toggle_virtual_cam to disable it
+   - Virtual camera should be stopped when not streaming
+
+6. **Check Replay Buffer**
+   - Use get_replay_buffer_status to check if replay buffer is active
+   - If user wants to save a final clip, use save_replay_buffer before disabling
+   - Optionally use toggle_replay_buffer to disable if not needed
+
+7. **Final Status Confirmation**
    - Verify streaming is stopped
    - Verify recording is stopped
    - Confirm scene is set to offline/end screen
    - Confirm all audio is muted
+   - Confirm virtual camera is disabled
 
 Provide a summary of all teardown actions completed.`
 
@@ -398,15 +410,36 @@ func (s *Server) handleHealthCheck(ctx context.Context, req *mcpsdk.GetPromptReq
    - Report if streaming is active or stopped
    - If streaming is active, report duration and connection status
 
-6. **Screenshot Sources**
+6. **Virtual Camera Status**
+   - Use get_virtual_cam_status to check virtual camera state
+   - Report if virtual camera is enabled or disabled
+   - Note: Virtual camera is used for video conferencing applications
+
+7. **Replay Buffer Status**
+   - Use get_replay_buffer_status to check replay buffer state
+   - Report if replay buffer is active or inactive
+   - Use get_last_replay to see last saved clip info if available
+   - Note: Replay buffer enables instant clip saving
+
+8. **Studio Mode Status**
+   - Use get_studio_mode_enabled to check if studio mode is active
+   - If active, use get_preview_scene to report the preview scene
+   - Note: Studio mode allows previewing scenes before switching live
+
+9. **Screenshot Sources**
    - Use list_screenshot_sources to check configured screenshot sources
    - Report which screenshot sources are active
    - Verify screenshot HTTP endpoints are accessible
 
-7. **Overall Health Assessment**
-   - Identify any warning signs or issues detected
-   - Provide recommendations for optimization
-   - Confirm overall OBS health status (Healthy, Warning, Critical)
+10. **Available Hotkeys**
+    - Use list_hotkeys to get available OBS hotkey names
+    - Report total hotkey count for automation reference
+
+11. **Overall Health Assessment**
+    - Summarize all component statuses
+    - Identify any warning signs or issues detected
+    - Provide recommendations for optimization
+    - Confirm overall OBS health status (Healthy, Warning, Critical)
 
 Provide a comprehensive health report with clear status indicators for each category.`
 
@@ -559,31 +592,45 @@ func (s *Server) handleRecordingWorkflow(ctx context.Context, req *mcpsdk.GetPro
    - If recording is active, report duration and output path
    - If recording is paused, show pause duration
 
-2. **Verify Scene is Ready**
+2. **Check Replay Buffer Status**
+   - Use get_replay_buffer_status to check if replay buffer is active
+   - Replay buffer allows saving the last X seconds as a clip at any time
+   - If inactive but desired, suggest enabling with toggle_replay_buffer
+   - Use get_last_replay to see info about the most recent saved clip
+
+3. **Verify Scene is Ready**
    - Use list_scenes to identify the current scene
    - Confirm the correct scene is active for recording
    - If wrong scene, suggest switching with set_current_scene
 
-3. **Verify Audio Configuration**
+4. **Verify Audio Configuration**
    - Use list_sources to identify audio inputs
    - For each audio input, check mute state with get_input_mute
    - Check audio levels with get_input_volume
    - Flag any audio sources that should be unmuted but aren't
 
-4. **Recording Control Guidance**
+5. **Recording Control Guidance**
    - If not recording: offer to start_recording after confirming setup is ready
    - If recording: offer to pause_recording or stop_recording
    - If paused: offer to resume_recording or stop_recording
    - Explain the implications of each action
 
-5. **Post-Recording Actions**
+6. **Replay Buffer Control**
+   - To save a highlight clip: use save_replay_buffer
+   - This saves the last few seconds/minutes (configured in OBS) to a file
+   - Great for capturing unexpected moments without recording everything
+   - Use get_last_replay to get the saved clip path
+
+7. **Post-Recording Actions**
    - When stopping recording, report the final output file path
    - Confirm recording duration and file size (if available)
+   - Remind about any replay buffer clips that were saved
    - Suggest next steps (review recording, start new recording, etc.)
 
-6. **Recording Best Practices**
+8. **Recording Best Practices**
    - Recommend checking disk space before starting long recordings
    - Suggest testing audio levels before recording important content
+   - Consider using replay buffer for highlight captures
    - Remind about scene setup and preset usage
 
 Provide a guided recording management experience with clear options.`

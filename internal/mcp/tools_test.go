@@ -1792,3 +1792,597 @@ func TestHandleListInputKinds(t *testing.T) {
 		assert.Contains(t, err.Error(), "not connected")
 	})
 }
+
+// ============================================================================
+// Virtual Camera Tool Tests (FB-25)
+// ============================================================================
+
+func TestHandleGetVirtualCamStatus(t *testing.T) {
+	t.Run("returns virtual cam status when inactive", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		_, result, err := server.handleGetVirtualCamStatus(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, false, resultMap["active"])
+	})
+
+	t.Run("returns virtual cam status when active", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetVirtualCamState(true)
+
+		_, result, err := server.handleGetVirtualCamStatus(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, true, resultMap["active"])
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleGetVirtualCamStatus(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleToggleVirtualCam(t *testing.T) {
+	t.Run("toggles virtual cam on when off", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetVirtualCamState(false)
+
+		_, result, err := server.handleToggleVirtualCam(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, true, resultMap["active"])
+		assert.Contains(t, resultMap["message"], "active")
+	})
+
+	t.Run("toggles virtual cam off when on", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetVirtualCamState(true)
+
+		_, result, err := server.handleToggleVirtualCam(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, false, resultMap["active"])
+		assert.Contains(t, resultMap["message"], "inactive")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleToggleVirtualCam(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+// ============================================================================
+// Replay Buffer Tool Tests (FB-25)
+// ============================================================================
+
+func TestHandleGetReplayBufferStatus(t *testing.T) {
+	t.Run("returns replay buffer status when inactive", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		_, result, err := server.handleGetReplayBufferStatus(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, false, resultMap["active"])
+	})
+
+	t.Run("returns replay buffer status when active", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetReplayBufferState(true)
+
+		_, result, err := server.handleGetReplayBufferStatus(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, true, resultMap["active"])
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleGetReplayBufferStatus(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleToggleReplayBuffer(t *testing.T) {
+	t.Run("toggles replay buffer on when off", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetReplayBufferState(false)
+
+		_, result, err := server.handleToggleReplayBuffer(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, true, resultMap["active"])
+		assert.Contains(t, resultMap["message"], "active")
+	})
+
+	t.Run("toggles replay buffer off when on", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetReplayBufferState(true)
+
+		_, result, err := server.handleToggleReplayBuffer(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, false, resultMap["active"])
+		assert.Contains(t, resultMap["message"], "inactive")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleToggleReplayBuffer(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleSaveReplayBuffer(t *testing.T) {
+	t.Run("saves replay buffer successfully when active", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetReplayBufferState(true)
+
+		_, result, err := server.handleSaveReplayBuffer(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		simpleResult, ok := result.(SimpleResult)
+		require.True(t, ok)
+		assert.Contains(t, simpleResult.Message, "saved")
+	})
+
+	t.Run("returns error when replay buffer not active", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetReplayBufferState(false)
+
+		_, _, err := server.handleSaveReplayBuffer(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not active")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleSaveReplayBuffer(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleGetLastReplay(t *testing.T) {
+	t.Run("returns last replay path successfully", func(t *testing.T) {
+		server, mock := testServer(t)
+		expectedPath := "/recordings/replay-2024-01-15_14-30-00.mkv"
+		mock.SetLastReplayPath(expectedPath)
+
+		_, result, err := server.handleGetLastReplay(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, expectedPath, resultMap["saved_replay_path"])
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleGetLastReplay(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+// ============================================================================
+// Studio Mode Tool Tests (FB-26)
+// ============================================================================
+
+func TestHandleGetStudioModeEnabled(t *testing.T) {
+	t.Run("returns studio mode disabled", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(false)
+
+		_, result, err := server.handleGetStudioModeEnabled(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, false, resultMap["studio_mode_enabled"])
+	})
+
+	t.Run("returns studio mode enabled", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(true)
+
+		_, result, err := server.handleGetStudioModeEnabled(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, true, resultMap["studio_mode_enabled"])
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleGetStudioModeEnabled(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleToggleStudioMode(t *testing.T) {
+	t.Run("enables studio mode successfully", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(false)
+
+		input := SetStudioModeInput{StudioModeEnabled: true}
+		_, result, err := server.handleToggleStudioMode(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, true, resultMap["studio_mode_enabled"])
+		assert.Contains(t, resultMap["message"], "enabled")
+
+		// Verify state changed
+		enabled, _ := mock.GetStudioModeEnabled()
+		assert.True(t, enabled)
+	})
+
+	t.Run("disables studio mode successfully", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(true)
+
+		input := SetStudioModeInput{StudioModeEnabled: false}
+		_, result, err := server.handleToggleStudioMode(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.Equal(t, false, resultMap["studio_mode_enabled"])
+		assert.Contains(t, resultMap["message"], "disabled")
+
+		// Verify state changed
+		enabled, _ := mock.GetStudioModeEnabled()
+		assert.False(t, enabled)
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		input := SetStudioModeInput{StudioModeEnabled: true}
+		_, _, err := server.handleToggleStudioMode(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleGetPreviewScene(t *testing.T) {
+	t.Run("returns preview scene when studio mode enabled", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(true)
+		mock.SetPreviewScene("Gaming")
+
+		_, result, err := server.handleGetPreviewScene(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Gaming", resultMap["preview_scene"])
+	})
+
+	t.Run("returns error when studio mode disabled", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(false)
+
+		_, _, err := server.handleGetPreviewScene(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "studio mode")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleGetPreviewScene(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleSetPreviewScene(t *testing.T) {
+	t.Run("sets preview scene successfully", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(true)
+
+		input := SetPreviewSceneInput{SceneName: "Gaming"}
+		_, result, err := server.handleSetPreviewScene(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Gaming", resultMap["preview_scene"])
+		assert.Contains(t, resultMap["message"], "Gaming")
+
+		// Verify scene changed
+		scene, _ := mock.GetCurrentPreviewScene()
+		assert.Equal(t, "Gaming", scene)
+	})
+
+	t.Run("returns error for non-existent scene", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(true)
+
+		input := SetPreviewSceneInput{SceneName: "NonExistent"}
+		_, _, err := server.handleSetPreviewScene(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error when studio mode disabled", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.SetStudioModeEnabledDirect(false)
+
+		input := SetPreviewSceneInput{SceneName: "Gaming"}
+		_, _, err := server.handleSetPreviewScene(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "studio mode")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		input := SetPreviewSceneInput{SceneName: "Gaming"}
+		_, _, err := server.handleSetPreviewScene(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+// ============================================================================
+// Hotkey Tool Tests (FB-26)
+// ============================================================================
+
+func TestHandleListHotkeys(t *testing.T) {
+	t.Run("lists hotkeys successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		_, result, err := server.handleListHotkeys(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, resultMap, "hotkeys")
+		assert.Contains(t, resultMap, "count")
+
+		hotkeys := resultMap["hotkeys"].([]string)
+		assert.Greater(t, len(hotkeys), 0)
+		// Verify some expected hotkeys from mock
+		assert.Contains(t, hotkeys, "OBSBasic.StartRecording")
+		assert.Contains(t, hotkeys, "OBSBasic.Screenshot")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleListHotkeys(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+func TestHandleTriggerHotkeyByName(t *testing.T) {
+	t.Run("triggers hotkey successfully", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := TriggerHotkeyInput{HotkeyName: "OBSBasic.Screenshot"}
+		_, result, err := server.handleTriggerHotkeyByName(context.Background(), nil, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "OBSBasic.Screenshot", resultMap["hotkey_name"])
+		assert.Contains(t, resultMap["message"], "triggered")
+	})
+
+	t.Run("returns error for non-existent hotkey", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		input := TriggerHotkeyInput{HotkeyName: "NonExistent.Hotkey"}
+		_, _, err := server.handleTriggerHotkeyByName(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		input := TriggerHotkeyInput{HotkeyName: "OBSBasic.Screenshot"}
+		_, _, err := server.handleTriggerHotkeyByName(context.Background(), nil, input)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+// ============================================================================
+// FB-25/FB-26 Integration Workflow Tests
+// ============================================================================
+
+func TestVirtualCamAndReplayBufferWorkflow(t *testing.T) {
+	t.Run("complete virtual cam and replay buffer workflow", func(t *testing.T) {
+		server, mock := testServer(t)
+
+		// 1. Check initial states - both should be off
+		vcStatus, _ := mock.GetVirtualCamStatus()
+		rbStatus, _ := mock.GetReplayBufferStatus()
+		assert.False(t, vcStatus.Active)
+		assert.False(t, rbStatus.Active)
+
+		// 2. Start virtual camera
+		_, _, err := server.handleToggleVirtualCam(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+		vcStatus, _ = mock.GetVirtualCamStatus()
+		assert.True(t, vcStatus.Active)
+
+		// 3. Start replay buffer
+		_, _, err = server.handleToggleReplayBuffer(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+		rbStatus, _ = mock.GetReplayBufferStatus()
+		assert.True(t, rbStatus.Active)
+
+		// 4. Save replay buffer (should work since it's active)
+		_, _, err = server.handleSaveReplayBuffer(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+
+		// 5. Get last replay path
+		_, result, err := server.handleGetLastReplay(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		assert.NotEmpty(t, resultMap["saved_replay_path"])
+
+		// 6. Stop both
+		_, _, err = server.handleToggleVirtualCam(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+		_, _, err = server.handleToggleReplayBuffer(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+
+		// 7. Verify both stopped
+		vcStatus, _ = mock.GetVirtualCamStatus()
+		rbStatus, _ = mock.GetReplayBufferStatus()
+		assert.False(t, vcStatus.Active)
+		assert.False(t, rbStatus.Active)
+	})
+}
+
+func TestStudioModeWorkflow(t *testing.T) {
+	t.Run("complete studio mode workflow", func(t *testing.T) {
+		server, mock := testServer(t)
+
+		// 1. Verify studio mode is off initially
+		enabled, _ := mock.GetStudioModeEnabled()
+		assert.False(t, enabled)
+
+		// 2. Enable studio mode
+		_, _, err := server.handleToggleStudioMode(context.Background(), nil, SetStudioModeInput{StudioModeEnabled: true})
+		require.NoError(t, err)
+		enabled, _ = mock.GetStudioModeEnabled()
+		assert.True(t, enabled)
+
+		// 3. Get preview scene (default from mock)
+		_, result, err := server.handleGetPreviewScene(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+		resultMap := result.(map[string]interface{})
+		initialPreview := resultMap["preview_scene"].(string)
+		assert.NotEmpty(t, initialPreview)
+
+		// 4. Set different preview scene
+		_, _, err = server.handleSetPreviewScene(context.Background(), nil, SetPreviewSceneInput{SceneName: "Gaming"})
+		require.NoError(t, err)
+
+		// 5. Verify preview scene changed
+		preview, _ := mock.GetCurrentPreviewScene()
+		assert.Equal(t, "Gaming", preview)
+
+		// 6. Disable studio mode
+		_, _, err = server.handleToggleStudioMode(context.Background(), nil, SetStudioModeInput{StudioModeEnabled: false})
+		require.NoError(t, err)
+		enabled, _ = mock.GetStudioModeEnabled()
+		assert.False(t, enabled)
+
+		// 7. Verify preview scene errors when studio mode off
+		_, _, err = server.handleGetPreviewScene(context.Background(), nil, struct{}{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "studio mode")
+	})
+}
+
+func TestHotkeyWorkflow(t *testing.T) {
+	t.Run("list and trigger hotkeys workflow", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		// 1. List all available hotkeys
+		_, listResult, err := server.handleListHotkeys(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+
+		resultMap := listResult.(map[string]interface{})
+		hotkeys := resultMap["hotkeys"].([]string)
+		assert.Greater(t, len(hotkeys), 0)
+
+		// 2. Trigger each hotkey from the list
+		for _, hotkeyName := range hotkeys[:3] { // Test first 3 hotkeys
+			input := TriggerHotkeyInput{HotkeyName: hotkeyName}
+			_, result, err := server.handleTriggerHotkeyByName(context.Background(), nil, input)
+			require.NoError(t, err, "Failed to trigger hotkey: %s", hotkeyName)
+
+			triggerResult := result.(map[string]interface{})
+			assert.Contains(t, triggerResult["message"], hotkeyName)
+		}
+	})
+}

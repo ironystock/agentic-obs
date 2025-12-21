@@ -103,6 +103,33 @@ type MockOBSClient struct {
 	ErrorOnSetCurrentSceneTransition         error
 	ErrorOnSetCurrentSceneTransitionDuration error
 	ErrorOnTriggerStudioModeTransition       error
+
+	// Virtual camera and replay buffer state (FB-25)
+	virtualCamActive   bool
+	replayBufferActive bool
+	lastReplayPath     string
+	hotkeys            []string
+	previewScene       string
+
+	// Error injection for virtual cam and replay buffer (FB-25)
+	ErrorOnGetVirtualCamStatus       error
+	ErrorOnToggleVirtualCam          error
+	ErrorOnStartVirtualCam           error
+	ErrorOnStopVirtualCam            error
+	ErrorOnGetReplayBufferStatus     error
+	ErrorOnToggleReplayBuffer        error
+	ErrorOnStartReplayBuffer         error
+	ErrorOnStopReplayBuffer          error
+	ErrorOnSaveReplayBuffer          error
+	ErrorOnGetLastReplayBufferReplay error
+
+	// Error injection for studio mode and hotkeys (FB-26)
+	ErrorOnGetStudioModeEnabled   error
+	ErrorOnSetStudioModeEnabled   error
+	ErrorOnGetCurrentPreviewScene error
+	ErrorOnSetCurrentPreviewScene error
+	ErrorOnTriggerHotkeyByName    error
+	ErrorOnGetHotkeyList          error
 }
 
 // NewMockOBSClient creates a new mock OBS client with default test data.
@@ -229,6 +256,22 @@ func NewMockOBSClient() *MockOBSClient {
 			Settings:     map[string]interface{}{},
 		},
 		studioModeEnabled: false,
+		// Virtual cam and replay buffer (FB-25)
+		virtualCamActive:   false,
+		replayBufferActive: false,
+		lastReplayPath:     "/recordings/replay-2024-01-15_14-30-00.mkv",
+		previewScene:       "Scene 1",
+		// Hotkeys (FB-26)
+		hotkeys: []string{
+			"OBSBasic.StartRecording",
+			"OBSBasic.StopRecording",
+			"OBSBasic.StartStreaming",
+			"OBSBasic.StopStreaming",
+			"OBSBasic.ToggleMute",
+			"OBSBasic.Screenshot",
+			"OBSBasic.ReplayBuffer",
+			"OBSBasic.SaveReplay",
+		},
 	}
 }
 
@@ -1748,8 +1791,8 @@ func (m *MockOBSClient) TriggerStudioModeTransition() error {
 
 // Helper methods for test setup
 
-// SetStudioModeEnabled sets the studio mode state for testing.
-func (m *MockOBSClient) SetStudioModeEnabled(enabled bool) {
+// SetStudioModeEnabledDirect sets the studio mode state directly for testing (no error return).
+func (m *MockOBSClient) SetStudioModeEnabledDirect(enabled bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.studioModeEnabled = enabled
@@ -1791,4 +1834,384 @@ func (m *MockOBSClient) SetCurrentTransitionDirect(transition *obs.TransitionDet
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.currentTransition = transition
+}
+
+// =============================================================================
+// Virtual Camera mock implementations (FB-25)
+// =============================================================================
+
+// GetVirtualCamStatus returns the virtual camera status.
+func (m *MockOBSClient) GetVirtualCamStatus() (*obs.VirtualCamStatus, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetVirtualCamStatus != nil {
+		return nil, m.ErrorOnGetVirtualCamStatus
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	return &obs.VirtualCamStatus{
+		Active: m.virtualCamActive,
+	}, nil
+}
+
+// ToggleVirtualCam toggles the virtual camera state.
+func (m *MockOBSClient) ToggleVirtualCam() (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnToggleVirtualCam != nil {
+		return false, m.ErrorOnToggleVirtualCam
+	}
+
+	if !m.connected {
+		return false, fmt.Errorf("not connected to OBS")
+	}
+
+	m.virtualCamActive = !m.virtualCamActive
+	return m.virtualCamActive, nil
+}
+
+// StartVirtualCam starts the virtual camera.
+func (m *MockOBSClient) StartVirtualCam() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnStartVirtualCam != nil {
+		return m.ErrorOnStartVirtualCam
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if m.virtualCamActive {
+		return fmt.Errorf("virtual camera already active")
+	}
+
+	m.virtualCamActive = true
+	return nil
+}
+
+// StopVirtualCam stops the virtual camera.
+func (m *MockOBSClient) StopVirtualCam() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnStopVirtualCam != nil {
+		return m.ErrorOnStopVirtualCam
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if !m.virtualCamActive {
+		return fmt.Errorf("virtual camera not active")
+	}
+
+	m.virtualCamActive = false
+	return nil
+}
+
+// =============================================================================
+// Replay Buffer mock implementations (FB-25)
+// =============================================================================
+
+// GetReplayBufferStatus returns the replay buffer status.
+func (m *MockOBSClient) GetReplayBufferStatus() (*obs.ReplayBufferStatus, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetReplayBufferStatus != nil {
+		return nil, m.ErrorOnGetReplayBufferStatus
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	return &obs.ReplayBufferStatus{
+		Active: m.replayBufferActive,
+	}, nil
+}
+
+// ToggleReplayBuffer toggles the replay buffer state.
+func (m *MockOBSClient) ToggleReplayBuffer() (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnToggleReplayBuffer != nil {
+		return false, m.ErrorOnToggleReplayBuffer
+	}
+
+	if !m.connected {
+		return false, fmt.Errorf("not connected to OBS")
+	}
+
+	m.replayBufferActive = !m.replayBufferActive
+	return m.replayBufferActive, nil
+}
+
+// StartReplayBuffer starts the replay buffer.
+func (m *MockOBSClient) StartReplayBuffer() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnStartReplayBuffer != nil {
+		return m.ErrorOnStartReplayBuffer
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if m.replayBufferActive {
+		return fmt.Errorf("replay buffer already active")
+	}
+
+	m.replayBufferActive = true
+	return nil
+}
+
+// StopReplayBuffer stops the replay buffer.
+func (m *MockOBSClient) StopReplayBuffer() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnStopReplayBuffer != nil {
+		return m.ErrorOnStopReplayBuffer
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if !m.replayBufferActive {
+		return fmt.Errorf("replay buffer not active")
+	}
+
+	m.replayBufferActive = false
+	return nil
+}
+
+// SaveReplayBuffer saves the current replay buffer.
+func (m *MockOBSClient) SaveReplayBuffer() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSaveReplayBuffer != nil {
+		return m.ErrorOnSaveReplayBuffer
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if !m.replayBufferActive {
+		return fmt.Errorf("replay buffer not active")
+	}
+
+	// In a real implementation, this would save the replay
+	return nil
+}
+
+// GetLastReplayBufferReplay returns the path to the last saved replay.
+func (m *MockOBSClient) GetLastReplayBufferReplay() (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetLastReplayBufferReplay != nil {
+		return "", m.ErrorOnGetLastReplayBufferReplay
+	}
+
+	if !m.connected {
+		return "", fmt.Errorf("not connected to OBS")
+	}
+
+	return m.lastReplayPath, nil
+}
+
+// =============================================================================
+// Studio Mode mock implementations (FB-26)
+// =============================================================================
+
+// GetStudioModeEnabled returns whether studio mode is enabled.
+func (m *MockOBSClient) GetStudioModeEnabled() (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetStudioModeEnabled != nil {
+		return false, m.ErrorOnGetStudioModeEnabled
+	}
+
+	if !m.connected {
+		return false, fmt.Errorf("not connected to OBS")
+	}
+
+	return m.studioModeEnabled, nil
+}
+
+// SetStudioModeEnabled enables or disables studio mode.
+func (m *MockOBSClient) SetStudioModeEnabled(enabled bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetStudioModeEnabled != nil {
+		return m.ErrorOnSetStudioModeEnabled
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	m.studioModeEnabled = enabled
+	return nil
+}
+
+// GetCurrentPreviewScene returns the current preview scene in studio mode.
+func (m *MockOBSClient) GetCurrentPreviewScene() (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetCurrentPreviewScene != nil {
+		return "", m.ErrorOnGetCurrentPreviewScene
+	}
+
+	if !m.connected {
+		return "", fmt.Errorf("not connected to OBS")
+	}
+
+	if !m.studioModeEnabled {
+		return "", fmt.Errorf("studio mode is not enabled")
+	}
+
+	return m.previewScene, nil
+}
+
+// SetCurrentPreviewScene sets the current preview scene in studio mode.
+func (m *MockOBSClient) SetCurrentPreviewScene(sceneName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.ErrorOnSetCurrentPreviewScene != nil {
+		return m.ErrorOnSetCurrentPreviewScene
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	if !m.studioModeEnabled {
+		return fmt.Errorf("studio mode is not enabled")
+	}
+
+	// Check if scene exists
+	found := false
+	for _, s := range m.scenes {
+		if s == sceneName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("scene '%s' not found", sceneName)
+	}
+
+	m.previewScene = sceneName
+	return nil
+}
+
+// =============================================================================
+// Hotkey mock implementations (FB-26)
+// =============================================================================
+
+// TriggerHotkeyByName triggers a hotkey by name.
+func (m *MockOBSClient) TriggerHotkeyByName(hotkeyName string) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnTriggerHotkeyByName != nil {
+		return m.ErrorOnTriggerHotkeyByName
+	}
+
+	if !m.connected {
+		return fmt.Errorf("not connected to OBS")
+	}
+
+	// Check if hotkey exists
+	found := false
+	for _, h := range m.hotkeys {
+		if h == hotkeyName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("hotkey '%s' not found", hotkeyName)
+	}
+
+	// In a real implementation, this would trigger the hotkey action
+	return nil
+}
+
+// GetHotkeyList returns the list of available hotkeys.
+func (m *MockOBSClient) GetHotkeyList() ([]string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetHotkeyList != nil {
+		return nil, m.ErrorOnGetHotkeyList
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	// Return a copy
+	result := make([]string, len(m.hotkeys))
+	copy(result, m.hotkeys)
+	return result, nil
+}
+
+// =============================================================================
+// Helper methods for FB-25/FB-26 test setup
+// =============================================================================
+
+// SetVirtualCamState sets the virtual camera state for testing.
+func (m *MockOBSClient) SetVirtualCamState(active bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.virtualCamActive = active
+}
+
+// SetReplayBufferState sets the replay buffer state for testing.
+func (m *MockOBSClient) SetReplayBufferState(active bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.replayBufferActive = active
+}
+
+// SetLastReplayPath sets the last replay path for testing.
+func (m *MockOBSClient) SetLastReplayPath(path string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lastReplayPath = path
+}
+
+// SetPreviewScene sets the preview scene for testing.
+func (m *MockOBSClient) SetPreviewScene(scene string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.previewScene = scene
+}
+
+// AddHotkey adds a hotkey for testing.
+func (m *MockOBSClient) AddHotkey(hotkeyName string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.hotkeys = append(m.hotkeys, hotkeyName)
 }
