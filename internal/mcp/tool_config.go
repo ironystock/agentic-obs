@@ -19,6 +19,10 @@ type ToolGroupMetadata struct {
 	ToolNames   []string // Tool names in this group
 }
 
+// ToolGroupOrder defines the canonical ordering of tool groups.
+// Used for consistent iteration and validation across the codebase.
+var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
+
 // toolGroupMetadata defines metadata for all tool groups.
 var toolGroupMetadata = map[string]*ToolGroupMetadata{
 	"Core": {
@@ -125,9 +129,7 @@ func (s *Server) handleGetToolConfig(ctx context.Context, request *mcpsdk.CallTo
 	var groups []ToolGroupInfo
 
 	// Build group info based on current state
-	groupOrder := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
-
-	for _, groupName := range groupOrder {
+	for _, groupName := range ToolGroupOrder {
 		// If filtering by group, skip non-matching groups
 		if input.Group != "" && input.Group != groupName {
 			continue
@@ -183,11 +185,10 @@ func (s *Server) handleSetToolConfig(ctx context.Context, request *mcpsdk.CallTo
 	start := time.Now()
 	log.Printf("Setting tool config: group=%s, enabled=%v, persist=%v", input.Group, input.Enabled, input.Persist)
 
-	// Validate group name
+	// Validate group name (before acquiring lock to reduce contention on invalid input)
 	meta := toolGroupMetadata[input.Group]
 	if meta == nil {
-		validGroups := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
-		return nil, nil, fmt.Errorf("invalid group name '%s'. Valid groups: %v", input.Group, validGroups)
+		return nil, nil, fmt.Errorf("invalid group name '%s'. Valid groups: %v", input.Group, ToolGroupOrder)
 	}
 
 	s.toolGroupMutex.Lock()
@@ -197,9 +198,11 @@ func (s *Server) handleSetToolConfig(ctx context.Context, request *mcpsdk.CallTo
 
 	// Persist if requested
 	persisted := false
+	var persistError string
 	if input.Persist && s.storage != nil {
 		if err := s.storage.SaveToolGroupConfig(ctx, s.convertToStorageConfig()); err != nil {
 			log.Printf("Warning: failed to persist tool config: %v", err)
+			persistError = err.Error()
 		} else {
 			persisted = true
 		}
@@ -219,6 +222,12 @@ func (s *Server) handleSetToolConfig(ctx context.Context, request *mcpsdk.CallTo
 		"message":        fmt.Sprintf("Tool group '%s' (%d tools) %s", input.Group, meta.ToolCount, action),
 	}
 
+	// Include persistence error if it occurred
+	if persistError != "" {
+		result["persist_error"] = persistError
+		result["message"] = fmt.Sprintf("Tool group '%s' (%d tools) %s (persistence failed: %s)", input.Group, meta.ToolCount, action, persistError)
+	}
+
 	// Note: In Phase 2, we would dynamically register/unregister tools here
 	// For now, the configuration is tracked but tools remain registered
 	// (handlers check group enabled state before executing)
@@ -236,9 +245,8 @@ func (s *Server) handleListToolGroups(ctx context.Context, request *mcpsdk.CallT
 	defer s.toolGroupMutex.RUnlock()
 
 	var groups []ToolGroupInfo
-	groupOrder := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
 
-	for _, groupName := range groupOrder {
+	for _, groupName := range ToolGroupOrder {
 		meta := toolGroupMetadata[groupName]
 		if meta == nil {
 			continue

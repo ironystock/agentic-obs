@@ -222,9 +222,7 @@ func TestHandleSetToolConfig(t *testing.T) {
 	t.Run("handles all tool groups", func(t *testing.T) {
 		server, _, _ := testServerForToolConfig(t)
 
-		groups := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
-
-		for _, group := range groups {
+		for _, group := range ToolGroupOrder {
 			input := SetToolConfigInput{Group: group, Enabled: false}
 			_, _, err := server.handleSetToolConfig(context.Background(), nil, input)
 			assert.NoError(t, err, "should handle group %s", group)
@@ -369,9 +367,7 @@ func TestSetGroupEnabled(t *testing.T) {
 	server, _, _ := testServerForToolConfig(t)
 
 	// Disable all groups
-	groups := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
-
-	for _, group := range groups {
+	for _, group := range ToolGroupOrder {
 		server.setGroupEnabled(group, false)
 	}
 
@@ -386,7 +382,7 @@ func TestSetGroupEnabled(t *testing.T) {
 	assert.False(t, server.toolGroups.Transitions)
 
 	// Re-enable all
-	for _, group := range groups {
+	for _, group := range ToolGroupOrder {
 		server.setGroupEnabled(group, true)
 	}
 
@@ -482,4 +478,44 @@ func TestMetaToolNames(t *testing.T) {
 	assert.Contains(t, MetaToolNames, "get_tool_config")
 	assert.Contains(t, MetaToolNames, "set_tool_config")
 	assert.Contains(t, MetaToolNames, "list_tool_groups")
+}
+
+// TestToolCountConsistency ensures ToolCount field matches len(ToolNames) for all groups.
+// This catches accidental desync when adding/removing tools from a group.
+func TestToolCountConsistency(t *testing.T) {
+	for _, groupName := range ToolGroupOrder {
+		t.Run(groupName, func(t *testing.T) {
+			meta := toolGroupMetadata[groupName]
+			require.NotNil(t, meta, "metadata should exist for %s", groupName)
+
+			assert.Equal(t, meta.ToolCount, len(meta.ToolNames),
+				"ToolCount (%d) must match len(ToolNames) (%d) for group %s",
+				meta.ToolCount, len(meta.ToolNames), groupName)
+		})
+	}
+}
+
+// TestToolGroupOrderConsistency ensures ToolGroupOrder matches toolGroupMetadata keys.
+func TestToolGroupOrderConsistency(t *testing.T) {
+	// Every group in ToolGroupOrder should exist in metadata
+	for _, groupName := range ToolGroupOrder {
+		_, exists := toolGroupMetadata[groupName]
+		assert.True(t, exists, "group %s in ToolGroupOrder missing from toolGroupMetadata", groupName)
+	}
+
+	// Every group in metadata should be in ToolGroupOrder
+	for groupName := range toolGroupMetadata {
+		found := false
+		for _, orderedName := range ToolGroupOrder {
+			if orderedName == groupName {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "group %s in toolGroupMetadata missing from ToolGroupOrder", groupName)
+	}
+
+	// Counts should match
+	assert.Equal(t, len(ToolGroupOrder), len(toolGroupMetadata),
+		"ToolGroupOrder and toolGroupMetadata should have same number of entries")
 }
