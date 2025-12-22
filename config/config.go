@@ -35,12 +35,14 @@ type Config struct {
 
 // ToolGroupConfig controls which tool categories are enabled
 type ToolGroupConfig struct {
-	Core    bool // Core OBS tools (scenes, recording, streaming, status)
-	Visual  bool // Visual monitoring tools (screenshots)
-	Layout  bool // Layout management tools (scene presets)
-	Audio   bool // Audio control tools
-	Sources bool // Source management tools
-	Design  bool // Scene design tools (source creation, transforms)
+	Core        bool // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
+	Visual      bool // Visual monitoring tools (screenshots)
+	Layout      bool // Layout management tools (scene presets)
+	Audio       bool // Audio control tools
+	Sources     bool // Source management tools
+	Design      bool // Scene design tools (source creation, transforms)
+	Filters     bool // Filter management tools
+	Transitions bool // Transition control tools
 }
 
 // WebServerConfig controls HTTP server settings
@@ -66,12 +68,14 @@ func DefaultConfig() *Config {
 		OBSPassword:   "",
 		DBPath:        filepath.Join(homeDir, ".agentic-obs", "db.sqlite"),
 		ToolGroups: ToolGroupConfig{
-			Core:    true,
-			Visual:  true,
-			Layout:  true,
-			Audio:   true,
-			Sources: true,
-			Design:  true,
+			Core:        true,
+			Visual:      true,
+			Layout:      true,
+			Audio:       true,
+			Sources:     true,
+			Design:      true,
+			Filters:     true,
+			Transitions: true,
 		},
 		WebServer: WebServerConfig{
 			Enabled:           true,
@@ -150,12 +154,14 @@ func (c *Config) PromptFirstRunSetup() error {
 
 	// Tool group prompts
 	fmt.Println("\n--- Tool Groups ---")
-	c.ToolGroups.Core = promptBool("Core OBS control (scenes, recording, streaming)", c.ToolGroups.Core)
+	c.ToolGroups.Core = promptBool("Core OBS control (scenes, recording, streaming, virtual cam, replay, studio mode)", c.ToolGroups.Core)
 	c.ToolGroups.Visual = promptBool("Visual monitoring (screenshot capture)", c.ToolGroups.Visual)
 	c.ToolGroups.Layout = promptBool("Layout management (scene presets)", c.ToolGroups.Layout)
 	c.ToolGroups.Audio = promptBool("Audio control (mute, volume)", c.ToolGroups.Audio)
 	c.ToolGroups.Sources = promptBool("Source management (visibility, settings)", c.ToolGroups.Sources)
 	c.ToolGroups.Design = promptBool("Scene design (create sources, transforms)", c.ToolGroups.Design)
+	c.ToolGroups.Filters = promptBool("Filter management (source filters)", c.ToolGroups.Filters)
+	c.ToolGroups.Transitions = promptBool("Transition control (scene transitions)", c.ToolGroups.Transitions)
 
 	// Webserver prompt
 	fmt.Println("\n--- HTTP Server ---")
@@ -186,6 +192,8 @@ func (c *Config) PromptFirstRunSetup() error {
 	fmt.Printf("Audio tools: %v\n", c.ToolGroups.Audio)
 	fmt.Printf("Source tools: %v\n", c.ToolGroups.Sources)
 	fmt.Printf("Design tools: %v\n", c.ToolGroups.Design)
+	fmt.Printf("Filter tools: %v\n", c.ToolGroups.Filters)
+	fmt.Printf("Transition tools: %v\n", c.ToolGroups.Transitions)
 	fmt.Printf("HTTP server: %v", c.WebServer.Enabled)
 	if c.WebServer.Enabled {
 		fmt.Printf(" (port %d)", c.WebServer.Port)
@@ -235,12 +243,14 @@ func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 		log.Printf("Warning: failed to load tool group config: %v", err)
 	} else {
 		cfg.ToolGroups = ToolGroupConfig{
-			Core:    toolGroups.Core,
-			Visual:  toolGroups.Visual,
-			Layout:  toolGroups.Layout,
-			Audio:   toolGroups.Audio,
-			Sources: toolGroups.Sources,
-			Design:  toolGroups.Design,
+			Core:        toolGroups.Core,
+			Visual:      toolGroups.Visual,
+			Layout:      toolGroups.Layout,
+			Audio:       toolGroups.Audio,
+			Sources:     toolGroups.Sources,
+			Design:      toolGroups.Design,
+			Filters:     toolGroups.Filters,
+			Transitions: toolGroups.Transitions,
 		}
 	}
 
@@ -289,12 +299,14 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 
 	// Save tool group preferences
 	toolGroups := storage.ToolGroupConfig{
-		Core:    cfg.ToolGroups.Core,
-		Visual:  cfg.ToolGroups.Visual,
-		Layout:  cfg.ToolGroups.Layout,
-		Audio:   cfg.ToolGroups.Audio,
-		Sources: cfg.ToolGroups.Sources,
-		Design:  cfg.ToolGroups.Design,
+		Core:        cfg.ToolGroups.Core,
+		Visual:      cfg.ToolGroups.Visual,
+		Layout:      cfg.ToolGroups.Layout,
+		Audio:       cfg.ToolGroups.Audio,
+		Sources:     cfg.ToolGroups.Sources,
+		Design:      cfg.ToolGroups.Design,
+		Filters:     cfg.ToolGroups.Filters,
+		Transitions: cfg.ToolGroups.Transitions,
 	}
 	if err := db.SaveToolGroupConfig(ctx, toolGroups); err != nil {
 		return fmt.Errorf("failed to save tool group config: %w", err)

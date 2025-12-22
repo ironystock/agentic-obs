@@ -156,8 +156,8 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 
 	toolGroups, err := s.storage.LoadToolGroupConfig(r.Context())
 	if err != nil {
-		log.Printf("Failed to load tool group config: %v", err)
-		toolGroups = storage.ToolGroupConfig{Core: true, Visual: true, Layout: true, Audio: true, Sources: true}
+		log.Printf("Warning: failed to load tool group config: %v", err)
+		toolGroups = storage.DefaultToolGroupConfig()
 	}
 
 	webServer, err := s.storage.LoadWebServerConfig(r.Context())
@@ -173,11 +173,14 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 			// Password intentionally omitted for security
 		},
 		"tool_groups": map[string]bool{
-			"core":    toolGroups.Core,
-			"visual":  toolGroups.Visual,
-			"layout":  toolGroups.Layout,
-			"audio":   toolGroups.Audio,
-			"sources": toolGroups.Sources,
+			"core":        toolGroups.Core,
+			"visual":      toolGroups.Visual,
+			"layout":      toolGroups.Layout,
+			"audio":       toolGroups.Audio,
+			"sources":     toolGroups.Sources,
+			"design":      toolGroups.Design,
+			"filters":     toolGroups.Filters,
+			"transitions": toolGroups.Transitions,
 		},
 		"web_server": map[string]interface{}{
 			"enabled": webServer.Enabled,
@@ -204,14 +207,17 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// Process tool_groups updates
 	if tg, ok := updates["tool_groups"].(map[string]interface{}); ok {
 		config := storage.ToolGroupConfig{
-			Core:    getBool(tg, "core", true),
-			Visual:  getBool(tg, "visual", true),
-			Layout:  getBool(tg, "layout", true),
-			Audio:   getBool(tg, "audio", true),
-			Sources: getBool(tg, "sources", true),
+			Core:        getBool(tg, "core", true),
+			Visual:      getBool(tg, "visual", true),
+			Layout:      getBool(tg, "layout", true),
+			Audio:       getBool(tg, "audio", true),
+			Sources:     getBool(tg, "sources", true),
+			Design:      getBool(tg, "design", true),
+			Filters:     getBool(tg, "filters", true),
+			Transitions: getBool(tg, "transitions", true),
 		}
 		if err := s.storage.SaveToolGroupConfig(r.Context(), config); err != nil {
-			log.Printf("Failed to save tool group config: %v", err)
+			log.Printf("Warning: failed to save tool group config: %v", err)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to save tool groups"})
 			return
 		}

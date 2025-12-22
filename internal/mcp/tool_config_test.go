@@ -563,3 +563,89 @@ func TestToolNamesAreUnique(t *testing.T) {
 		}
 	}
 }
+
+// Integration test: verify config persists across server restarts
+func TestToolConfigPersistsAcrossRestarts(t *testing.T) {
+	// Create shared database path
+	dbPath := filepath.Join(t.TempDir(), "persist-test.db")
+
+	// Phase 1: Create server, modify config, persist it
+	t.Run("persist config", func(t *testing.T) {
+		mock := testutil.NewMockOBSClient()
+		mock.Connect()
+
+		db, err := storage.New(context.Background(), storage.Config{Path: dbPath})
+		require.NoError(t, err)
+
+		server := &Server{
+			obsClient:  mock,
+			storage:    db,
+			toolGroups: DefaultToolGroupConfig(),
+			ctx:        context.Background(),
+		}
+
+		// Disable Audio group and persist
+		input := SetToolConfigInput{Group: "Audio", Enabled: false, Persist: true}
+		_, result, err := server.handleSetToolConfig(context.Background(), nil, input)
+		require.NoError(t, err)
+
+		resultMap := result.(map[string]interface{})
+		assert.True(t, resultMap["persisted"].(bool), "should have persisted")
+		assert.False(t, server.toolGroups.Audio, "Audio should be disabled in memory")
+
+		// Close the database (simulating server shutdown)
+		db.Close()
+	})
+
+	// Phase 2: Create new server instance, verify config was loaded from storage
+	t.Run("verify config loaded on restart", func(t *testing.T) {
+		mock := testutil.NewMockOBSClient()
+		mock.Connect()
+
+		// Open same database
+		db, err := storage.New(context.Background(), storage.Config{Path: dbPath})
+		require.NoError(t, err)
+		defer db.Close()
+
+		// Load config from storage (simulating what happens on server startup)
+		loadedConfig, err := db.LoadToolGroupConfig(context.Background())
+		require.NoError(t, err)
+
+		// Verify Audio was persisted as disabled
+		assert.False(t, loadedConfig.Audio, "Audio should still be disabled after restart")
+		assert.True(t, loadedConfig.Core, "Core should still be enabled")
+		assert.True(t, loadedConfig.Visual, "Visual should still be enabled")
+		assert.True(t, loadedConfig.Filters, "Filters should still be enabled")
+		assert.True(t, loadedConfig.Transitions, "Transitions should still be enabled")
+
+		// Create server with loaded config
+		server := &Server{
+			obsClient: mock,
+			storage:   db,
+			toolGroups: ToolGroupConfig{
+				Core:        loadedConfig.Core,
+				Visual:      loadedConfig.Visual,
+				Layout:      loadedConfig.Layout,
+				Audio:       loadedConfig.Audio,
+				Sources:     loadedConfig.Sources,
+				Design:      loadedConfig.Design,
+				Filters:     loadedConfig.Filters,
+				Transitions: loadedConfig.Transitions,
+			},
+			ctx: context.Background(),
+		}
+
+		// Verify server has correct config
+		assert.False(t, server.toolGroups.Audio, "Server should have Audio disabled")
+
+		// Query config through handler
+		getInput := GetToolConfigInput{Group: "Audio"}
+		_, getResult, err := server.handleGetToolConfig(context.Background(), nil, getInput)
+		require.NoError(t, err)
+
+		getResultMap := getResult.(map[string]interface{})
+		groups := getResultMap["groups"].([]ToolGroupInfo)
+		require.Len(t, groups, 1)
+		assert.False(t, groups[0].Enabled, "Audio group should show as disabled")
+	})
+}

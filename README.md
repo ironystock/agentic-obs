@@ -286,6 +286,27 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `list_hotkeys` | List all available OBS hotkeys |
 | `trigger_hotkey_by_name` | Trigger a hotkey by name |
 
+### Meta Tools (4 tools, always enabled)
+
+| Tool | Description |
+|------|-------------|
+| `help` | Get detailed help on tools, resources, prompts, workflows, or troubleshooting |
+| `get_tool_config` | Query current tool group configuration (enabled/disabled state) |
+| `set_tool_config` | Enable/disable tool groups at runtime (session-only or persistent) |
+| `list_tool_groups` | List all tool groups with descriptions and status |
+
+**Example: Disable Visual tools for a lighter setup**
+```json
+{
+  "tool": "set_tool_config",
+  "arguments": {
+    "group": "Visual",
+    "enabled": false,
+    "persist": true
+  }
+}
+```
+
 **Total: 72 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Meta (4 always-enabled tools)
 
 ## MCP Resources
