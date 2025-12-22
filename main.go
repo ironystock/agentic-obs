@@ -90,12 +90,14 @@ func main() {
 		HTTPPort:          cfg.WebServer.Port,
 		ThumbnailCacheSec: cfg.WebServer.ThumbnailCacheSec,
 		ToolGroups: mcp.ToolGroupConfig{
-			Core:    cfg.ToolGroups.Core,
-			Visual:  cfg.ToolGroups.Visual,
-			Layout:  cfg.ToolGroups.Layout,
-			Audio:   cfg.ToolGroups.Audio,
-			Sources: cfg.ToolGroups.Sources,
-			Design:  cfg.ToolGroups.Design,
+			Core:        cfg.ToolGroups.Core,
+			Visual:      cfg.ToolGroups.Visual,
+			Layout:      cfg.ToolGroups.Layout,
+			Audio:       cfg.ToolGroups.Audio,
+			Sources:     cfg.ToolGroups.Sources,
+			Design:      cfg.ToolGroups.Design,
+			Filters:     cfg.ToolGroups.Filters,
+			Transitions: cfg.ToolGroups.Transitions,
 		},
 	}
 

@@ -883,7 +883,9 @@ func (s *Server) registerToolHandlers() {
 		log.Println("Transition tools registered (5 tools)")
 	}
 
-	// Help tool - always enabled (not part of any tool group)
+	// Meta tools - always enabled, cannot be disabled
+	// These provide help and runtime tool configuration
+
 	mcpsdk.AddTool(s.mcpServer,
 		&mcpsdk.Tool{
 			Name:        "help",
@@ -891,8 +893,33 @@ func (s *Server) registerToolHandlers() {
 		},
 		s.handleHelp,
 	)
-	toolCount++
-	log.Println("Help tool registered")
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "get_tool_config",
+			Description: "Get current tool group configuration showing which tool groups are enabled/disabled. Use group parameter to filter by specific group, verbose=true to include tool names.",
+		},
+		s.handleGetToolConfig,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "set_tool_config",
+			Description: "Enable or disable a tool group at runtime. Changes are session-only by default; use persist=true to save to database for future sessions.",
+		},
+		s.handleSetToolConfig,
+	)
+
+	mcpsdk.AddTool(s.mcpServer,
+		&mcpsdk.Tool{
+			Name:        "list_tool_groups",
+			Description: "List all available tool groups with their descriptions and enabled status. Use include_disabled=false to only show enabled groups.",
+		},
+		s.handleListToolGroups,
+	)
+
+	toolCount += 4 // 4 meta-tools (help + 3 config tools)
+	log.Println("Meta tools registered (help, get_tool_config, set_tool_config, list_tool_groups)")
 
 	log.Printf("Tool handlers registered successfully (%d tools total)", toolCount)
 }

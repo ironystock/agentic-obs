@@ -58,7 +58,7 @@ Claude should recognize and describe the agentic-obs skills.
 
 ### 1. Streaming Assistant (`streaming-assistant`)
 
-**When to use**: Pre-stream setup, live streaming management, source orchestration
+**When to use**: Pre-stream setup, live streaming management, source orchestration, virtual camera, replay highlights
 
 **Key capabilities**:
 - Pre-stream checklist execution (audio, video, scene verification)
@@ -66,10 +66,14 @@ Claude should recognize and describe the agentic-obs skills.
 - Audio level monitoring and adjustment
 - Scene preset application for quick transitions
 - Stream health monitoring and diagnostics
+- Virtual camera control for video calls
+- Replay buffer management for highlight capture
+- Studio mode preview/program transitions
+- Hotkey automation for quick actions
 
-**Tools used**: `get_obs_status`, `list_scenes`, `list_sources`, `toggle_source_visibility`, `get_input_mute`, `get_input_volume`, `list_scene_presets`, `apply_scene_preset`, `start_streaming`, `stop_streaming`, `get_streaming_status`
+**Tools used**: `get_obs_status`, `list_scenes`, `list_sources`, `toggle_source_visibility`, `get_input_mute`, `get_input_volume`, `list_scene_presets`, `apply_scene_preset`, `start_streaming`, `stop_streaming`, `get_streaming_status`, `get_virtual_cam_status`, `toggle_virtual_cam`, `get_replay_buffer_status`, `toggle_replay_buffer`, `save_replay_buffer`, `get_last_replay`, `get_studio_mode_enabled`, `toggle_studio_mode`, `get_preview_scene`, `set_preview_scene`, `list_hotkeys`, `trigger_hotkey_by_name`
 
-**Best for**: Users who need AI assistance during live streaming sessions, including pre-stream setup, real-time adjustments, and post-stream cleanup.
+**Best for**: Users who need AI assistance during live streaming sessions, including pre-stream setup, real-time adjustments, highlight capture, virtual camera for video calls, and post-stream cleanup.
 
 ---
 
@@ -141,6 +145,9 @@ Claude will automatically select the appropriate skill based on your request. Ho
 | "Position this image in the bottom right" | `scene-designer` |
 | "Check all my audio levels" | `audio-engineer` |
 | "Switch to my gaming preset" | `preset-manager` |
+| "Start the virtual camera for my video call" | `streaming-assistant` |
+| "Save that moment as a highlight" | `streaming-assistant` |
+| "Preview the next scene before switching" | `streaming-assistant` |
 
 ## Using Skills Effectively
 
@@ -262,6 +269,6 @@ For issues with skills or agentic-obs:
 
 ---
 
-**Last Updated**: 2025-12-19
-**agentic-obs Version**: 0.8.0
-**Skills Version**: 1.0.0
+**Last Updated**: 2025-12-21
+**agentic-obs Version**: 0.12.0
+**Skills Version**: 1.1.0

@@ -20,6 +20,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.12.0] - 2025-12-21
+
+### Phase 12: Dynamic Tool Configuration
+
+**Summary:** FB-27 (Dynamic Tool Config) and FB-28 (Skills Update).
+
+### Added
+- **Dynamic Tool Configuration** (FB-27, 3 tools):
+  - `get_tool_config` - Query tool group configuration (enabled/disabled state, tool counts)
+  - `set_tool_config` - Enable/disable tool groups at runtime (session-only or persistent)
+  - `list_tool_groups` - List all tool groups with descriptions and status
+- **Meta-tools category** - 4 always-enabled tools that cannot be disabled:
+  - `help`, `get_tool_config`, `set_tool_config`, `list_tool_groups`
+- Thread-safe tool configuration with `sync.RWMutex`
+- Tool group metadata with tool counts and tool name lists
+- Persistence option for tool configuration via SQLite
+
+### Changed
+- "Help" category renamed to "Meta" tools for clarity
+- Help content updated to describe meta-tools functionality
+- **streaming-assistant skill** (FB-28): Added FB-25/26 tools and workflows:
+  - Virtual camera management (start/stop for video calls)
+  - Replay buffer highlight capture workflows
+  - Studio mode preview/program transitions
+  - Hotkey automation guidance
+  - Updated cleanup recommendations
+
+### Tests
+- 32 test cases across 9 test functions for tool config handlers
+- Tests for getGroupEnabled, setGroupEnabled, convertToStorageConfig helpers
+- Tool group metadata validation tests
+
+### Metrics
+- **Tools:** 72 (+3)
+- **Resources:** 4 (unchanged)
+- **Prompts:** 13 (unchanged)
+- **Skills:** 4 (unchanged)
+
+---
+
 ## [0.11.0] - 2025-12-21
 
 ### Phase 11: Virtual Camera, Replay Buffer, Studio Mode & Hotkeys
@@ -290,6 +330,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 | Version | Phase | Tools | Resources | Prompts | Date |
 |---------|-------|-------|-----------|---------|------|
+| 0.12.0 | 12 | 72 | 4 | 13 | 2025-12-21 |
+| 0.11.0 | 11 | 69 | 4 | 13 | 2025-12-21 |
+| 0.10.0 | 10 | 57 | 4 | 13 | 2025-12-20 |
 | 0.7.0 | 7 | 45 | 4 | 13 | 2025-12-18 |
 | 0.6.3 | 6.3 | 45 | 4 | 10 | 2025-12-17 |
 | 0.6.2 | 6.2 | 31 | 4 | 10 | 2025-12-17 |

@@ -119,6 +119,7 @@ type Server struct {
 	screenshotMgr  *screenshot.Manager
 	httpServer     *agenthttp.Server
 	toolGroups     ToolGroupConfig
+	toolGroupMutex sync.RWMutex // Protects toolGroups for runtime config changes
 	thumbnailCache *thumbnailCache
 	ctx            context.Context
 	cancel         context.CancelFunc

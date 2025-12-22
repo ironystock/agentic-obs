@@ -42,6 +42,21 @@ Activate the **streaming-assistant** skill when users request help with:
   - "End my stream"
   - "Stop streaming and clean up"
 
+- **Virtual camera for video calls**
+  - "Start the virtual camera"
+  - "Share my OBS output in Zoom"
+  - "Use OBS as my webcam"
+
+- **Highlight capture and replay buffer**
+  - "I want to capture highlights"
+  - "Save that clip!"
+  - "Start the replay buffer"
+
+- **Studio mode preview/program workflow**
+  - "Enable studio mode"
+  - "Preview the gaming scene"
+  - "Transition to preview"
+
 ## Core Responsibilities
 
 As the **streaming-assistant**, your role is to:
@@ -52,7 +67,10 @@ As the **streaming-assistant**, your role is to:
 4. **Manage source visibility** and scene transitions during live streams
 5. **Apply presets** for quick configuration changes
 6. **Handle stream lifecycle** (start, monitor, stop)
-7. **Troubleshoot issues** during active streaming sessions
+7. **Manage virtual camera** for video conferencing integration
+8. **Capture highlights** using replay buffer
+9. **Control studio mode** for professional preview/program workflow
+10. **Troubleshoot issues** during active streaming sessions
 
 ## Available Tools
 
@@ -82,6 +100,26 @@ As the **streaming-assistant**, your role is to:
 - `toggle_input_mute` - Mute/unmute audio source
 - `get_input_volume` - Retrieve current volume level (dB)
 - `set_input_volume` - Adjust volume level
+
+### Virtual Camera
+- `get_virtual_cam_status` - Check if virtual camera is active
+- `toggle_virtual_cam` - Start/stop virtual camera output
+
+### Replay Buffer
+- `get_replay_buffer_status` - Check if replay buffer is running
+- `toggle_replay_buffer` - Start/stop replay buffer
+- `save_replay_buffer` - Capture last N seconds as clip
+- `get_last_replay` - Get path to most recently saved replay
+
+### Studio Mode
+- `get_studio_mode_enabled` - Check if studio mode is active
+- `toggle_studio_mode` - Enable/disable studio mode
+- `get_preview_scene` - Get current preview scene
+- `set_preview_scene` - Set preview scene before transitioning
+
+### Hotkeys
+- `list_hotkeys` - List available OBS hotkey names
+- `trigger_hotkey_by_name` - Trigger any OBS hotkey
 
 ## Pre-Stream Workflow
 
@@ -202,6 +240,71 @@ User: "Is my stream okay?"
 5. Provide brief health summary
 ```
 
+### Virtual Camera Management
+```
+User: "Start the virtual camera for my Discord call"
+1. Use get_virtual_cam_status to check current state
+2. If not active, use toggle_virtual_cam to start
+3. Confirm: "Virtual camera is now active"
+4. Inform: "You can select 'OBS Virtual Camera' in Discord/Zoom/Teams"
+
+User: "Stop the virtual camera"
+1. Use toggle_virtual_cam to stop
+2. Confirm: "Virtual camera stopped"
+```
+
+### Highlight Capture with Replay Buffer
+```
+User: "I want to capture highlights"
+1. Use get_replay_buffer_status to check if running
+2. If not active, use toggle_replay_buffer to start
+3. Confirm: "Replay buffer is now active"
+4. Inform: "Say 'save that' or 'clip it' to capture last N seconds"
+
+User: "That was epic! Clip it!"
+1. Use save_replay_buffer to capture
+2. Use get_last_replay to get file path
+3. Report: "Clip saved to [path]"
+
+User: "Show me the last clip"
+1. Use get_last_replay
+2. Report file path for user to review
+```
+
+### Studio Mode Transitions
+```
+User: "Enable studio mode"
+1. Use toggle_studio_mode with enabled=true
+2. Confirm: "Studio mode enabled"
+3. Explain: "Use preview/program for smoother transitions"
+
+User: "Preview my gaming scene"
+1. Use set_preview_scene with "Gaming"
+2. Confirm: "Gaming scene is now in preview"
+3. Remind: "Use 'transition' when ready to go live with it"
+
+User: "Transition to the preview"
+1. Use trigger_transition (or relevant hotkey)
+2. Confirm: "Transitioned to Gaming scene"
+
+User: "Turn off studio mode"
+1. Use toggle_studio_mode with enabled=false
+2. Confirm: "Studio mode disabled"
+```
+
+### Hotkey Automation
+```
+User: "Show me available hotkeys"
+1. Use list_hotkeys
+2. Report key hotkeys organized by category
+3. Explain common uses (StartRecording, StopRecording, etc.)
+
+User: "Trigger the screenshot hotkey"
+1. Use list_hotkeys to find screenshot hotkey name
+2. Use trigger_hotkey_by_name with "OBSBasic.Screenshot"
+3. Confirm: "Screenshot captured"
+```
+
 ## Post-Stream Workflow
 
 When users request stream teardown:
@@ -227,6 +330,9 @@ Suggest:
 - Reviewing stream recording if enabled
 - Switching to a neutral scene
 - Muting audio inputs if finished
+- Stopping replay buffer if running (toggle_replay_buffer)
+- Stopping virtual camera if active (toggle_virtual_cam)
+- Disabling studio mode if enabled (toggle_studio_mode)
 - Applying a "Stream Ended" preset if available
 ```
 
@@ -485,6 +591,10 @@ The **streaming-assistant** skill is your go-to for complete live streaming work
 - Audio monitoring and adjustment
 - Stream health diagnostics
 - Preset-based configuration management
+- Virtual camera for video conferencing integration
+- Replay buffer for highlight capture
+- Studio mode for professional preview/program workflow
+- Hotkey automation for quick actions
 - Post-stream teardown
 
 Always prioritize user experience during active streams: be concise, confirm actions immediately, and proactively suggest next steps. Make streaming effortless.

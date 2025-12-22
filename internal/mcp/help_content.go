@@ -21,13 +21,13 @@ import "fmt"
 //
 // ============================================================================
 const (
-	HelpToolCount     = 69 // Total MCP tools (including help)
+	HelpToolCount     = 72 // Total MCP tools (including meta-tools)
 	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
 	HelpPromptCount   = 13 // Workflow prompts
 
 	// Tool counts by category (should sum to HelpToolCount)
 	HelpCoreToolCount        = 25 // Scene management, recording, streaming, status, virtual cam, replay buffer, studio mode, hotkeys
-	HelpHelpToolCount        = 1  // The help tool itself
+	HelpMetaToolCount        = 4  // Meta-tools: help, get_tool_config, set_tool_config, list_tool_groups (FB-27)
 	HelpSourcesToolCount     = 3  // Source management
 	HelpAudioToolCount       = 4  // Audio control
 	HelpLayoutToolCount      = 6  // Scene presets
@@ -123,9 +123,12 @@ func GetToolsHelp(verbose bool) string {
 **Status:**
 - get_obs_status - Overall OBS connection and state
 
-## Help Tool (%d tool) - Always Enabled
+## Meta Tools (%d tools) - Always Enabled
 
 - help - Get detailed help on tools, resources, prompts, workflows, or troubleshooting
+- get_tool_config - Get current tool group configuration
+- set_tool_config - Enable/disable tool groups at runtime
+- list_tool_groups - List all tool groups with their status
 
 ## Sources Tools (%d tools) - Source Management
 
@@ -195,7 +198,7 @@ func GetToolsHelp(verbose bool) string {
 - set_current_transition - Change active transition (Cut, Fade, Swipe, etc.)
 - set_transition_duration - Set transition duration in milliseconds
 - trigger_transition - Trigger studio mode transition (preview to program)
-`, HelpToolCount, HelpCoreToolCount, HelpHelpToolCount, HelpSourcesToolCount,
+`, HelpToolCount, HelpCoreToolCount, HelpMetaToolCount, HelpSourcesToolCount,
 		HelpAudioToolCount, HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
 		HelpFiltersToolCount, HelpTransitionsToolCount)
 
