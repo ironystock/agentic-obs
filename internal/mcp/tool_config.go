@@ -194,13 +194,15 @@ func (s *Server) handleSetToolConfig(ctx context.Context, request *mcpsdk.CallTo
 	s.toolGroupMutex.Lock()
 	previousState := s.getGroupEnabled(input.Group)
 	s.setGroupEnabled(input.Group, input.Enabled)
+	// Capture config snapshot while holding lock to avoid race condition
+	configSnapshot := s.convertToStorageConfig()
 	s.toolGroupMutex.Unlock()
 
-	// Persist if requested
+	// Persist if requested (using snapshot captured under lock)
 	persisted := false
 	var persistError string
 	if input.Persist && s.storage != nil {
-		if err := s.storage.SaveToolGroupConfig(ctx, s.convertToStorageConfig()); err != nil {
+		if err := s.storage.SaveToolGroupConfig(ctx, configSnapshot); err != nil {
 			log.Printf("Warning: failed to persist tool config: %v", err)
 			persistError = err.Error()
 		} else {
@@ -228,9 +230,18 @@ func (s *Server) handleSetToolConfig(ctx context.Context, request *mcpsdk.CallTo
 		result["message"] = fmt.Sprintf("Tool group '%s' (%d tools) %s (persistence failed: %s)", input.Group, meta.ToolCount, action, persistError)
 	}
 
-	// Note: In Phase 2, we would dynamically register/unregister tools here
-	// For now, the configuration is tracked but tools remain registered
-	// (handlers check group enabled state before executing)
+	// IMPORTANT: Tool filtering implementation notes
+	// Current behavior (Phase 1): All tools remain registered in MCP. The config
+	// state is tracked for future use and UI display, but tools are not actually
+	// disabled at runtime. This is intentional - dynamic tool registration/removal
+	// would require MCP server restart or protocol-level tool list updates.
+	//
+	// Future enhancement (Phase 2): Options include:
+	// 1. Handler-level checks: Each tool handler checks isGroupEnabled() and returns
+	//    an error like "Tool group 'X' is disabled" if the group is off.
+	// 2. Dynamic registration: Restart MCP server or use notifications to update
+	//    the tool list when config changes.
+	// 3. Startup filtering: Only register enabled groups on server initialization.
 
 	s.recordAction("set_tool_config", "Set tool configuration", input, result, true, time.Since(start))
 	return nil, result, nil

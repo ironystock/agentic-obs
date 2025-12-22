@@ -519,3 +519,47 @@ func TestToolGroupOrderConsistency(t *testing.T) {
 	assert.Equal(t, len(ToolGroupOrder), len(toolGroupMetadata),
 		"ToolGroupOrder and toolGroupMetadata should have same number of entries")
 }
+
+// TestTotalToolCountMatchesDocumentation validates that tool counts in metadata
+// sum to the documented total (72 tools = 68 group tools + 4 meta-tools).
+// This catches drift between code and documentation.
+func TestTotalToolCountMatchesDocumentation(t *testing.T) {
+	// Sum all tool counts from metadata
+	var groupToolCount int
+	for _, meta := range toolGroupMetadata {
+		groupToolCount += meta.ToolCount
+	}
+
+	// Add meta-tools
+	totalTools := groupToolCount + len(MetaToolNames)
+
+	// Expected total from documentation (CLAUDE.md, README.md, verify-docs.sh)
+	const expectedTotal = 72
+
+	assert.Equal(t, expectedTotal, totalTools,
+		"Total tool count (%d group tools + %d meta-tools = %d) should match documented %d",
+		groupToolCount, len(MetaToolNames), totalTools, expectedTotal)
+}
+
+// TestToolNamesAreUnique ensures no duplicate tool names exist across groups.
+func TestToolNamesAreUnique(t *testing.T) {
+	seen := make(map[string]string) // tool name -> group name
+
+	for groupName, meta := range toolGroupMetadata {
+		for _, toolName := range meta.ToolNames {
+			if existingGroup, exists := seen[toolName]; exists {
+				t.Errorf("Tool '%s' appears in both '%s' and '%s' groups",
+					toolName, existingGroup, groupName)
+			}
+			seen[toolName] = groupName
+		}
+	}
+
+	// Also check meta-tools don't conflict with group tools
+	for _, metaTool := range MetaToolNames {
+		if existingGroup, exists := seen[metaTool]; exists {
+			t.Errorf("Meta-tool '%s' conflicts with tool in group '%s'",
+				metaTool, existingGroup)
+		}
+	}
+}
