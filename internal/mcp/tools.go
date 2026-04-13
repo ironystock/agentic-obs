@@ -1158,8 +1158,12 @@ func (s *Server) handleListSources(ctx context.Context, request *mcpsdk.CallTool
 		return nil, nil, fmt.Errorf("failed to list sources: %w", err)
 	}
 
-	s.recordAction("list_sources", "List sources", nil, sources, true, time.Since(start))
-	return nil, sources, nil
+	result := map[string]interface{}{
+		"sources": sources,
+		"count":   len(sources),
+	}
+	s.recordAction("list_sources", "List sources", nil, result, true, time.Since(start))
+	return nil, result, nil
 }
 
 func (s *Server) handleToggleSourceVisibility(ctx context.Context, request *mcpsdk.CallToolRequest, input SourceVisibilityInput) (*mcpsdk.CallToolResult, any, error) {

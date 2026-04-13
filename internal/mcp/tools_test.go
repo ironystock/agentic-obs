@@ -365,6 +365,14 @@ func TestHandleListSources(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
+
+		// Result must be a map (object), not a bare slice — MCP spec requires
+		// tool results to be JSON objects at the top level so clients can
+		// deserialize them without type ambiguity.
+		resultMap, ok := result.(map[string]interface{})
+		assert.True(t, ok, "result should be map[string]interface{}, got %T", result)
+		assert.Contains(t, resultMap, "sources")
+		assert.Contains(t, resultMap, "count")
 	})
 }
 
