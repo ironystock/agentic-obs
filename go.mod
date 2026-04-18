@@ -3,7 +3,7 @@ module github.com/ironystock/agentic-obs
 go 1.25.5
 
 require (
-	github.com/andreykaipov/goobs v1.5.6
+	github.com/andreykaipov/goobs v1.8.3
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/glamour v0.10.0
