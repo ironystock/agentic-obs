@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Documentation restructuring with `design/` directory
 - Architecture Decision Records (ADRs)
 - docs-maintainer agent for documentation consistency
+- **`automation-setup` prompt (FB-20 follow-up)** — 14th MCP workflow prompt; guides users through creating, testing, and monitoring automation rules. Accepts optional `rule_type` ('event'|'schedule') and `trigger_event` arguments for targeted guidance.
+
+### Fixed
+- **Automation engine graceful shutdown** — `AutomationEngine.Stop()` now waits for in-flight event dispatch and rule execution goroutines via a `sync.WaitGroup`, preventing execution records from being stranded in the `running` status on restart.
+- **`delete_automation_rule` elicitation safety** — when the elicitation RPC itself errors, the handler now returns that error instead of silently falling through and deleting without user confirmation.
 
 ### Changed
 - **FB-15: mcpui-go extraction** - Extracted `pkg/mcpui/` to standalone module
@@ -17,6 +22,67 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Go SDK for MCP-UI protocol with 77.7% test coverage
   - 6 documentation files, 5 runnable examples
   - agentic-obs now depends on external module
+
+---
+
+## [0.13.0] - 2025-12-23
+
+### Phase 13: Automation Rules
+
+**Summary:** FB-20 - Event-triggered actions and scheduled automation for OBS.
+
+### Added
+- **Automation Rules** (FB-20, 9 tools):
+  - `list_automation_rules` - List all automation rules with status
+  - `get_automation_rule` - Get detailed rule configuration
+  - `create_automation_rule` - Create event-triggered or scheduled rules
+  - `update_automation_rule` - Modify existing rules
+  - `delete_automation_rule` - Remove rules (with confirmation)
+  - `enable_automation_rule` - Activate a rule
+  - `disable_automation_rule` - Deactivate a rule
+  - `trigger_automation_rule` - Manually trigger for testing
+  - `list_rule_executions` - View execution history
+- **AutomationEngine** - Background service for rule execution:
+  - Event-triggered rules (scene change, recording start, streaming, etc.)
+  - Cron-based scheduled rules (using `robfig/cron/v3`)
+  - Action execution with cooldown enforcement
+  - In-memory rule caching with hot-reload
+- **17 trigger event types**:
+  - Scene: `scene_changed`, `scene_created`, `scene_removed`
+  - Recording: `recording_started`, `recording_stopped`, `recording_paused`, `recording_resumed`
+  - Streaming: `streaming_started`, `streaming_stopped`
+  - Virtual Cam: `virtual_cam_started`, `virtual_cam_stopped`
+  - Replay Buffer: `replay_buffer_saved`
+  - Audio: `input_mute_changed`
+  - Sources: `source_visibility_changed`
+  - Transitions: `transition_started`
+  - UI: `studio_mode_changed`
+- **14 action types**:
+  - Scenes: `set_scene`
+  - Audio: `toggle_mute`, `set_mute`, `set_volume`
+  - Sources: `toggle_visibility`
+  - Recording: `start_recording`, `stop_recording`
+  - Streaming: `start_streaming`, `stop_streaming`
+  - Output: `toggle_virtual_cam`, `save_replay`, `trigger_hotkey`, `trigger_transition`
+  - Control: `delay` (ms)
+- **Storage migrations** (14-18) for automation rules and execution history
+- **New tool group**: "Automation" (9th tool group)
+
+### Changed
+- Expanded OBS event subscriptions to include Outputs, Inputs, SceneItems, Transitions, and UI
+- EventCallback interface expanded with 13 new callback methods
+- Server lifecycle now manages AutomationEngine start/stop
+- config.go ToolGroupConfig includes Automation option
+
+### Dependencies
+- Added `github.com/robfig/cron/v3` for cron expression parsing
+
+### Metrics
+- **Tools:** 81 (+9)
+- **Resources:** 4 (unchanged)
+- **Prompts:** 13 (unchanged)
+- **Skills:** 4 (unchanged)
+- **Tool Groups:** 9 (+1 Automation)
 
 ---
 

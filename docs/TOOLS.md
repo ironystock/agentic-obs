@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-Comprehensive documentation for all 72 Model Context Protocol (MCP) tools provided by the agentic-obs server.
+Comprehensive documentation for all 81 Model Context Protocol (MCP) tools provided by the agentic-obs server.
 
 ## Table of Contents
 
@@ -92,6 +92,16 @@ Comprehensive documentation for all 72 Model Context Protocol (MCP) tools provid
   - [set_preview_scene](#set_preview_scene)
   - [list_hotkeys](#list_hotkeys)
   - [trigger_hotkey_by_name](#trigger_hotkey_by_name)
+- [Automation Rules](#automation-rules)
+  - [list_automation_rules](#list_automation_rules)
+  - [get_automation_rule](#get_automation_rule)
+  - [create_automation_rule](#create_automation_rule)
+  - [update_automation_rule](#update_automation_rule)
+  - [delete_automation_rule](#delete_automation_rule)
+  - [enable_automation_rule](#enable_automation_rule)
+  - [disable_automation_rule](#disable_automation_rule)
+  - [trigger_automation_rule](#trigger_automation_rule)
+  - [list_rule_executions](#list_rule_executions)
 - [Common Patterns](#common-patterns)
 - [Error Handling](#error-handling)
 
@@ -99,7 +109,7 @@ Comprehensive documentation for all 72 Model Context Protocol (MCP) tools provid
 
 ## Overview
 
-The agentic-obs MCP server provides 72 tools organized into 14 categories (8 tool groups + 4 meta-tools) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
+The agentic-obs MCP server provides 81 tools organized into 15 categories (9 tool groups + 4 meta-tools) for comprehensive OBS Studio control. All tools communicate with OBS via WebSocket (default port 4455) and return structured JSON responses.
 
 | Category | Tools | Description | Tool Group |
 |----------|-------|-------------|------------|
@@ -117,6 +127,7 @@ The agentic-obs MCP server provides 72 tools organized into 14 categories (8 too
 | Transitions | 5 | Transition control and configuration | Transitions |
 | Virtual Cam & Replay | 6 | Virtual camera and replay buffer control | Core |
 | Studio Mode & Hotkeys | 6 | Studio mode preview and hotkey triggers | Core |
+| Automation Rules | 9 | Event-triggered actions and scheduled tasks | Automation |
 
 **General Prerequisites:**
 - OBS Studio 28+ running with WebSocket server enabled
@@ -2825,10 +2836,10 @@ Prompts use both tools and resources internally:
 
 ---
 
-**Document Version:** 6.0
-**Last Updated:** 2025-12-21
-**agentic-obs Version:** Phase 11 Complete
-**Total Tools:** 69 (8 tool groups)
+**Document Version:** 7.0
+**Last Updated:** 2025-12-23
+**agentic-obs Version:** Phase 13 Complete
+**Total Tools:** 81 (9 tool groups + Meta)
 **Total Resources:** 4 types (scenes, screenshots, screenshot-url, presets)
-**Total Prompts:** 13
+**Total Prompts:** 14
 **Total API Endpoints:** 8

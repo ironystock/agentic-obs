@@ -20,7 +20,7 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 - **Help & Discovery**: Built-in help tool with topic-based guidance
 - **Status Monitoring**: Query OBS connection and operational status
 - **4 MCP Resources**: Scenes, screenshots, screenshot URLs, and presets exposed as resources
-- **13 MCP Prompts**: Pre-built workflows for common tasks and diagnostics
+- **14 MCP Prompts**: Pre-built workflows for common tasks and diagnostics
 - **MCP Completions**: Autocomplete for prompt arguments and resource URIs
 - **Claude Skills**: Shareable skill packages for advanced AI orchestration
 - **TUI Dashboard**: Terminal interface for status, config, and history (`--tui` flag)
@@ -264,7 +264,7 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `set_transition_duration` | Set transition duration in milliseconds |
 | `trigger_transition` | Trigger studio mode transition (preview to program) |
 
-**Total: 72 tools in 8 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Meta (4 always-enabled tools)
+**Total: 81 tools in 9 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta (4 always-enabled tools)
 
 ## MCP Resources
 
@@ -302,6 +302,7 @@ Pre-built workflow prompts guide AI assistants through common OBS tasks:
 | `scene-designer` | scene_name, action (optional) | Visual layout creation with Design tools |
 | `source-management` | scene_name | Manage source visibility and properties |
 | `visual-setup` | monitor_scene (optional) | Configure screenshot monitoring |
+| `automation-setup` | rule_type (optional), trigger_event (optional) | Create and manage automation rules (FB-20) |
 
 Prompts combine multiple tools into cohesive workflows with best practices built-in.
 **Completions**: Autocomplete available for prompt arguments (preset names, screenshot sources, scene names).
@@ -315,7 +316,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (72 tools)
+│   ├── mcp/               # MCP server implementation (81 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard

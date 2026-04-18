@@ -126,8 +126,9 @@ Prompts provide pre-built workflow templates for common OBS operations:
 | `scene-designer` | scene_name, action (optional) | Visual layout creation with Design tools |
 | `source-management` | scene_name | Manage source visibility and properties |
 | `visual-setup` | monitor_scene (optional) | Configure screenshot monitoring |
+| `automation-setup` | rule_type (optional), trigger_event (optional) | Create and manage automation rules (FB-20) |
 
-**Total: 13 MCP prompts available** (with autocomplete for arguments)
+**Total: 14 MCP prompts available** (with autocomplete for arguments)
 
 ---
 

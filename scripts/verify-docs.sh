@@ -14,11 +14,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Current expected values - UPDATE THESE AFTER EACH PHASE
-EXPECTED_TOOLS=72
+EXPECTED_TOOLS=81
 EXPECTED_RESOURCES=4
-EXPECTED_PROMPTS=13
+EXPECTED_PROMPTS=14
 EXPECTED_API_ENDPOINTS=8
-CURRENT_PHASE=12
+CURRENT_PHASE=13
 
 echo "=========================================="
 echo "Documentation Consistency Verification"
@@ -42,11 +42,13 @@ check_pattern() {
 
     echo -n "Checking: $description... "
 
-    # Run grep and capture results, excluding the expected value
+    # Run grep and capture results, excluding the expected value.
+    # design/audits/ is excluded because it holds historical audit reports
+    # that are frozen-in-time snapshots, not live documentation.
     if [ -n "$exclude" ]; then
-        RESULTS=$(grep -rE "$pattern" . --include="*.md" 2>/dev/null | grep -v "$exclude" | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" || true)
+        RESULTS=$(grep -rE "$pattern" . --include="*.md" 2>/dev/null | grep -v "$exclude" | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" | grep -v "design/audits/" || true)
     else
-        RESULTS=$(grep -rE "$pattern" . --include="*.md" 2>/dev/null | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" || true)
+        RESULTS=$(grep -rE "$pattern" . --include="*.md" 2>/dev/null | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" | grep -v "design/audits/" || true)
     fi
 
     if [ -z "$RESULTS" ]; then
@@ -77,7 +79,7 @@ check_pattern "Incorrect API endpoint counts" "[0-9]+ (HTTP )?API endpoints" "$E
 echo ""
 echo "--- Unresolved Items ---"
 echo -n "Checking: TODO items... "
-TODO_RESULTS=$(grep -r "TODO" . --include="*.md" 2>/dev/null | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" || true)
+TODO_RESULTS=$(grep -r "TODO" . --include="*.md" 2>/dev/null | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" | grep -v "design/audits/" || true)
 if [ -z "$TODO_RESULTS" ]; then
     echo -e "${GREEN}OK${NC}"
 else
@@ -88,7 +90,7 @@ else
 fi
 
 echo -n "Checking: 'Coming Soon' references... "
-COMING_SOON=$(grep -ri "coming soon" . --include="*.md" 2>/dev/null | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" || true)
+COMING_SOON=$(grep -ri "coming soon" . --include="*.md" 2>/dev/null | grep -v "verify-docs.sh" | grep -v "DOC_UPDATE_CHECKLIST.md" | grep -v "design/audits/" || true)
 if [ -z "$COMING_SOON" ]; then
     echo -e "${GREEN}OK${NC}"
 else

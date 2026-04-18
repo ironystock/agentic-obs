@@ -6,7 +6,7 @@ Context for AI assistants working on the agentic-obs project.
 
 **agentic-obs** is an MCP (Model Context Protocol) server providing AI assistants with programmatic control over OBS Studio via the WebSocket API.
 
-**Current Status:** 72 Tools | 4 Resources | 13 Prompts | 4 Skills
+**Current Status:** 81 Tools | 4 Resources | 14 Prompts | 4 Skills
 
 ## Project Structure
 
@@ -17,9 +17,9 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/
 │   │   ├── server.go       # MCP server lifecycle
-│   │   ├── tools.go        # Tool registration (72 tools)
+│   │   ├── tools.go        # Tool registration (81 tools)
 │   │   ├── resources.go    # Resource handlers (4 types)
-│   │   ├── prompts.go      # Prompt definitions (13 prompts)
+│   │   ├── prompts.go      # Prompt definitions (14 prompts)
 │   │   ├── completions.go  # Autocomplete handler
 │   │   ├── elicitation.go  # User confirmation for high-risk tools
 │   │   ├── help.go         # Help tool
@@ -56,7 +56,7 @@ agentic-obs/
 AI Assistant (Claude)
     ↕ stdio (JSON-RPC)
 MCP Server (agentic-obs)
-    ├─ Tools (72) ─────────┐
+    ├─ Tools (81) ─────────┐
     ├─ Resources (4) ──────┼─→ OBS Client ─→ OBS Studio
     ├─ Prompts (13) ───────┘      ↕ WebSocket (4455)
     └─ Storage ─────────────→ SQLite
@@ -150,7 +150,7 @@ go mod tidy
 
 ## MCP Capabilities Summary
 
-### Tools (72 in 8 groups + meta)
+### Tools (81 in 9 groups + meta)
 
 | Group | Count | Examples |
 |-------|-------|----------|
@@ -162,6 +162,7 @@ go mod tidy
 | Design | 14 | `create_text_source`, `set_source_transform` |
 | Filters | 7 | `list_source_filters`, `toggle_source_filter` |
 | Transitions | 5 | `list_transitions`, `set_current_transition` |
+| Automation | 9 | `list_automation_rules`, `create_automation_rule`, `trigger_automation_rule` |
 | Meta | 4 | `help`, `get_tool_config`, `set_tool_config`, `list_tool_groups` (always enabled) |
 
 ### Resources (4 types)
@@ -175,7 +176,7 @@ go mod tidy
 
 ### Prompts (13 workflows)
 
-`stream-launch`, `stream-teardown`, `audio-check`, `visual-check`, `health-check`, `problem-detection`, `preset-switcher`, `recording-workflow`, `scene-organizer`, `quick-status`, `scene-designer`, `source-management`, `visual-setup`
+`stream-launch`, `stream-teardown`, `audio-check`, `visual-check`, `health-check`, `problem-detection`, `preset-switcher`, `recording-workflow`, `scene-organizer`, `quick-status`, `scene-designer`, `source-management`, `visual-setup`, `automation-setup`
 
 ## Key Design Decisions
 
@@ -184,7 +185,7 @@ For detailed rationale, see [design/decisions/](design/decisions/).
 1. **Pure Go SQLite** (`modernc.org/sqlite`) - No CGO for easy cross-compilation
 2. **Persistent OBS Connection** - Single 1:1 connection with auto-reconnect
 3. **Scenes as Resources** - Enable MCP notifications for state synchronization
-4. **Tool Groups** - Configurable categories (Core, Visual, Layout, Audio, Sources, Design, Filters, Transitions)
+4. **Tool Groups** - Configurable categories (Core, Visual, Layout, Audio, Sources, Design, Filters, Transitions, Automation)
 5. **Interface Pattern** - StatusProvider/ActionExecutor for web UI decoupling
 
 ## Documentation Links
