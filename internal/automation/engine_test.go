@@ -420,6 +420,64 @@ func TestEngineCooldown(t *testing.T) {
 	assert.Len(t, mock.GetActions(), 2)
 }
 
+// TestEngineOnErrorStop verifies that an action with OnError="stop" halts
+// the rule's action chain, while the default OnError="continue" proceeds.
+func TestEngineOnErrorStop(t *testing.T) {
+	db, cleanup := testAutomationDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	// Rule with three actions. Action #1 (set_scene) will fail because we
+	// prime mock.failNextCall. With OnError="stop" on the failing action,
+	// action #2 must NOT run.
+	rule := storage.AutomationRule{
+		Name:          "onerror-stop",
+		Enabled:       true,
+		TriggerType:   TriggerTypeManual,
+		TriggerConfig: map[string]interface{}{},
+		Actions: []storage.RuleAction{
+			{Type: ActionTypeStartRecording},
+			{
+				Type:       ActionTypeSetScene,
+				Parameters: map[string]interface{}{"scene_name": "Fails"},
+				OnError:    ActionErrorStop,
+			},
+			{Type: ActionTypeStopRecording},
+		},
+	}
+	id, err := db.CreateAutomationRule(ctx, rule)
+	require.NoError(t, err)
+
+	mock := NewMockOBSClient()
+	mock.failNextCall = true // causes the set_scene action to fail
+
+	engine := NewAutomationEngine(db, mock)
+	require.NoError(t, engine.Start())
+	defer engine.Stop()
+
+	require.NoError(t, engine.TriggerRule(id))
+
+	// Wait for execution record to be finalized so the test isn't timing-flaky.
+	assert.Eventually(t, func() bool {
+		execs, err := db.GetRuleExecutions(ctx, id, 10)
+		return err == nil && len(execs) == 1 && execs[0].Status == storage.ExecutionStatusFailed
+	}, 2*time.Second, 20*time.Millisecond)
+
+	actions := mock.GetActions()
+	assert.Contains(t, actions, "start_recording", "action #0 should have run")
+	assert.NotContains(t, actions, "stop_recording", "action #2 must NOT run after OnError=stop halts chain")
+
+	// Sanity: there is exactly one failed execution with three action results
+	// (action #0 success, action #1 failure, action #2 absent).
+	execs, err := db.GetRuleExecutions(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, execs, 1)
+	assert.Equal(t, storage.ExecutionStatusFailed, execs[0].Status)
+	assert.Len(t, execs[0].ActionResults, 2, "only the first two actions should have results")
+	assert.True(t, execs[0].ActionResults[0].Success, "action #0 succeeded")
+	assert.False(t, execs[0].ActionResults[1].Success, "action #1 failed")
+}
+
 func TestEngineMultipleActions(t *testing.T) {
 	db, cleanup := testAutomationDB(t)
 	defer cleanup()
