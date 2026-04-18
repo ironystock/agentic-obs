@@ -21,14 +21,39 @@ type NotificationFunc func(eventType EventType, data map[string]interface{})
 type EventType string
 
 const (
-	// EventTypeSceneCreated is fired when a new scene is created
+	// Scene events
 	EventTypeSceneCreated EventType = "scene_created"
-
-	// EventTypeSceneRemoved is fired when a scene is removed/deleted
 	EventTypeSceneRemoved EventType = "scene_removed"
-
-	// EventTypeSceneChanged is fired when the current program scene changes
 	EventTypeSceneChanged EventType = "scene_changed"
+
+	// Recording events
+	EventTypeRecordingStarted EventType = "recording_started"
+	EventTypeRecordingStopped EventType = "recording_stopped"
+	EventTypeRecordingPaused  EventType = "recording_paused"
+	EventTypeRecordingResumed EventType = "recording_resumed"
+
+	// Streaming events
+	EventTypeStreamingStarted EventType = "streaming_started"
+	EventTypeStreamingStopped EventType = "streaming_stopped"
+
+	// Virtual camera events
+	EventTypeVirtualCamStarted EventType = "virtual_cam_started"
+	EventTypeVirtualCamStopped EventType = "virtual_cam_stopped"
+
+	// Replay buffer events
+	EventTypeReplayBufferSaved EventType = "replay_buffer_saved"
+
+	// Input events
+	EventTypeInputMuteChanged EventType = "input_mute_changed"
+
+	// Scene item events
+	EventTypeSourceVisibilityChanged EventType = "source_visibility_changed"
+
+	// Transition events
+	EventTypeTransitionStarted EventType = "transition_started"
+
+	// Studio mode events
+	EventTypeStudioModeChanged EventType = "studio_mode_changed"
 )
 
 // NewEventHandler creates a new event handler with the specified notification function.
@@ -79,6 +104,125 @@ func (h *EventHandler) OnCurrentProgramSceneChanged(sceneName string) {
 	}
 }
 
+// OnRecordingStarted is called when recording begins.
+func (h *EventHandler) OnRecordingStarted() {
+	log.Printf("[OBS Event] Recording started")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeRecordingStarted, map[string]interface{}{})
+	}
+}
+
+// OnRecordingStopped is called when recording stops.
+func (h *EventHandler) OnRecordingStopped(outputPath string) {
+	log.Printf("[OBS Event] Recording stopped: %s", outputPath)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeRecordingStopped, map[string]interface{}{
+			"output_path": outputPath,
+		})
+	}
+}
+
+// OnRecordingPaused is called when recording is paused.
+func (h *EventHandler) OnRecordingPaused() {
+	log.Printf("[OBS Event] Recording paused")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeRecordingPaused, map[string]interface{}{})
+	}
+}
+
+// OnRecordingResumed is called when recording resumes after being paused.
+func (h *EventHandler) OnRecordingResumed() {
+	log.Printf("[OBS Event] Recording resumed")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeRecordingResumed, map[string]interface{}{})
+	}
+}
+
+// OnStreamingStarted is called when streaming begins.
+func (h *EventHandler) OnStreamingStarted() {
+	log.Printf("[OBS Event] Streaming started")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeStreamingStarted, map[string]interface{}{})
+	}
+}
+
+// OnStreamingStopped is called when streaming stops.
+func (h *EventHandler) OnStreamingStopped() {
+	log.Printf("[OBS Event] Streaming stopped")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeStreamingStopped, map[string]interface{}{})
+	}
+}
+
+// OnVirtualCamStarted is called when the virtual camera is started.
+func (h *EventHandler) OnVirtualCamStarted() {
+	log.Printf("[OBS Event] Virtual camera started")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeVirtualCamStarted, map[string]interface{}{})
+	}
+}
+
+// OnVirtualCamStopped is called when the virtual camera is stopped.
+func (h *EventHandler) OnVirtualCamStopped() {
+	log.Printf("[OBS Event] Virtual camera stopped")
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeVirtualCamStopped, map[string]interface{}{})
+	}
+}
+
+// OnReplayBufferSaved is called when a replay buffer is saved.
+func (h *EventHandler) OnReplayBufferSaved(savedPath string) {
+	log.Printf("[OBS Event] Replay buffer saved: %s", savedPath)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeReplayBufferSaved, map[string]interface{}{
+			"saved_path": savedPath,
+		})
+	}
+}
+
+// OnInputMuteChanged is called when an input's mute state changes.
+func (h *EventHandler) OnInputMuteChanged(inputName string, muted bool) {
+	log.Printf("[OBS Event] Input mute changed: %s = %v", inputName, muted)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeInputMuteChanged, map[string]interface{}{
+			"input_name": inputName,
+			"muted":      muted,
+		})
+	}
+}
+
+// OnSceneItemVisibilityChanged is called when a scene item's visibility changes.
+func (h *EventHandler) OnSceneItemVisibilityChanged(sceneName string, sceneItemId int, visible bool) {
+	log.Printf("[OBS Event] Scene item visibility changed: %s item %d = %v", sceneName, sceneItemId, visible)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeSourceVisibilityChanged, map[string]interface{}{
+			"scene_name":    sceneName,
+			"scene_item_id": sceneItemId,
+			"visible":       visible,
+		})
+	}
+}
+
+// OnTransitionStarted is called when a scene transition starts.
+func (h *EventHandler) OnTransitionStarted(transitionName string) {
+	log.Printf("[OBS Event] Transition started: %s", transitionName)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeTransitionStarted, map[string]interface{}{
+			"transition_name": transitionName,
+		})
+	}
+}
+
+// OnStudioModeChanged is called when studio mode is enabled or disabled.
+func (h *EventHandler) OnStudioModeChanged(enabled bool) {
+	log.Printf("[OBS Event] Studio mode changed: %v", enabled)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeStudioModeChanged, map[string]interface{}{
+			"enabled": enabled,
+		})
+	}
+}
+
 // EventLogger is a simple event callback implementation that just logs events
 // without triggering MCP notifications. Useful for testing and debugging.
 type EventLogger struct{}
@@ -101,6 +245,71 @@ func (l *EventLogger) OnSceneRemoved(sceneName string) {
 // OnCurrentProgramSceneChanged logs scene change events.
 func (l *EventLogger) OnCurrentProgramSceneChanged(sceneName string) {
 	log.Printf("[OBS Event Logger] Current program scene changed to: %s", sceneName)
+}
+
+// OnRecordingStarted logs recording start events.
+func (l *EventLogger) OnRecordingStarted() {
+	log.Printf("[OBS Event Logger] Recording started")
+}
+
+// OnRecordingStopped logs recording stop events.
+func (l *EventLogger) OnRecordingStopped(outputPath string) {
+	log.Printf("[OBS Event Logger] Recording stopped: %s", outputPath)
+}
+
+// OnRecordingPaused logs recording pause events.
+func (l *EventLogger) OnRecordingPaused() {
+	log.Printf("[OBS Event Logger] Recording paused")
+}
+
+// OnRecordingResumed logs recording resume events.
+func (l *EventLogger) OnRecordingResumed() {
+	log.Printf("[OBS Event Logger] Recording resumed")
+}
+
+// OnStreamingStarted logs streaming start events.
+func (l *EventLogger) OnStreamingStarted() {
+	log.Printf("[OBS Event Logger] Streaming started")
+}
+
+// OnStreamingStopped logs streaming stop events.
+func (l *EventLogger) OnStreamingStopped() {
+	log.Printf("[OBS Event Logger] Streaming stopped")
+}
+
+// OnVirtualCamStarted logs virtual camera start events.
+func (l *EventLogger) OnVirtualCamStarted() {
+	log.Printf("[OBS Event Logger] Virtual camera started")
+}
+
+// OnVirtualCamStopped logs virtual camera stop events.
+func (l *EventLogger) OnVirtualCamStopped() {
+	log.Printf("[OBS Event Logger] Virtual camera stopped")
+}
+
+// OnReplayBufferSaved logs replay buffer saved events.
+func (l *EventLogger) OnReplayBufferSaved(savedPath string) {
+	log.Printf("[OBS Event Logger] Replay buffer saved: %s", savedPath)
+}
+
+// OnInputMuteChanged logs input mute change events.
+func (l *EventLogger) OnInputMuteChanged(inputName string, muted bool) {
+	log.Printf("[OBS Event Logger] Input mute changed: %s = %v", inputName, muted)
+}
+
+// OnSceneItemVisibilityChanged logs scene item visibility change events.
+func (l *EventLogger) OnSceneItemVisibilityChanged(sceneName string, sceneItemId int, visible bool) {
+	log.Printf("[OBS Event Logger] Scene item visibility changed: %s item %d = %v", sceneName, sceneItemId, visible)
+}
+
+// OnTransitionStarted logs transition start events.
+func (l *EventLogger) OnTransitionStarted(transitionName string) {
+	log.Printf("[OBS Event Logger] Transition started: %s", transitionName)
+}
+
+// OnStudioModeChanged logs studio mode change events.
+func (l *EventLogger) OnStudioModeChanged(enabled bool) {
+	log.Printf("[OBS Event Logger] Studio mode changed: %v", enabled)
 }
 
 // FormatEventNotification formats an event into a structured notification message
@@ -146,9 +355,22 @@ func ShouldTriggerResourceUpdated(eventType EventType) bool {
 
 // EventMetrics tracks statistics about OBS events for monitoring and debugging.
 type EventMetrics struct {
-	SceneCreatedCount int
-	SceneRemovedCount int
-	SceneChangedCount int
+	SceneCreatedCount            int
+	SceneRemovedCount            int
+	SceneChangedCount            int
+	RecordingStartedCount        int
+	RecordingStoppedCount        int
+	RecordingPausedCount         int
+	RecordingResumedCount        int
+	StreamingStartedCount        int
+	StreamingStoppedCount        int
+	VirtualCamStartedCount       int
+	VirtualCamStoppedCount       int
+	ReplayBufferSavedCount       int
+	InputMuteChangedCount        int
+	SourceVisibilityChangedCount int
+	TransitionStartedCount       int
+	StudioModeChangedCount       int
 }
 
 // EventMetricsTracker is an event callback that tracks event counts.
@@ -179,6 +401,71 @@ func (t *EventMetricsTracker) OnSceneRemoved(sceneName string) {
 func (t *EventMetricsTracker) OnCurrentProgramSceneChanged(sceneName string) {
 	t.metrics.SceneChangedCount++
 	log.Printf("[Metrics] Scene changed: %s (total: %d)", sceneName, t.metrics.SceneChangedCount)
+}
+
+// OnRecordingStarted increments the recording started counter.
+func (t *EventMetricsTracker) OnRecordingStarted() {
+	t.metrics.RecordingStartedCount++
+}
+
+// OnRecordingStopped increments the recording stopped counter.
+func (t *EventMetricsTracker) OnRecordingStopped(outputPath string) {
+	t.metrics.RecordingStoppedCount++
+}
+
+// OnRecordingPaused increments the recording paused counter.
+func (t *EventMetricsTracker) OnRecordingPaused() {
+	t.metrics.RecordingPausedCount++
+}
+
+// OnRecordingResumed increments the recording resumed counter.
+func (t *EventMetricsTracker) OnRecordingResumed() {
+	t.metrics.RecordingResumedCount++
+}
+
+// OnStreamingStarted increments the streaming started counter.
+func (t *EventMetricsTracker) OnStreamingStarted() {
+	t.metrics.StreamingStartedCount++
+}
+
+// OnStreamingStopped increments the streaming stopped counter.
+func (t *EventMetricsTracker) OnStreamingStopped() {
+	t.metrics.StreamingStoppedCount++
+}
+
+// OnVirtualCamStarted increments the virtual cam started counter.
+func (t *EventMetricsTracker) OnVirtualCamStarted() {
+	t.metrics.VirtualCamStartedCount++
+}
+
+// OnVirtualCamStopped increments the virtual cam stopped counter.
+func (t *EventMetricsTracker) OnVirtualCamStopped() {
+	t.metrics.VirtualCamStoppedCount++
+}
+
+// OnReplayBufferSaved increments the replay buffer saved counter.
+func (t *EventMetricsTracker) OnReplayBufferSaved(savedPath string) {
+	t.metrics.ReplayBufferSavedCount++
+}
+
+// OnInputMuteChanged increments the input mute changed counter.
+func (t *EventMetricsTracker) OnInputMuteChanged(inputName string, muted bool) {
+	t.metrics.InputMuteChangedCount++
+}
+
+// OnSceneItemVisibilityChanged increments the source visibility changed counter.
+func (t *EventMetricsTracker) OnSceneItemVisibilityChanged(sceneName string, sceneItemId int, visible bool) {
+	t.metrics.SourceVisibilityChangedCount++
+}
+
+// OnTransitionStarted increments the transition started counter.
+func (t *EventMetricsTracker) OnTransitionStarted(transitionName string) {
+	t.metrics.TransitionStartedCount++
+}
+
+// OnStudioModeChanged increments the studio mode changed counter.
+func (t *EventMetricsTracker) OnStudioModeChanged(enabled bool) {
+	t.metrics.StudioModeChangedCount++
 }
 
 // GetMetrics returns the current event metrics.
@@ -227,5 +514,96 @@ func (c *CompositeEventCallback) OnSceneRemoved(sceneName string) {
 func (c *CompositeEventCallback) OnCurrentProgramSceneChanged(sceneName string) {
 	for _, callback := range c.callbacks {
 		callback.OnCurrentProgramSceneChanged(sceneName)
+	}
+}
+
+// OnRecordingStarted dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnRecordingStarted() {
+	for _, callback := range c.callbacks {
+		callback.OnRecordingStarted()
+	}
+}
+
+// OnRecordingStopped dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnRecordingStopped(outputPath string) {
+	for _, callback := range c.callbacks {
+		callback.OnRecordingStopped(outputPath)
+	}
+}
+
+// OnRecordingPaused dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnRecordingPaused() {
+	for _, callback := range c.callbacks {
+		callback.OnRecordingPaused()
+	}
+}
+
+// OnRecordingResumed dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnRecordingResumed() {
+	for _, callback := range c.callbacks {
+		callback.OnRecordingResumed()
+	}
+}
+
+// OnStreamingStarted dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnStreamingStarted() {
+	for _, callback := range c.callbacks {
+		callback.OnStreamingStarted()
+	}
+}
+
+// OnStreamingStopped dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnStreamingStopped() {
+	for _, callback := range c.callbacks {
+		callback.OnStreamingStopped()
+	}
+}
+
+// OnVirtualCamStarted dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnVirtualCamStarted() {
+	for _, callback := range c.callbacks {
+		callback.OnVirtualCamStarted()
+	}
+}
+
+// OnVirtualCamStopped dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnVirtualCamStopped() {
+	for _, callback := range c.callbacks {
+		callback.OnVirtualCamStopped()
+	}
+}
+
+// OnReplayBufferSaved dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnReplayBufferSaved(savedPath string) {
+	for _, callback := range c.callbacks {
+		callback.OnReplayBufferSaved(savedPath)
+	}
+}
+
+// OnInputMuteChanged dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnInputMuteChanged(inputName string, muted bool) {
+	for _, callback := range c.callbacks {
+		callback.OnInputMuteChanged(inputName, muted)
+	}
+}
+
+// OnSceneItemVisibilityChanged dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnSceneItemVisibilityChanged(sceneName string, sceneItemId int, visible bool) {
+	for _, callback := range c.callbacks {
+		callback.OnSceneItemVisibilityChanged(sceneName, sceneItemId, visible)
+	}
+}
+
+// OnTransitionStarted dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnTransitionStarted(transitionName string) {
+	for _, callback := range c.callbacks {
+		callback.OnTransitionStarted(transitionName)
+	}
+}
+
+// OnStudioModeChanged dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnStudioModeChanged(enabled bool) {
+	for _, callback := range c.callbacks {
+		callback.OnStudioModeChanged(enabled)
 	}
 }

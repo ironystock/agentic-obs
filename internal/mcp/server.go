@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ironystock/agentic-obs/internal/automation"
 	agenthttp "github.com/ironystock/agentic-obs/internal/http"
 	"github.com/ironystock/agentic-obs/internal/obs"
 	"github.com/ironystock/agentic-obs/internal/screenshot"
@@ -113,16 +114,17 @@ func (c *thumbnailCache) clear() {
 
 // Server represents the MCP server instance for OBS control
 type Server struct {
-	mcpServer      *mcpsdk.Server
-	obsClient      OBSClient
-	storage        *storage.DB
-	screenshotMgr  *screenshot.Manager
-	httpServer     *agenthttp.Server
-	toolGroups     ToolGroupConfig
-	toolGroupMutex sync.RWMutex // Protects toolGroups for runtime config changes
-	thumbnailCache *thumbnailCache
-	ctx            context.Context
-	cancel         context.CancelFunc
+	mcpServer        *mcpsdk.Server
+	obsClient        OBSClient
+	storage          *storage.DB
+	screenshotMgr    *screenshot.Manager
+	httpServer       *agenthttp.Server
+	automationEngine *automation.AutomationEngine
+	toolGroups       ToolGroupConfig
+	toolGroupMutex   sync.RWMutex // Protects toolGroups for runtime config changes
+	thumbnailCache   *thumbnailCache
+	ctx              context.Context
+	cancel           context.CancelFunc
 }
 
 // ServerConfig holds configuration for server initialization
@@ -150,6 +152,7 @@ type ToolGroupConfig struct {
 	Design      bool // Scene design tools (source creation, transforms)
 	Filters     bool // Filter management tools (FB-23)
 	Transitions bool // Transition control tools (FB-24)
+	Automation  bool // Automation rule tools (FB-20)
 }
 
 // DefaultToolGroupConfig returns config with all tool groups enabled
@@ -163,6 +166,7 @@ func DefaultToolGroupConfig() ToolGroupConfig {
 		Design:      true,
 		Filters:     true,
 		Transitions: true,
+		Automation:  true,
 	}
 }
 
@@ -222,6 +226,12 @@ func NewServer(config ServerConfig) (*Server, error) {
 	screenshotCfg := screenshot.DefaultConfig()
 	s.screenshotMgr = screenshot.NewManager(obsClient, db, screenshotCfg)
 
+	// Initialize automation engine (if enabled)
+	if config.ToolGroups.Automation {
+		s.automationEngine = automation.NewAutomationEngine(db, obsClient)
+		log.Println("Automation engine initialized")
+	}
+
 	// Create MCP server with completion handler
 	mcpServer := mcpsdk.NewServer(
 		&mcpsdk.Implementation{
@@ -273,6 +283,14 @@ func (s *Server) Start() error {
 		log.Printf("Screenshot manager started with %d workers", s.screenshotMgr.GetWorkerCount())
 	}
 
+	// Start automation engine (if enabled)
+	if s.automationEngine != nil {
+		if err := s.automationEngine.Start(); err != nil {
+			return fmt.Errorf("failed to start automation engine: %w", err)
+		}
+		log.Println("Automation engine started")
+	}
+
 	return nil
 }
 
@@ -301,7 +319,13 @@ func (s *Server) Stop() error {
 		s.thumbnailCache.stop()
 	}
 
-	// Stop screenshot manager first (depends on OBS connection)
+	// Stop automation engine first (depends on OBS connection)
+	if s.automationEngine != nil {
+		s.automationEngine.Stop()
+		log.Println("Automation engine stopped")
+	}
+
+	// Stop screenshot manager (depends on OBS connection)
 	if s.screenshotMgr != nil {
 		s.screenshotMgr.Stop()
 		log.Println("Screenshot manager stopped")
@@ -377,6 +401,15 @@ func (s *Server) SendResourceUpdated(ctx context.Context, uri string) error {
 // handleOBSEventNotification processes OBS event notifications and dispatches MCP resource notifications
 func (s *Server) handleOBSEventNotification(eventType obs.EventType, data map[string]interface{}) {
 	ctx := s.ctx
+
+	// Dispatch to automation engine for rule triggering
+	if s.automationEngine != nil && s.automationEngine.IsRunning() {
+		s.automationEngine.HandleEvent(automation.EventPayload{
+			EventType: string(eventType),
+			Data:      data,
+			Timestamp: time.Now(),
+		})
+	}
 
 	// Check if list changed (scene created or removed)
 	if obs.ShouldTriggerListChanged(eventType) {

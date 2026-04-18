@@ -7,3 +7,7 @@ manifest.json
 
 # Windows special files
 nul
+
+# Test output dumps
+test_out.txt
+test_*.out

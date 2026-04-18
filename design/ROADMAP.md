@@ -168,12 +168,12 @@ Tracked features with unique identifiers for reference.
 | FB-26 | Studio Mode & Hotkeys | 6 tools for studio mode and hotkey control | Phase 11 |
 | FB-27 | Dynamic Tool Config | 3 meta-tools for runtime tool group enable/disable | Phase 12 |
 | FB-28 | Skills Update | streaming-assistant with virtual cam, replay, studio mode, hotkeys | Phase 12 |
+| FB-20 | Automation Rules | 9 automation tools for event-triggered actions and scheduled tasks | Phase 13 |
 
 ### Active Backlog
 
 | ID | Name | Priority | Complexity | Dependencies | Description |
 |----|------|----------|------------|--------------|-------------|
-| FB-20 | Automation Rules | High | Medium | - | Event-triggered actions and macros |
 | FB-29 | New Prompts | Medium | Low | FB-25, FB-26 ✅ | Add virtual-cam-control, replay-management prompts |
 | FB-30 | Scene Designer Filters | Medium | Low | FB-23 ✅ | Add filter section to scene-designer skill |
 | FB-31 | Studio Mode Skill | Medium | Medium | FB-26 ✅ | New studio-mode-operator skill for preview/program workflow |

@@ -21,9 +21,9 @@ import "fmt"
 //
 // ============================================================================
 const (
-	HelpToolCount     = 72 // Total MCP tools (including meta-tools)
+	HelpToolCount     = 81 // Total MCP tools (including meta-tools)
 	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
-	HelpPromptCount   = 13 // Workflow prompts
+	HelpPromptCount   = 14 // Workflow prompts
 
 	// Tool counts by category (should sum to HelpToolCount)
 	HelpCoreToolCount        = 25 // Scene management, recording, streaming, status, virtual cam, replay buffer, studio mode, hotkeys
@@ -35,6 +35,7 @@ const (
 	HelpDesignToolCount      = 14 // Source creation and layout
 	HelpFiltersToolCount     = 7  // Filter management (FB-23)
 	HelpTransitionsToolCount = 5  // Transition control (FB-24)
+	HelpAutomationToolCount  = 9  // Automation rules (FB-20)
 )
 
 // GetOverviewHelp returns high-level overview of agentic-obs
@@ -53,7 +54,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 
 ## Key Features
 
-- **%d Tools** across 8 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions) + Help
+- **%d Tools** across 9 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta
 - **%d Resource Types** (scenes, screenshots, screenshot URLs, presets)
 - **%d Workflow Prompts** for common streaming/recording tasks
 - **Real-time Monitoring** via screenshot sources for AI visual inspection
@@ -73,6 +74,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 **Design Tools** (%d tools): Source creation, transforms, positioning
 **Filters Tools** (%d tools): Filter creation, toggle, settings
 **Transitions Tools** (%d tools): Transition selection, duration, trigger
+**Automation Tools** (%d tools): Event-triggered rules, schedules, macros
 
 ## Common Workflows
 
@@ -90,7 +92,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 - topic="troubleshooting" - Common issues and solutions
 `, HelpCoreToolCount, HelpSourcesToolCount, HelpAudioToolCount,
 			HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
-			HelpFiltersToolCount, HelpTransitionsToolCount)
+			HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount)
 	}
 
 	return help
@@ -198,9 +200,21 @@ func GetToolsHelp(verbose bool) string {
 - set_current_transition - Change active transition (Cut, Fade, Swipe, etc.)
 - set_transition_duration - Set transition duration in milliseconds
 - trigger_transition - Trigger studio mode transition (preview to program)
+
+## Automation Tools (%d tools) - Event-Triggered Rules & Schedules
+
+- list_automation_rules - List all automation rules with status
+- get_automation_rule - Get detailed rule configuration
+- create_automation_rule - Create event-triggered or scheduled rules
+- update_automation_rule - Modify existing rules
+- delete_automation_rule - Remove rules (with confirmation)
+- enable_automation_rule - Activate a rule
+- disable_automation_rule - Deactivate a rule
+- trigger_automation_rule - Manually trigger for testing
+- list_rule_executions - View execution history
 `, HelpToolCount, HelpCoreToolCount, HelpMetaToolCount, HelpSourcesToolCount,
 		HelpAudioToolCount, HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
-		HelpFiltersToolCount, HelpTransitionsToolCount)
+		HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount)
 
 	if verbose {
 		help += `
@@ -220,6 +234,7 @@ Tools are organized by capability. You can:
 - Use Design tools to build scenes programmatically
 - Use Filters tools to manage source effects (color correction, noise suppression)
 - Use Transitions tools to control scene change animations
+- Use Automation tools to create event-triggered rules and scheduled actions
 `
 	}
 
@@ -357,6 +372,14 @@ Pre-built prompts combine multiple tools into guided workflows.
 - Set up screenshot sources for AI visual monitoring
 - Configure capture cadence and image settings
 - Enable real-time visual inspection
+
+## Automation
+
+**automation-setup** - Create and manage automation rules (FB-20)
+- Set up event-triggered rules that react to OBS events
+- Configure scheduled rules with 6-field cron expressions (seconds precision)
+- Test with manual triggers, inspect execution history
+- Optional rule_type ('event'|'schedule') and trigger_event arguments for targeted guidance
 `, HelpPromptCount)
 
 	if verbose {

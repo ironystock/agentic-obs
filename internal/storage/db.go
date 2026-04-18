@@ -167,6 +167,48 @@ func (db *DB) migrate(ctx context.Context) error {
 
 		// Migration 13: Create index for filtering by tool name
 		`CREATE INDEX IF NOT EXISTS idx_action_history_tool ON action_history(tool_name)`,
+
+		// Migration 14: Create automation_rules table for event-triggered actions
+		`CREATE TABLE IF NOT EXISTS automation_rules (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL,
+			description TEXT,
+			enabled INTEGER DEFAULT 1,
+			trigger_type TEXT NOT NULL,
+			trigger_config TEXT NOT NULL,
+			actions TEXT NOT NULL,
+			cooldown_ms INTEGER DEFAULT 0,
+			priority INTEGER DEFAULT 0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			last_run TIMESTAMP,
+			run_count INTEGER DEFAULT 0
+		)`,
+
+		// Migration 15: Create index on automation_rules.enabled for fast lookups
+		`CREATE INDEX IF NOT EXISTS idx_automation_rules_enabled ON automation_rules(enabled)`,
+
+		// Migration 16: Create index on automation_rules.trigger_type for filtering
+		`CREATE INDEX IF NOT EXISTS idx_automation_rules_trigger_type ON automation_rules(trigger_type)`,
+
+		// Migration 17: Create rule_executions table for execution history
+		`CREATE TABLE IF NOT EXISTS rule_executions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			rule_id INTEGER NOT NULL,
+			rule_name TEXT NOT NULL,
+			trigger_type TEXT NOT NULL,
+			trigger_data TEXT,
+			started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			completed_at TIMESTAMP,
+			status TEXT NOT NULL,
+			action_results TEXT,
+			error TEXT,
+			duration_ms INTEGER,
+			FOREIGN KEY (rule_id) REFERENCES automation_rules(id) ON DELETE CASCADE
+		)`,
+
+		// Migration 18: Create index for rule_executions lookup by rule and time
+		`CREATE INDEX IF NOT EXISTS idx_rule_executions_rule_started ON rule_executions(rule_id, started_at DESC)`,
 	}
 
 	// Execute each migration in a transaction

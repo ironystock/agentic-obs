@@ -1,0 +1,252 @@
+================================================================================
+AGENTIC-OBS PROMPT AUDIT - FB-20 AUTOMATION RULES FEATURE
+================================================================================
+
+AUDIT DATE: 2025-12-23
+AUDITOR: Claude Code (MCP Prompts Specialist)
+BRANCH: feature/fb-25-26-virtual-cam-studio-mode
+
+
+================================================================================
+1. PROMPT COUNT VERIFICATION
+================================================================================
+
+VERIFICATION RESULTS:
+  - internal/mcp/prompts.go:     13 prompts (actual definitions)
+  - internal/mcp/help_content.go: 13 (HelpPromptCount constant)
+  - CLAUDE.md:                    13 (documentation)
+  - README.md:                    13 (user docs)
+
+STATUS: PASS - All counts synchronized
+
+
+PROMPT INVENTORY (Verified):
+  1.  stream-launch           - Pre-stream checklist
+  2.  stream-teardown         - Post-stream cleanup
+  3.  audio-check             - Audio verification
+  4.  visual-check            - Screenshot analysis (requires screenshot_source)
+  5.  health-check            - OBS diagnostic
+  6.  problem-detection       - Issue detection (requires screenshot_source)
+  7.  preset-switcher         - Scene preset management
+  8.  recording-workflow      - Recording session management
+  9.  scene-organizer         - Scene structure analysis
+  10. quick-status            - Brief status summary
+  11. scene-designer          - Visual layout creation (requires scene_name)
+  12. source-management       - Source visibility (requires scene_name)
+  13. visual-setup            - Screenshot monitoring setup
+
+
+================================================================================
+2. FB-20 AUTOMATION RULES FEATURE ANALYSIS
+================================================================================
+
+FB-20 ADDED 9 NEW AUTOMATION TOOLS:
+  1. list_automation_rules      - List rules with status
+  2. get_automation_rule        - Get rule configuration
+  3. create_automation_rule     - Create new rules
+  4. update_automation_rule     - Modify rules
+  5. delete_automation_rule     - Remove rules
+  6. enable_automation_rule     - Activate rules
+  7. disable_automation_rule    - Deactivate rules
+  8. trigger_automation_rule    - Test rules
+  9. list_rule_executions       - View execution history
+
+CAPABILITIES:
+  - Event-triggered actions (respond to OBS state changes)
+  - Scheduled tasks (time-based triggers)
+  - Full rule management (CRUD operations)
+  - Execution history tracking
+  - Manual testing/debugging
+
+
+================================================================================
+3. PROMPT COVERAGE BY TOOL CATEGORY
+================================================================================
+
+Domain              Tools    Prompts   Coverage Status
+─────────────────────────────────────────────────────
+Streaming/Record      3        3       GOOD (3 prompts)
+Diagnostics           4        3       GOOD (health-check, audio-check, visual-check, problem-detection)
+Scene Design         14        1       GOOD (scene-designer)
+Source Management     3        1       GOOD (source-management)
+Scene Presets         6        1       GOOD (preset-switcher)
+Visual/Monitoring     4        2       GOOD (visual-check, visual-setup)
+Quick Status          1        1       GOOD (quick-status)
+─────────────────────────────────────────────────────
+Filters               7        0       MISSING
+Transitions           5        0       MISSING
+AUTOMATION            9        0       MISSING <-- GAP IDENTIFIED
+─────────────────────────────────────────────────────
+TOTAL               56       13
+
+
+================================================================================
+4. GAP ANALYSIS - AUTOMATION RULES
+================================================================================
+
+PROBLEM: 9 Automation tools exist with ZERO dedicated workflow prompts
+
+IMPACT:
+  - Users must discover automation via tool help (manual process)
+  - No guided workflow for creating rules
+  - No best practices documentation in prompt format
+  - Reduced discoverability of automation capabilities
+  - AI cannot guide users through complex rule creation
+
+MISSING WORKFLOW AREAS:
+  1. Understanding automation concepts (events vs schedules)
+  2. Listing and reviewing existing rules
+  3. Creating new rules from scratch
+  4. Configuring trigger events and actions
+  5. Testing rules with manual triggers
+  6. Monitoring rule execution history
+  7. Debugging failed rules
+  8. Best practices and anti-patterns
+
+
+================================================================================
+5. RECOMMENDATION: ADD AUTOMATION-SETUP PROMPT
+================================================================================
+
+SPECIFICATION:
+
+Name:        automation-setup
+Description: Set up and configure automation rules for hands-free OBS control
+Arguments:
+  - rule_type (optional): 'event' or 'schedule' for targeted guidance
+  - trigger_event (optional): Specific event (e.g., 'stream_start')
+
+PROMPT WORKFLOW WOULD INCLUDE:
+
+  1. Explain automation concepts
+  2. List existing rules with list_automation_rules
+  3. Offer rule creation with create_automation_rule
+  4. Guide trigger and action configuration
+  5. Test rules with trigger_automation_rule
+  6. Review execution with list_rule_executions
+  7. Recommend best practices
+
+EXAMPLE USE:
+  User: "Help me set up automation for my stream"
+  → automation-setup (no args)
+  → Lists existing rules
+  → Asks what automation is needed
+  → Creates and tests rule
+  → Shows execution history
+  → Recommends best practices
+
+
+================================================================================
+6. IMPLEMENTATION IMPACT
+================================================================================
+
+PRIORITY: HIGH
+COMPLEXITY: LOW (follows existing prompt patterns)
+RISK: LOW (enhancement only, no breaking changes)
+EFFORT: 1-2 hours implementation + testing
+
+REQUIRED CHANGES:
+
+  1. internal/mcp/prompts.go
+     - Add handleAutomationSetup() function
+     - Register new prompt with s.mcpServer.AddPrompt()
+
+  2. internal/mcp/help_content.go
+     - Update HelpPromptCount: 13 → 14
+     - Add automation-setup to GetPromptsHelp()
+
+  3. CLAUDE.md
+     - Update prompt count: 13 → 14
+     - Update prompt list
+
+  4. README.md
+     - Update prompt count: 13 → 14
+
+OPTIONAL FUTURE ENHANCEMENTS:
+
+  - filter-management prompt (for 7 filter tools)
+  - transition-design prompt (for 5 transition tools)
+  - Automation examples in examples/prompts/
+  - Automation best practices documentation
+
+
+================================================================================
+7. RELATED GAPS (LOWER PRIORITY)
+================================================================================
+
+Filters:
+  - 7 tools available (list, get, create, remove, toggle, set, list_kinds)
+  - 0 dedicated prompts
+  - Recommendation: Consider filter-management prompt
+
+Transitions:
+  - 5 tools available (list, get_current, set, set_duration, trigger)
+  - 0 dedicated prompts
+  - Recommendation: Consider transition-design prompt
+
+
+================================================================================
+8. DOCUMENTATION SYNCHRONIZATION STATUS
+================================================================================
+
+File                        Count   Status  Notes
+─────────────────────────────────────────────────────────────────
+prompts.go                   13     SYNC    13 AddPrompt calls verified
+help_content.go              13     SYNC    HelpPromptCount = 13
+CLAUDE.md                    13     SYNC    Lists all 13 prompts
+README.md                    13     SYNC    "13 MCP Prompts" mentioned
+GetPromptsHelp()             13     SYNC    All prompts documented
+
+
+================================================================================
+9. KEY FINDINGS
+================================================================================
+
+STRENGTHS:
+  ✓ Prompt count is accurate across all documentation
+  ✓ All 13 existing prompts are well-implemented
+  ✓ Help documentation is comprehensive and accurate
+  ✓ Tool-to-prompt mapping is logical and consistent
+  ✓ Automation tools are fully functional (9 tools)
+
+ISSUES:
+  ✗ Zero prompts for Automation Rules (major gap)
+  ✗ Zero prompts for Filters (minor gap)
+  ✗ Zero prompts for Transitions (minor gap)
+  ✗ Help documentation doesn't mention automation workflows
+
+RISK LEVEL: LOW RISK for adding automation-setup
+  - Follows existing patterns
+  - Uses already-implemented tools
+  - No breaking changes
+
+
+================================================================================
+10. CONCLUSION
+================================================================================
+
+The existing 13 prompts are accurate and well-documented. However, the FB-20
+Automation Rules feature (9 tools) lacks any workflow guidance.
+
+STRONG RECOMMENDATION: Add automation-setup prompt to:
+  1. Guide users through automation rule creation
+  2. Document best practices for automation
+  3. Reduce friction discovering automation capabilities
+  4. Maintain consistency with other feature domains
+
+IMPACT: Add 1 prompt, bringing total from 13 → 14
+EFFORT: 1-2 hours
+VALUE: High - Enables comprehensive automation guidance
+
+
+================================================================================
+AUDIT REPORT FILES
+================================================================================
+
+Detailed audit report:   E:\code\agentic-obs\AUDIT_REPORT_FB20_PROMPTS.md
+Summary (this file):     E:\code\agentic-obs\AUDIT_FINDINGS_SUMMARY.txt
+
+
+================================================================================
+END OF AUDIT REPORT
+================================================================================
