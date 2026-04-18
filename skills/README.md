@@ -69,9 +69,10 @@ Claude should recognize and describe the agentic-obs skills.
 - Virtual camera control for video calls
 - Replay buffer management for highlight capture
 - Studio mode preview/program transitions
-- Hotkey automation for quick actions
+- Hotkey-based quick actions
+- Automation rules for event-triggered and scheduled workflows
 
-**Tools used**: `get_obs_status`, `list_scenes`, `list_sources`, `toggle_source_visibility`, `get_input_mute`, `get_input_volume`, `list_scene_presets`, `apply_scene_preset`, `start_streaming`, `stop_streaming`, `get_streaming_status`, `get_virtual_cam_status`, `toggle_virtual_cam`, `get_replay_buffer_status`, `toggle_replay_buffer`, `save_replay_buffer`, `get_last_replay`, `get_studio_mode_enabled`, `toggle_studio_mode`, `get_preview_scene`, `set_preview_scene`, `list_hotkeys`, `trigger_hotkey_by_name`
+**Tools used**: `get_obs_status`, `list_scenes`, `list_sources`, `toggle_source_visibility`, `get_input_mute`, `get_input_volume`, `list_scene_presets`, `apply_scene_preset`, `start_streaming`, `stop_streaming`, `get_streaming_status`, `get_virtual_cam_status`, `toggle_virtual_cam`, `get_replay_buffer_status`, `toggle_replay_buffer`, `save_replay_buffer`, `get_last_replay`, `get_studio_mode_enabled`, `toggle_studio_mode`, `get_preview_scene`, `set_preview_scene`, `list_hotkeys`, `trigger_hotkey_by_name`, `list_automation_rules`, `create_automation_rule`, `update_automation_rule`, `enable_automation_rule`, `disable_automation_rule`, `trigger_automation_rule`
 
 **Best for**: Users who need AI assistance during live streaming sessions, including pre-stream setup, real-time adjustments, highlight capture, virtual camera for video calls, and post-stream cleanup.
 
@@ -89,8 +90,9 @@ Claude should recognize and describe the agentic-obs skills.
 - Precise source positioning, scaling, and rotation
 - Multi-source layout composition
 - Crop and visibility control
+- Source filters: chroma key, color correction, sharpen, noise suppression
 
-**Tools used**: All 14 Design tools including `create_text_source`, `create_image_source`, `create_color_source`, `create_browser_source`, `set_source_transform`, `get_source_transform`, `set_source_crop`, `remove_source_from_scene`, `duplicate_source`, `set_source_index`, `set_source_blend_mode`, `set_source_locked`, `set_source_visible`, `get_scene_item_id`
+**Tools used**: All 14 Design tools plus the 7 Filters tools — `create_text_source`, `create_image_source`, `create_color_source`, `create_browser_source`, `set_source_transform`, `get_source_transform`, `set_source_crop`, `remove_source_from_scene`, `duplicate_source`, `set_source_index`, `set_source_blend_mode`, `set_source_locked`, `set_source_visible`, `get_scene_item_id`, `list_source_filters`, `get_source_filter`, `create_source_filter`, `remove_source_filter`, `toggle_source_filter`, `set_source_filter_settings`, `list_filter_kinds`
 
 **Best for**: Users designing stream layouts, creating overlays, positioning sources, or building complex visual compositions.
 
@@ -132,6 +134,30 @@ Claude should recognize and describe the agentic-obs skills.
 
 ---
 
+### 5. Studio Mode Operator (`studio-mode-operator`)
+
+**When to use**: Two-scene preview/program workflow — staging scenes
+privately before putting them live, rehearsing transitions, or directing
+a broadcast with a separation between what's being prepared and what's
+on air.
+
+**Key capabilities**:
+- Enabling and exiting studio mode
+- Preview-side scene staging (`set_preview_scene`)
+- Transition type selection (cut/fade/slide) and duration tuning
+- Promoting preview to program via `trigger_transition`
+- Emergency direct-cut guidance (when to bypass preview)
+- Reconnect-safe state inspection
+
+**Tools used**: `get_studio_mode_enabled`, `toggle_studio_mode`, `get_preview_scene`, `set_preview_scene`, `list_scenes`, `get_current_scene`, `set_current_scene`, `list_transitions`, `get_current_transition`, `set_current_transition`, `trigger_transition`
+
+**Best for**: Broadcast operators, multi-segment shows, and anyone who
+needs to stage scene changes privately before committing them to the
+live output. Use `streaming-assistant` for whole-session workflows that
+only incidentally touch studio mode.
+
+---
+
 ## Skill Selection Guide
 
 Claude will automatically select the appropriate skill based on your request. However, you can explicitly invoke a skill:
@@ -147,7 +173,11 @@ Claude will automatically select the appropriate skill based on your request. Ho
 | "Switch to my gaming preset" | `preset-manager` |
 | "Start the virtual camera for my video call" | `streaming-assistant` |
 | "Save that moment as a highlight" | `streaming-assistant` |
-| "Preview the next scene before switching" | `streaming-assistant` |
+| "Preview the next scene before switching" | `studio-mode-operator` |
+| "Auto-mute mic when I switch to BRB" | `streaming-assistant` (automation) |
+| "Add chroma key to my webcam" | `scene-designer` (filters) |
+| "Enable studio mode and rehearse the transition" | `studio-mode-operator` |
+| "Fade to the Intermission scene over 800ms" | `studio-mode-operator` |
 
 ## Using Skills Effectively
 
@@ -269,6 +299,7 @@ For issues with skills or agentic-obs:
 
 ---
 
-**Last Updated**: 2025-12-21
-**agentic-obs Version**: 0.12.0
-**Skills Version**: 1.1.0
+**Last Updated**: 2026-04-18
+**agentic-obs Version**: 0.13.0+ (Sprint 0.5 — Upstream Alignment)
+**Skills Version**: 1.2.0 — adds `studio-mode-operator`, filter coverage
+in `scene-designer`, automation coverage in `streaming-assistant`
