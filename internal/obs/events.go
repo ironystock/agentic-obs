@@ -27,10 +27,11 @@ const (
 	EventTypeSceneChanged EventType = "scene_changed"
 
 	// Recording events
-	EventTypeRecordingStarted EventType = "recording_started"
-	EventTypeRecordingStopped EventType = "recording_stopped"
-	EventTypeRecordingPaused  EventType = "recording_paused"
-	EventTypeRecordingResumed EventType = "recording_resumed"
+	EventTypeRecordingStarted     EventType = "recording_started"
+	EventTypeRecordingStopped     EventType = "recording_stopped"
+	EventTypeRecordingPaused      EventType = "recording_paused"
+	EventTypeRecordingResumed     EventType = "recording_resumed"
+	EventTypeRecordingFileChanged EventType = "recording_file_changed"
 
 	// Streaming events
 	EventTypeStreamingStarted EventType = "streaming_started"
@@ -135,6 +136,17 @@ func (h *EventHandler) OnRecordingResumed() {
 	log.Printf("[OBS Event] Recording resumed")
 	if h.notificationFunc != nil {
 		h.notificationFunc(EventTypeRecordingResumed, map[string]interface{}{})
+	}
+}
+
+// OnRecordingFileChanged is called when the record output rotates to a new file
+// (e.g. OBS 30+ file splits).
+func (h *EventHandler) OnRecordingFileChanged(newOutputPath string) {
+	log.Printf("[OBS Event] Recording file changed: %s", newOutputPath)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeRecordingFileChanged, map[string]interface{}{
+			"new_output_path": newOutputPath,
+		})
 	}
 }
 
@@ -267,6 +279,11 @@ func (l *EventLogger) OnRecordingResumed() {
 	log.Printf("[OBS Event Logger] Recording resumed")
 }
 
+// OnRecordingFileChanged logs recording file-rotation events.
+func (l *EventLogger) OnRecordingFileChanged(newOutputPath string) {
+	log.Printf("[OBS Event Logger] Recording file changed: %s", newOutputPath)
+}
+
 // OnStreamingStarted logs streaming start events.
 func (l *EventLogger) OnStreamingStarted() {
 	log.Printf("[OBS Event Logger] Streaming started")
@@ -362,6 +379,7 @@ type EventMetrics struct {
 	RecordingStoppedCount        int
 	RecordingPausedCount         int
 	RecordingResumedCount        int
+	RecordingFileChangedCount    int
 	StreamingStartedCount        int
 	StreamingStoppedCount        int
 	VirtualCamStartedCount       int
@@ -421,6 +439,11 @@ func (t *EventMetricsTracker) OnRecordingPaused() {
 // OnRecordingResumed increments the recording resumed counter.
 func (t *EventMetricsTracker) OnRecordingResumed() {
 	t.metrics.RecordingResumedCount++
+}
+
+// OnRecordingFileChanged increments the recording file-changed counter.
+func (t *EventMetricsTracker) OnRecordingFileChanged(newOutputPath string) {
+	t.metrics.RecordingFileChangedCount++
 }
 
 // OnStreamingStarted increments the streaming started counter.
@@ -542,6 +565,13 @@ func (c *CompositeEventCallback) OnRecordingPaused() {
 func (c *CompositeEventCallback) OnRecordingResumed() {
 	for _, callback := range c.callbacks {
 		callback.OnRecordingResumed()
+	}
+}
+
+// OnRecordingFileChanged dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnRecordingFileChanged(newOutputPath string) {
+	for _, callback := range c.callbacks {
+		callback.OnRecordingFileChanged(newOutputPath)
 	}
 }
 

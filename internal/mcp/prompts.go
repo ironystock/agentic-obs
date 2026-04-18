@@ -1176,7 +1176,7 @@ func (s *Server) handleAutomationSetup(ctx context.Context, req *mcpsdk.GetPromp
    - Use create_automation_rule with trigger_type='event'
    - Supported events include:
      * 'stream_started', 'stream_stopped'
-     * 'recording_started', 'recording_stopped', 'recording_paused', 'recording_resumed'
+     * 'recording_started', 'recording_stopped', 'recording_paused', 'recording_resumed', 'recording_file_changed'
      * 'scene_changed'
      * 'source_visibility_changed'
      * 'input_mute_changed', 'input_volume_changed'
