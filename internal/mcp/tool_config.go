@@ -21,7 +21,7 @@ type ToolGroupMetadata struct {
 
 // ToolGroupOrder defines the canonical ordering of tool groups.
 // Used for consistent iteration and validation across the codebase.
-var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
+var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions", "Automation"}
 
 // toolGroupMetadata defines metadata for all tool groups.
 var toolGroupMetadata = map[string]*ToolGroupMetadata{
@@ -85,6 +85,12 @@ var toolGroupMetadata = map[string]*ToolGroupMetadata{
 		Description: "Scene transition control: list, set, and trigger transitions",
 		ToolCount:   5,
 		ToolNames:   []string{"list_transitions", "get_current_transition", "set_current_transition", "set_transition_duration", "trigger_transition"},
+	},
+	"Automation": {
+		Name:        "Automation",
+		Description: "Automation rule management: event-triggered and scheduled actions",
+		ToolCount:   9,
+		ToolNames:   []string{"list_automation_rules", "get_automation_rule", "create_automation_rule", "update_automation_rule", "delete_automation_rule", "enable_automation_rule", "disable_automation_rule", "trigger_automation_rule", "list_rule_executions"},
 	},
 }
 
@@ -309,6 +315,8 @@ func (s *Server) getGroupEnabled(group string) bool {
 		return s.toolGroups.Filters
 	case "Transitions":
 		return s.toolGroups.Transitions
+	case "Automation":
+		return s.toolGroups.Automation
 	default:
 		return false
 	}
@@ -334,6 +342,8 @@ func (s *Server) setGroupEnabled(group string, enabled bool) {
 		s.toolGroups.Filters = enabled
 	case "Transitions":
 		s.toolGroups.Transitions = enabled
+	case "Automation":
+		s.toolGroups.Automation = enabled
 	}
 }
 
@@ -348,5 +358,6 @@ func (s *Server) convertToStorageConfig() storage.ToolGroupConfig {
 		Design:      s.toolGroups.Design,
 		Filters:     s.toolGroups.Filters,
 		Transitions: s.toolGroups.Transitions,
+		Automation:  s.toolGroups.Automation,
 	}
 }

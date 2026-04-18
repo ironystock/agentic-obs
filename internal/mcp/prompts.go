@@ -164,6 +164,27 @@ func (s *Server) registerPrompts() {
 		s.handleVisualSetup,
 	)
 
+	// Prompt 14: Automation Setup (FB-20)
+	s.mcpServer.AddPrompt(
+		&mcpsdk.Prompt{
+			Name:        "automation-setup",
+			Description: "Set up and configure automation rules for hands-free OBS control with event triggers and schedules",
+			Arguments: []*mcpsdk.PromptArgument{
+				{
+					Name:        "rule_type",
+					Description: "Optional: 'event' for event-triggered rules or 'schedule' for time-based rules",
+					Required:    false,
+				},
+				{
+					Name:        "trigger_event",
+					Description: "Optional: Specific event to trigger on (e.g., 'stream_start', 'scene_switch', 'recording_stop')",
+					Required:    false,
+				},
+			},
+		},
+		s.handleAutomationSetup,
+	)
+
 	log.Println("Prompt handlers registered successfully")
 }
 
@@ -1109,6 +1130,184 @@ Provide guidance on setting up comprehensive visual monitoring for AI-driven str
 
 	return &mcpsdk.GetPromptResult{
 		Description: "Create and configure screenshot sources for AI visual monitoring of stream output",
+		Messages: []*mcpsdk.PromptMessage{{
+			Role: "user",
+			Content: &mcpsdk.TextContent{
+				Text: promptText,
+			},
+		}},
+	}, nil
+}
+
+// handleAutomationSetup guides users through the FB-20 automation rules workflow.
+func (s *Server) handleAutomationSetup(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsdk.GetPromptResult, error) {
+	log.Println("Handling automation-setup prompt")
+
+	ruleType := ""
+	triggerEvent := ""
+	if req != nil && req.Params.Arguments != nil {
+		if val, ok := req.Params.Arguments["rule_type"]; ok {
+			ruleType = val
+		}
+		if val, ok := req.Params.Arguments["trigger_event"]; ok {
+			triggerEvent = val
+		}
+	}
+
+	promptText := `Help me set up automation rules for hands-free OBS control:
+
+1. **Understand Automation Concepts**
+   - Event-triggered rules: Execute when specific OBS events occur
+   - Scheduled rules: Execute at specific times or intervals (cron-style, with seconds precision)
+   - Examples: Auto-record on stream start, auto-switch scenes, health check every 30 minutes
+   - Use cases: Reduce manual operations, create consistent workflows, automate repetitive tasks
+
+2. **List Existing Automation Rules**
+   - Use list_automation_rules to see all configured rules
+   - Report rule names, trigger types (event/schedule/manual), current status (enabled/disabled)
+   - Show priority, cooldown, last execution time, run count
+   - Identify rules that are inactive or that have never run`
+
+	switch ruleType {
+	case "event":
+		promptText += `
+
+3. **Create an Event-Triggered Rule**
+   - Use create_automation_rule with trigger_type='event'
+   - Supported events include:
+     * 'stream_started', 'stream_stopped'
+     * 'recording_started', 'recording_stopped', 'recording_paused', 'recording_resumed'
+     * 'scene_changed'
+     * 'source_visibility_changed'
+     * 'input_mute_changed', 'input_volume_changed'
+     * 'virtual_cam_started', 'virtual_cam_stopped'
+     * 'replay_buffer_started', 'replay_buffer_stopped', 'replay_buffer_saved'
+     * 'studio_mode_state_changed'
+   - Optional event_filter narrows matching (e.g., only when scene_name == "Gaming")
+   - Configure one or more actions executed in order
+   - Set cooldown_ms to prevent rapid re-triggering`
+	case "schedule":
+		promptText += `
+
+3. **Create a Scheduled Rule**
+   - Use create_automation_rule with trigger_type='schedule'
+   - Schedule uses 6-field cron expression (seconds minutes hours day month weekday)
+   - Examples:
+     * '0 0 9 * * *'      — every day at 9:00:00 AM
+     * '0 */30 * * * *'   — every 30 minutes on the minute
+     * '*/15 * * * * *'   — every 15 seconds
+     * '0 0 18 * * MON-FRI' — weekdays at 6:00 PM
+   - Rules fire on the schedule regardless of OBS state — your actions should be idempotent
+   - Configure one or more actions executed in order`
+	default:
+		promptText += `
+
+3. **Choose a Rule Type**
+   - **Event-triggered rules** — respond to OBS events (stream/recording/scene changes, etc.)
+     Best for reactions: "when X happens, do Y"
+   - **Scheduled rules** — fire on a cron schedule (6-field with seconds precision)
+     Best for periodic work: "every day at 9am", "every 30 minutes"
+   - **Manual rules** — only triggered via trigger_automation_rule
+     Best for reusable macros you invoke yourself
+   - For targeted guidance, re-invoke this prompt with rule_type='event' or rule_type='schedule'`
+	}
+
+	if triggerEvent != "" {
+		promptText += fmt.Sprintf(`
+
+4. **Set Up Rule for '%s' Event**
+   - create_automation_rule arguments:
+     * trigger_type: 'event'
+     * trigger_config: { "event_type": "%s", "event_filter": { ... } }
+   - Decide the matching actions:
+     * What should happen when %s occurs?
+     * Which action types apply? (see list below)
+   - Set enabled=true to activate immediately
+   - Start with cooldown_ms=1000 to avoid duplicate triggers during transient state`, triggerEvent, triggerEvent, triggerEvent)
+	} else {
+		promptText += `
+
+4. **Configure Rule Actions**
+   - Each rule executes an ordered list of actions. Supported action types:
+     * Recording/streaming: 'start_recording', 'stop_recording', 'pause_recording',
+       'resume_recording', 'start_streaming', 'stop_streaming'
+     * Scenes: 'set_scene', 'apply_preset'
+     * Sources: 'toggle_source_visibility'
+     * Audio: 'toggle_mute', 'set_volume'
+     * Virtual cam & replay buffer: 'toggle_virtual_cam', 'save_replay'
+     * Studio mode: 'toggle_studio_mode', 'trigger_transition'
+     * Hotkeys & flow control: 'trigger_hotkey', 'delay'
+   - Each action has parameters (scene name, source name, value, milliseconds, etc.)
+   - Per-action on_error: 'continue' (default) or 'stop' halts the chain
+   - Order actions deliberately — they run sequentially`
+	}
+
+	promptText += `
+
+5. **Test the Rule Manually**
+   - Use trigger_automation_rule with the rule name to fire it on demand
+   - Verify each action succeeded
+   - Check list_rule_executions for the execution record and per-action results
+
+6. **Monitor Executions**
+   - list_rule_executions — history with status (running/completed/failed), duration, errors
+   - Filter by rule name to narrow scope
+   - Investigate failed executions: action index, error text, trigger data captured at dispatch
+
+7. **Manage Existing Rules**
+   - get_automation_rule — inspect one rule's full configuration
+   - update_automation_rule — modify name, actions, cooldown, priority, schedule, or filter
+   - enable_automation_rule / disable_automation_rule — flip without deleting
+   - delete_automation_rule — removes the rule (requires confirmation via elicitation)
+
+8. **Best Practices**
+   - Use descriptive rule names ('auto-record-on-stream-start', not 'rule1')
+   - Start simple — one trigger, one or two actions — and grow from there
+   - Prefer cooldowns on event rules to absorb duplicate notifications
+   - Set priority higher for rules that should win when multiple match the same event
+   - For schedules that do real work, use a cooldown so manual triggers don't collide with the clock
+   - Test manually before relying on the rule in a live stream
+
+9. **Common Workflows**
+
+   **Auto-record when streaming starts**
+   - create_automation_rule(name='auto-record-stream',
+       trigger_type='event',
+       trigger_config={"event_type":"stream_started"},
+       actions=[{"type":"start_recording"}])
+
+   **Switch to offline scene and stop recording when stream ends**
+   - create_automation_rule(name='stream-end-cleanup',
+       trigger_type='event',
+       trigger_config={"event_type":"stream_stopped"},
+       actions=[
+         {"type":"stop_recording"},
+         {"type":"set_scene","parameters":{"scene_name":"Offline"}}
+       ])
+
+   **Hourly health check**
+   - create_automation_rule(name='hourly-health-check',
+       trigger_type='schedule',
+       trigger_config={"schedule":"0 0 * * * *"},
+       actions=[{"type":"save_replay"}])
+
+10. **Troubleshooting**
+    - Rule not firing? Confirm enabled=true, trigger_type matches, and the event actually occurred (check OBS logs).
+    - Rule triggering too often? Add or raise cooldown_ms.
+    - Action failing? list_rule_executions shows the failing action index and error text.
+    - Schedule not firing? Verify the 6-field cron expression — remember leading seconds field.
+
+Provide step-by-step guidance, tailor suggestions to the user's scenario, and propose concrete create_automation_rule invocations they can run directly.`
+
+	if ruleType != "" {
+		promptText += fmt.Sprintf("\n\nTarget rule type: %s", ruleType)
+	}
+	if triggerEvent != "" {
+		promptText += fmt.Sprintf("\nTarget trigger event: %s", triggerEvent)
+	}
+
+	return &mcpsdk.GetPromptResult{
+		Description: "Set up and configure automation rules for hands-free OBS control",
 		Messages: []*mcpsdk.PromptMessage{{
 			Role: "user",
 			Content: &mcpsdk.TextContent{

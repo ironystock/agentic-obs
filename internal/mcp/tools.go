@@ -883,6 +883,84 @@ func (s *Server) registerToolHandlers() {
 		log.Println("Transition tools registered (5 tools)")
 	}
 
+	// Automation tools
+	if s.toolGroups.Automation {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_automation_rules",
+				Description: "List all automation rules with their status, trigger type, and execution stats",
+			},
+			s.handleListAutomationRules,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "get_automation_rule",
+				Description: "Get detailed configuration of a specific automation rule by name",
+			},
+			s.handleGetAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "create_automation_rule",
+				Description: "Create a new automation rule with triggers and actions",
+			},
+			s.handleCreateAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "update_automation_rule",
+				Description: "Update an existing automation rule's configuration",
+			},
+			s.handleUpdateAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "delete_automation_rule",
+				Description: "Delete an automation rule and its execution history",
+			},
+			s.handleDeleteAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "enable_automation_rule",
+				Description: "Enable an automation rule so it can be triggered",
+			},
+			s.handleEnableAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "disable_automation_rule",
+				Description: "Disable an automation rule without deleting it",
+			},
+			s.handleDisableAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "trigger_automation_rule",
+				Description: "Manually trigger an automation rule for testing or one-off execution",
+			},
+			s.handleTriggerAutomationRule,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_rule_executions",
+				Description: "List recent automation rule execution history with status and results",
+			},
+			s.handleListRuleExecutions,
+		)
+
+		toolCount += 9
+		log.Println("Automation tools registered (9 tools)")
+	}
+
 	// Meta tools - always enabled, cannot be disabled
 	// These provide help and runtime tool configuration
 

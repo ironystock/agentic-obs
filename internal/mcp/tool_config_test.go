@@ -55,7 +55,7 @@ func TestHandleGetToolConfig(t *testing.T) {
 
 		groups, ok := resultMap["groups"].([]ToolGroupInfo)
 		require.True(t, ok, "groups should be []ToolGroupInfo")
-		assert.Len(t, groups, 8, "should have 8 tool groups")
+		assert.Len(t, groups, 9, "should have 9 tool groups")
 
 		// Verify all groups are enabled by default
 		for _, g := range groups {
@@ -255,11 +255,11 @@ func TestHandleListToolGroups(t *testing.T) {
 		resultMap := result.(map[string]interface{})
 		groups := resultMap["groups"].([]ToolGroupInfo)
 
-		assert.Len(t, groups, 8, "should list all 8 groups")
-		assert.Equal(t, 8, resultMap["count"])
+		assert.Len(t, groups, 9, "should list all 9 groups")
+		assert.Equal(t, 9, resultMap["count"])
 
 		// Verify correct order
-		expectedOrder := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions"}
+		expectedOrder := []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions", "Automation"}
 		for i, expectedName := range expectedOrder {
 			assert.Equal(t, expectedName, groups[i].Name, "group %d should be %s", i, expectedName)
 		}
@@ -279,7 +279,7 @@ func TestHandleListToolGroups(t *testing.T) {
 		resultMap := result.(map[string]interface{})
 		groups := resultMap["groups"].([]ToolGroupInfo)
 
-		assert.Len(t, groups, 8, "should include disabled groups")
+		assert.Len(t, groups, 9, "should include disabled groups")
 
 		// Verify Audio and Visual show as disabled
 		var audioFound, visualFound bool
@@ -311,7 +311,7 @@ func TestHandleListToolGroups(t *testing.T) {
 		resultMap := result.(map[string]interface{})
 		groups := resultMap["groups"].([]ToolGroupInfo)
 
-		assert.Len(t, groups, 6, "should exclude 2 disabled groups")
+		assert.Len(t, groups, 7, "should exclude 2 disabled groups")
 
 		// Verify Audio and Visual are not in the list
 		for _, g := range groups {
@@ -521,7 +521,7 @@ func TestToolGroupOrderConsistency(t *testing.T) {
 }
 
 // TestTotalToolCountMatchesDocumentation validates that tool counts in metadata
-// sum to the documented total (72 tools = 68 group tools + 4 meta-tools).
+// sum to the documented total (81 tools = 77 group tools + 4 meta-tools).
 // This catches drift between code and documentation.
 func TestTotalToolCountMatchesDocumentation(t *testing.T) {
 	// Sum all tool counts from metadata
@@ -534,7 +534,7 @@ func TestTotalToolCountMatchesDocumentation(t *testing.T) {
 	totalTools := groupToolCount + len(MetaToolNames)
 
 	// Expected total from documentation (CLAUDE.md, README.md, verify-docs.sh)
-	const expectedTotal = 72
+	const expectedTotal = 81
 
 	assert.Equal(t, expectedTotal, totalTools,
 		"Total tool count (%d group tools + %d meta-tools = %d) should match documented %d",
