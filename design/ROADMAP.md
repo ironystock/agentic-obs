@@ -156,7 +156,7 @@ FB item numbers and sprint numbers are orthogonal: an **FB item** is a single tr
 
 | Sprint | Focus | Status | Contains |
 |--------|-------|--------|----------|
-| **0.5** | Upstream Alignment & FB-20 Follow-ups | In progress | FB-4, FB-32..FB-41 (FB-30, FB-31 folded into FB-33) |
+| **0.5** | Upstream Alignment & FB-20 Follow-ups | In progress | FB-4, FB-32..FB-41, FB-43, FB-44 (FB-30, FB-31 folded into FB-33) |
 | **1.0** | Canvas & Multi-Output | Candidate (blocked on 0.5) | FB-42 |
 
 ### Sprint 0.5 — Upstream Alignment & FB-20 Follow-ups
@@ -170,6 +170,9 @@ FB item numbers and sprint numbers are orthogonal: an **FB item** is a single tr
 4. **FB-33** — Skills modernization sweep, informed by FB-20 ✅ + FB-27 ✅ tool inventory.
 5. **FB-35, FB-36** — Deprecated-field audit and `RecordFileChanged` wiring (mechanical, follow FB-34).
 6. **FB-37..FB-41** — FB-20 safety / test / retention follow-ups (can parallelize).
+7. **FB-43, FB-44** — Charm v1 majors (TUI/docs) and `modernc/sqlite` catch-up (storage). Independent of MCP/OBS layers; can parallelize with FB-37..FB-41.
+
+**Fold-in dep bumps** (ride along with FB-4 / FB-34 `go mod tidy`, no dedicated FB): `yuin/goldmark` v1.7→v1.8, `google/jsonschema-go` v0.3→v0.4, `golang.org/x/{net,crypto,oauth2}` security catch-up, `golang-jwt/jwt/v5` v5.2→v5.3. Explicitly `go get` to target after tidy so we control the floor rather than accepting `tidy`'s minimum-required.
 
 **Tangent discipline:** during each dep bump, feature opportunities that surface go into [`sprints/0.5-tangent-log.md`](sprints/0.5-tangent-log.md) rather than expanding the sprint. A **30-minute gate** applies: if the enhancement is literally 30 minutes AND entirely additive, fold it into the dep bump's commit; anything bigger goes to the log. Candidates are promoted to FB numbers at sprint close.
 
@@ -225,6 +228,8 @@ Ordered by sprint, then priority. Items marked `—` in the Sprint column are un
 | FB-39 | Automation concurrency tests | Medium | Medium | **0.5** | FB-20 ✅ | Stress tests for cooldown map + rule cache; may need a CGO-enabled test lane for `-race` |
 | FB-40 | Automation `OnError="stop"` test | Low | Low | **0.5** | FB-20 ✅ | Unit test covering action-chain halt when `OnError=stop` |
 | FB-41 | Automation execution retention | Medium | Low-Med | **0.5** | FB-20 ✅ | Scheduled sweep via `ClearOldRuleExecutions` to prevent DB bloat over time |
+| FB-43 | Charm v1 majors (bubbles + glamour) | Low-Med | Low-Med | **0.5** | - | Bump `charmbracelet/bubbles` v0.21→v1.0 and `charmbracelet/glamour` v0.10→v1.0 together; both hit TUI + docs rendering layer; absorb v1 API breaks |
+| FB-44 | modernc/sqlite catch-up | Medium | Low-Med | **0.5** | - | Bump `modernc.org/sqlite` v1.40→v1.49 (9 minor versions); verify storage layer + driver pool behavior unchanged via existing `internal/storage` tests |
 | FB-42 | Canvas Support (OBS 30+) | High | Medium-High | **1.0** | FB-34 | New tool group for OBS 30 multi-canvas: `GetCanvasList`, `obs://canvas/*` resource, `Canvas*` event bridge |
 | FB-30 | Scene Designer Filters | Medium | Low | 0.5 (via FB-33) | FB-23 ✅ | Add filter section to `scene-designer` skill |
 | FB-31 | Studio Mode Skill | Medium | Medium | 0.5 (via FB-33) | FB-26 ✅ | New `studio-mode-operator` skill for preview/program workflow |
