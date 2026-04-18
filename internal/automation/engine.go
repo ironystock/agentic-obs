@@ -11,6 +11,13 @@ import (
 	"github.com/ironystock/agentic-obs/internal/storage"
 )
 
+// Default retention policy for execution history. Operators can override
+// at runtime via SetExecutionRetention / SetRetentionSweepInterval.
+const (
+	defaultExecutionRetention     = 30 * 24 * time.Hour // keep 30 days
+	defaultRetentionSweepInterval = 1 * time.Hour       // sweep hourly
+)
+
 // AutomationEngine manages automation rules and their execution.
 type AutomationEngine struct {
 	mu        sync.RWMutex
@@ -30,6 +37,10 @@ type AutomationEngine struct {
 	// droppedEvents counts events discarded because eventChan was full.
 	// Accessed via sync/atomic so callers don't need to hold e.mu.
 	droppedEvents atomic.Uint64
+
+	// Retention sweep configuration. Guarded by e.mu.
+	executionRetention     time.Duration
+	retentionSweepInterval time.Duration
 }
 
 // NewAutomationEngine creates a new automation engine.
@@ -37,13 +48,15 @@ func NewAutomationEngine(db *storage.DB, obsClient OBSClient) *AutomationEngine 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	engine := &AutomationEngine{
-		ctx:       ctx,
-		cancel:    cancel,
-		storage:   db,
-		executor:  NewExecutor(obsClient),
-		rules:     make(map[int64]*Rule),
-		cooldowns: make(map[int64]time.Time),
-		eventChan: make(chan EventPayload, 100),
+		ctx:                    ctx,
+		cancel:                 cancel,
+		storage:                db,
+		executor:               NewExecutor(obsClient),
+		rules:                  make(map[int64]*Rule),
+		cooldowns:              make(map[int64]time.Time),
+		eventChan:              make(chan EventPayload, 100),
+		executionRetention:     defaultExecutionRetention,
+		retentionSweepInterval: defaultRetentionSweepInterval,
 	}
 
 	return engine
@@ -80,9 +93,78 @@ func (e *AutomationEngine) Start() error {
 	e.wg.Add(1)
 	go e.processEvents()
 
+	// Start retention sweeper
+	e.wg.Add(1)
+	go e.retentionSweeper()
+
 	e.running = true
 	log.Printf("[Automation] Engine started with %d rules", len(e.rules))
 	return nil
+}
+
+// SetExecutionRetention overrides how long execution history is kept
+// before the background sweeper deletes it. Must be called before Start
+// or the next sweep tick will use the new value.
+func (e *AutomationEngine) SetExecutionRetention(d time.Duration) {
+	e.mu.Lock()
+	e.executionRetention = d
+	e.mu.Unlock()
+}
+
+// SetRetentionSweepInterval overrides how often the retention sweeper
+// runs. Must be called before Start; changes after Start do not
+// reschedule the current ticker.
+func (e *AutomationEngine) SetRetentionSweepInterval(d time.Duration) {
+	e.mu.Lock()
+	e.retentionSweepInterval = d
+	e.mu.Unlock()
+}
+
+// retentionSweeper periodically purges old rule_executions records.
+func (e *AutomationEngine) retentionSweeper() {
+	defer e.wg.Done()
+
+	e.mu.RLock()
+	interval := e.retentionSweepInterval
+	e.mu.RUnlock()
+	if interval <= 0 {
+		return
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-e.ctx.Done():
+			return
+		case <-ticker.C:
+			if _, err := e.RunRetentionSweep(); err != nil && e.ctx.Err() == nil {
+				log.Printf("[Automation] Retention sweep failed: %v", err)
+			}
+		}
+	}
+}
+
+// RunRetentionSweep executes a single retention pass immediately and
+// returns the number of rows removed. Exposed for tests and for
+// operators who want to purge on demand.
+func (e *AutomationEngine) RunRetentionSweep() (int64, error) {
+	e.mu.RLock()
+	retention := e.executionRetention
+	e.mu.RUnlock()
+	if retention <= 0 {
+		return 0, nil
+	}
+
+	deleted, err := e.storage.ClearOldRuleExecutions(e.ctx, retention)
+	if err != nil {
+		return 0, err
+	}
+	if deleted > 0 {
+		log.Printf("[Automation] Retention sweep: removed %d executions older than %s", deleted, retention)
+	}
+	return deleted, nil
 }
 
 // Stop gracefully shuts down the engine. Waits for all in-flight
