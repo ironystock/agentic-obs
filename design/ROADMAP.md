@@ -156,8 +156,10 @@ FB item numbers and sprint numbers are orthogonal: an **FB item** is a single tr
 
 | Sprint | Focus | Status | Contains |
 |--------|-------|--------|----------|
-| **0.5** | Upstream Alignment & FB-20 Follow-ups | In progress | FB-4, FB-32..FB-41, FB-43, FB-44 (FB-30, FB-31 folded into FB-33) |
-| **1.0** | Canvas & Multi-Output | Candidate (blocked on 0.5) | FB-42 |
+| **0.5** | Upstream Alignment & FB-20 Follow-ups | ✅ Closed 2026-04-18 | FB-4, FB-32..FB-41, FB-43, FB-44 (FB-30, FB-31 folded into FB-33) |
+| **1.0** | Canvas & Multi-Output | Candidate | FB-42 |
+| **1.5** | *(unscheduled — candidates: FB-47, FB-48, FB-49, FB-50)* | Proposed | — |
+| **2.0** | *(unscheduled — candidate anchor: FB-45 sampling)* | Proposed | — |
 
 ### Sprint 0.5 — Upstream Alignment & FB-20 Follow-ups
 
@@ -219,7 +221,7 @@ Ordered by sprint, then priority. Items marked `—` in the Sprint column are un
 |----|------|----------|------------|--------|--------------|-------------|
 | FB-4 | SDK Migration (MCP Go SDK bump) | High | Medium | **0.5** | - | Bump `github.com/modelcontextprotocol/go-sdk` past v1.1.0; absorb API changes; surface MCP Apps / sampling / annotations opportunities |
 | FB-34 | goobs + obs-websocket 5.5 → 5.7 bump | High | Medium | **0.5** | - | Bump goobs v1.5.6 → v1.8.3 (protocol 5.5 → 5.7); absorb API changes; unblocks FB-42 |
-| FB-32 | MCP Apps Port | High | Medium-High | **0.5** | FB-4 | Port the mcpui-go work (FB-15 ✅) to the new MCP Apps spec at `apps.extensions.modelcontextprotocol.io`; shape depends on FB-4 discoveries |
+| FB-32 | MCP Apps Port | High | Medium-High | **0.5** *(ADR shipped; impl deferred)* | FB-4 ✅ | Port the mcpui-go work (FB-15 ✅) to the new MCP Apps spec at `apps.extensions.modelcontextprotocol.io`; shape captured in [ADR-008](decisions/008-mcp-apps-port.md). Stage 3 absorbs Form/URL elicitation (`FormElicitationCapabilities`/`URLElicitationCapabilities`) folded from the tangent log. |
 | FB-33 | Skills Modernization Sweep | Medium | Medium | **0.5** | FB-20 ✅, FB-27 ✅ | Audit all 4 skills against 81 tools + 14 prompts; add automation coverage to `streaming-assistant`; folds FB-30 and FB-31 |
 | FB-35 | Deprecated field audit (`currentProgram*` / `currentPreview*`) | Medium | Low | **0.5** | FB-34 | Migrate off scene-response fields flagged for removal in obs-websocket protocol |
 | FB-36 | `RecordFileChanged` event wiring | Low | Low | **0.5** | FB-34 | Bridge OBS 30+ file-split event into the automation engine's event bridge |
@@ -230,7 +232,13 @@ Ordered by sprint, then priority. Items marked `—` in the Sprint column are un
 | FB-41 | Automation execution retention | Medium | Low-Med | **0.5** | FB-20 ✅ | Scheduled sweep via `ClearOldRuleExecutions` to prevent DB bloat over time |
 | FB-43 | Charm v1 majors (bubbles + glamour) | Low-Med | Low-Med | **0.5** | - | Bump `charmbracelet/bubbles` v0.21→v1.0 and `charmbracelet/glamour` v0.10→v1.0 together; both hit TUI + docs rendering layer; absorb v1 API breaks |
 | FB-44 | modernc/sqlite catch-up | Medium | Low-Med | **0.5** | - | Bump `modernc.org/sqlite` v1.40→v1.49 (9 minor versions); verify storage layer + driver pool behavior unchanged via existing `internal/storage` tests |
-| FB-42 | Canvas Support (OBS 30+) | High | Medium-High | **1.0** | FB-34 | New tool group for OBS 30 multi-canvas: `GetCanvasList`, `obs://canvas/*` resource, `Canvas*` event bridge |
+| FB-42 | Canvas Support (OBS 30+) | High | Medium-High | **1.0** | FB-34 ✅ | New tool group for OBS 30 multi-canvas: `GetCanvasList`, `obs://canvas/*` resource, `Canvas*` event bridge. Absorbs the `canvasUuid` scene-request parameter added in obs-websocket 5.7 (noted during FB-34 bump). |
+| FB-45 | MCP Sampling | Medium-High | Medium | **2.0** *(proposed)* | FB-4 ✅ | Server-initiated LLM calls via `CreateMessageParams`/`ModelPreferences`/`ModelHint`. Negotiate `SamplingCapabilities` at init. Candidate callers: screenshot narration, automation rule-name suggestion, scene-cluster naming. Scope includes the `ToolChoice` hint type folded from tangent log. |
+| FB-46 | Sampling tool-call loop | Low | Large | — | FB-45 | `CreateMessageWithToolsParams`/`CreateMessageWithToolsResult` — sampling can recursively invoke our own tools. High-value (server-side mini-agents over OBS state) but real scope risk; write an ADR before implementing. |
+| FB-47 | MCP Annotations on tools | Medium | Low | **1.5** *(proposed)* | FB-4 ✅ | Apply the `Annotations` struct (priority/audience/`readOnly`/`destructive`/`idempotent`) to tool definitions for safer client-side gating. Cross-check with existing elicitation layer to avoid redundant confirmations. |
+| FB-48 | MCP Icons on tools/prompts/resources | Low-Med | Small-Medium | **1.5** *(proposed)* | FB-4 ✅, FB-14 ✅ | Declare `Icon`/`IconTheme` on tool/prompt/resource definitions with light/dark variants. Reuses the FB-14 logo/favicon assets. UX polish for MCP Apps clients that render icons. |
+| FB-49 | Richer completion context | Low | Small | — | FB-4 ✅ | Use `CompleteContext`/`CompletionResultDetails` to pass argument context to `completions.go` and return metadata. Current implementation is flat; this would enable smarter autocomplete. |
+| FB-50 | Deinterlace inputs API | Low | Small | — | FB-34 ✅ | Wrap the 4 new obs-websocket 5.7 requests (`Get/SetInputDeinterlaceMode`, `Get/SetInputDeinterlaceFieldOrder`) as Sources-group tools. Streaming/capture-card users only. |
 | FB-30 | Scene Designer Filters | Medium | Low | 0.5 (via FB-33) | FB-23 ✅ | Add filter section to `scene-designer` skill |
 | FB-31 | Studio Mode Skill | Medium | Medium | 0.5 (via FB-33) | FB-26 ✅ | New `studio-mode-operator` skill for preview/program workflow |
 | FB-29 | New Prompts (virtual-cam-control, replay-management) | Medium | Low | — | FB-25 ✅, FB-26 ✅ | Add virtual-cam-control, replay-management prompts |
