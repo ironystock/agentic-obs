@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ironystock/agentic-obs/internal/storage"
@@ -25,6 +26,10 @@ type AutomationEngine struct {
 	eventChan chan EventPayload
 	wg        sync.WaitGroup // Tracks in-flight processEvents + executeRule goroutines
 	running   bool
+
+	// droppedEvents counts events discarded because eventChan was full.
+	// Accessed via sync/atomic so callers don't need to hold e.mu.
+	droppedEvents atomic.Uint64
 }
 
 // NewAutomationEngine creates a new automation engine.
@@ -119,8 +124,15 @@ func (e *AutomationEngine) HandleEvent(payload EventPayload) {
 	select {
 	case e.eventChan <- payload:
 	default:
-		log.Printf("[Automation] Event buffer full, dropping event: %s", payload.EventType)
+		dropped := e.droppedEvents.Add(1)
+		log.Printf("[Automation] Event buffer full, dropping event: %s (total dropped: %d)", payload.EventType, dropped)
 	}
+}
+
+// DroppedEventsTotal returns the cumulative number of events discarded due
+// to a full event buffer. Exposed for observability and tests.
+func (e *AutomationEngine) DroppedEventsTotal() uint64 {
+	return e.droppedEvents.Load()
 }
 
 // TriggerRule manually triggers a rule by ID.

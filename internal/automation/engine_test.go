@@ -478,6 +478,34 @@ func TestEngineOnErrorStop(t *testing.T) {
 	assert.False(t, execs[0].ActionResults[1].Success, "action #1 failed")
 }
 
+func TestEngineDroppedEventsCounter(t *testing.T) {
+	db, cleanup := testAutomationDB(t)
+	defer cleanup()
+
+	mock := NewMockOBSClient()
+	engine := NewAutomationEngine(db, mock)
+
+	// Don't start the engine — processEvents must NOT drain the channel
+	// so we can force a buffer overflow. eventChan is buffered to 100.
+
+	assert.Equal(t, uint64(0), engine.DroppedEventsTotal(),
+		"counter should start at zero")
+
+	// Fill the buffer exactly to capacity; none should drop yet.
+	for i := 0; i < 100; i++ {
+		engine.HandleEvent(EventPayload{EventType: EventSceneChanged})
+	}
+	assert.Equal(t, uint64(0), engine.DroppedEventsTotal(),
+		"no drops expected while buffer has room")
+
+	// Overflow by 5.
+	for i := 0; i < 5; i++ {
+		engine.HandleEvent(EventPayload{EventType: EventSceneChanged})
+	}
+	assert.Equal(t, uint64(5), engine.DroppedEventsTotal(),
+		"overflow events should increment counter")
+}
+
 func TestEngineMultipleActions(t *testing.T) {
 	db, cleanup := testAutomationDB(t)
 	defer cleanup()
