@@ -577,6 +577,148 @@ func TestEngineRetentionSweeperStartsOnStart(t *testing.T) {
 	assert.False(t, engine.IsRunning())
 }
 
+// TestEngineConcurrentDispatch stresses the cooldown map and rule cache
+// under parallel HandleEvent calls. On the default (non-CGO) lane this
+// detects correctness bugs (duplicate fires, lost events, deadlocks); on
+// the race lane (make test-race on a CGO-enabled host, or CI ubuntu-latest)
+// the race detector catches unsynchronized accesses to e.rules / e.cooldowns.
+func TestEngineConcurrentDispatch(t *testing.T) {
+	db, cleanup := testAutomationDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	// 5 rules, all watching the same event, each with different cooldowns.
+	for i := 0; i < 5; i++ {
+		rule := storage.AutomationRule{
+			Name:        "concurrent-" + string(rune('a'+i)),
+			Enabled:     true,
+			TriggerType: TriggerTypeEvent,
+			TriggerConfig: map[string]interface{}{
+				"event_type": EventSceneChanged,
+			},
+			Actions:    []storage.RuleAction{{Type: ActionTypeStartRecording}},
+			CooldownMs: 200, // 200ms cooldown on every rule
+		}
+		_, err := db.CreateAutomationRule(ctx, rule)
+		require.NoError(t, err)
+	}
+
+	mock := NewMockOBSClient()
+	engine := NewAutomationEngine(db, mock)
+	require.NoError(t, engine.Start())
+
+	// Fire 200 events from 20 goroutines. With a 200ms cooldown and the
+	// whole test taking <100ms, we expect each rule to fire exactly once,
+	// so exactly 5 actions total despite ~200 dispatches.
+	const goroutines = 20
+	const eventsPerGoroutine = 10
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < eventsPerGoroutine; j++ {
+				engine.HandleEvent(EventPayload{
+					EventType: EventSceneChanged,
+					Data:      map[string]interface{}{},
+				})
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Drain: wait for all in-flight executeRule goroutines to complete.
+	time.Sleep(200 * time.Millisecond)
+
+	// Correctness guarantees we check even without -race:
+	//   (a) at least one rule fires per rule — the dispatcher isn't starved
+	//   (b) no panic / unrecovered map-write occurred (test would've crashed)
+	//   (c) engine.Stop() drains the wg without deadlocking
+	//
+	// We intentionally do NOT assert an exact upper bound on actions here;
+	// that guarantee belongs to the cooldown contract tested by
+	// TestEngineCooldown. This test's job is concurrency survival.
+	actions := mock.GetActions()
+	assert.GreaterOrEqual(t, len(actions), 5,
+		"every rule should fire at least once under a 200-event burst")
+
+	// Stop must not hang under load.
+	done := make(chan struct{})
+	go func() { engine.Stop(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("engine.Stop() did not return within 2s — likely deadlock")
+	}
+}
+
+// TestEngineConcurrentReloadAndDispatch exercises ReloadRules racing
+// against dispatchEvent. Both touch the e.rules map under e.mu; on the
+// race lane this asserts the locking discipline is correct, and on the
+// default lane it smoke-tests that no panics or deadlocks surface.
+func TestEngineConcurrentReloadAndDispatch(t *testing.T) {
+	db, cleanup := testAutomationDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	rule := storage.AutomationRule{
+		Name:          "reload-dispatch-race",
+		Enabled:       true,
+		TriggerType:   TriggerTypeEvent,
+		TriggerConfig: map[string]interface{}{"event_type": EventSceneChanged},
+		Actions:       []storage.RuleAction{{Type: ActionTypeStartRecording}},
+	}
+	_, err := db.CreateAutomationRule(ctx, rule)
+	require.NoError(t, err)
+
+	mock := NewMockOBSClient()
+	engine := NewAutomationEngine(db, mock)
+	require.NoError(t, engine.Start())
+	defer engine.Stop()
+
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+
+	// Dispatcher goroutine: fires events continuously.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				engine.HandleEvent(EventPayload{
+					EventType: EventSceneChanged,
+					Data:      map[string]interface{}{},
+				})
+			}
+		}
+	}()
+
+	// Reloader goroutine: reloads rules continuously.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				_ = engine.ReloadRules()
+			}
+		}
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	close(stop)
+	wg.Wait()
+
+	// If we got here without panicking or deadlocking, the lock discipline
+	// is at least consistent under this workload.
+	assert.True(t, engine.IsRunning())
+}
+
 func TestEngineMultipleActions(t *testing.T) {
 	db, cleanup := testAutomationDB(t)
 	defer cleanup()

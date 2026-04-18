@@ -58,9 +58,11 @@ test-coverage:
 	@echo "Coverage report: coverage.html"
 
 # Run tests with race detector
+# Requires CGO_ENABLED=1 and a C compiler (gcc/MinGW on Windows, xcode-select
+# on macOS). CI runs this on ubuntu-latest where gcc is pre-installed.
 .PHONY: test-race
 test-race:
-	$(GOTEST) -v -race ./...
+	CGO_ENABLED=1 $(GOTEST) -v -race ./...
 
 # Run go vet
 .PHONY: vet
