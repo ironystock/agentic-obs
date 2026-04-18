@@ -1382,7 +1382,7 @@ func (c *Client) GetCurrentPreviewScene() (string, error) {
 		return "", fmt.Errorf("failed to get current preview scene: %w", err)
 	}
 
-	return resp.CurrentPreviewSceneName, nil
+	return resp.SceneName, nil
 }
 
 // SetCurrentPreviewScene sets the current preview scene in studio mode.
