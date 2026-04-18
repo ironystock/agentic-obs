@@ -53,6 +53,7 @@ type EventCallback interface {
 	OnRecordingStopped(outputPath string)
 	OnRecordingPaused()
 	OnRecordingResumed()
+	OnRecordingFileChanged(newOutputPath string)
 
 	// Streaming events
 	OnStreamingStarted()
@@ -334,6 +335,9 @@ func (c *Client) handleEvents() {
 			case e.OutputState == "OBS_WEBSOCKET_OUTPUT_RESUMED":
 				callback.OnRecordingResumed()
 			}
+
+		case *events.RecordFileChanged:
+			callback.OnRecordingFileChanged(e.NewOutputPath)
 
 		// Streaming events
 		case *events.StreamStateChanged:
