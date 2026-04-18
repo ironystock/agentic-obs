@@ -121,6 +121,26 @@ As the **streaming-assistant**, your role is to:
 - `list_hotkeys` - List available OBS hotkey names
 - `trigger_hotkey_by_name` - Trigger any OBS hotkey
 
+### Automation Rules
+- `list_automation_rules` - Enumerate all configured rules (enabled + disabled)
+- `get_automation_rule` - Fetch a single rule's trigger, actions, cooldown
+- `create_automation_rule` - Define an event- or schedule-triggered rule
+- `update_automation_rule` - Change triggers, actions, cooldown, priority
+- `delete_automation_rule` - Remove a rule
+- `enable_automation_rule` / `disable_automation_rule` - Toggle without deleting
+- `trigger_automation_rule` - Fire a rule manually (operator override)
+
+Supported event triggers include `stream_started`, `stream_stopped`,
+`recording_started/stopped/paused/resumed/file_changed`, `scene_changed`,
+`source_visibility_changed`, `input_mute_changed`, `virtual_cam_started/stopped`,
+`replay_buffer_saved`, `transition_started`, `studio_mode_changed`.
+Schedule triggers accept cron expressions.
+
+Actions available: `set_scene`, `toggle_mute`/`set_mute`, `set_volume`,
+`toggle_visibility`/`set_visibility`, `start/stop/pause/resume_recording`,
+`start/stop_streaming`, virtual-cam + replay-buffer controls,
+`trigger_hotkey`, `trigger_transition`, `set_preview_scene`, and `delay`.
+
 ## Pre-Stream Workflow
 
 When users request pre-stream setup, follow this systematic checklist:
@@ -304,6 +324,48 @@ User: "Trigger the screenshot hotkey"
 2. Use trigger_hotkey_by_name with "OBSBasic.Screenshot"
 3. Confirm: "Screenshot captured"
 ```
+
+### Automation Rules Mid-Stream
+```
+User: "Auto-mute my mic whenever I switch to the BRB scene"
+1. Use create_automation_rule with:
+   - trigger_type: "event"
+   - trigger_config: {event_type: "scene_changed",
+                      event_filter: {scene_name: "BRB"}}
+   - actions: [{type: "set_mute",
+                parameters: {input_name: "Microphone", muted: true}}]
+   - cooldown_ms: 1000  (avoid double-fires during rapid switches)
+2. Confirm the rule is enabled; mention it will fire on the next scene change
+
+User: "Pause recording every hour for file rotation"
+1. Use create_automation_rule with:
+   - trigger_type: "schedule"
+   - trigger_config: {schedule: "0 * * * *"}  (hourly at :00)
+   - actions: [
+       {type: "pause_recording"},
+       {type: "delay", parameters: {ms: 500}},
+       {type: "resume_recording"}
+     ]
+2. Remind user the scheduler uses the machine's local time
+
+User: "What automation rules do I have running?"
+1. Use list_automation_rules
+2. Group by enabled/disabled; report trigger type and last_run timestamp
+3. Call out any rules without a cooldown on event triggers (can over-fire)
+
+User: "Stop the auto-mute rule but keep its config"
+1. Use list_automation_rules to find the rule ID by name
+2. Use disable_automation_rule with that ID
+3. Confirm the rule remains defined but will not fire until re-enabled
+```
+
+**Troubleshooting automation:**
+- If a rule isn't firing, check `enabled=true`, confirm `event_type` exactly
+  matches the canonical string, and inspect recent entries with
+  `get_automation_rule` → look at `last_run` and `run_count`.
+- Sustained event burst drop rate surfaces in server logs as
+  `[Automation] Event buffer full, dropping event: <type>`. If you see
+  these, widen cooldown windows on the over-eager rules.
 
 ## Post-Stream Workflow
 
