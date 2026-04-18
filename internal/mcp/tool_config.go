@@ -21,7 +21,7 @@ type ToolGroupMetadata struct {
 
 // ToolGroupOrder defines the canonical ordering of tool groups.
 // Used for consistent iteration and validation across the codebase.
-var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions", "Automation"}
+var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions", "Automation", "Canvas"}
 
 // toolGroupMetadata defines metadata for all tool groups.
 var toolGroupMetadata = map[string]*ToolGroupMetadata{
@@ -92,6 +92,12 @@ var toolGroupMetadata = map[string]*ToolGroupMetadata{
 		ToolCount:   9,
 		ToolNames:   []string{"list_automation_rules", "get_automation_rule", "create_automation_rule", "update_automation_rule", "delete_automation_rule", "enable_automation_rule", "disable_automation_rule", "trigger_automation_rule", "list_rule_executions"},
 	},
+	"Canvas": {
+		Name:        "Canvas",
+		Description: "Canvas management: OBS 30+ multi-canvas (vertical streaming, multi-output) via obs-websocket 5.7+",
+		ToolCount:   1,
+		ToolNames:   []string{"list_canvases"},
+	},
 }
 
 // MetaToolNames are tools that are always enabled and cannot be disabled.
@@ -108,7 +114,7 @@ type ToolGroupInfo struct {
 
 // GetToolConfigInput is the input for querying tool configuration.
 type GetToolConfigInput struct {
-	Group   string `json:"group,omitempty" jsonschema:"Filter by group name (Core, Visual, Audio, Layout, Sources, Design, Filters, Transitions)"`
+	Group   string `json:"group,omitempty" jsonschema:"Filter by group name (Core, Visual, Audio, Layout, Sources, Design, Filters, Transitions, Automation, Canvas)"`
 	Verbose bool   `json:"verbose,omitempty" jsonschema:"Include list of tool names per group"`
 }
 
@@ -317,6 +323,8 @@ func (s *Server) getGroupEnabled(group string) bool {
 		return s.toolGroups.Transitions
 	case "Automation":
 		return s.toolGroups.Automation
+	case "Canvas":
+		return s.toolGroups.Canvas
 	default:
 		return false
 	}
@@ -344,6 +352,8 @@ func (s *Server) setGroupEnabled(group string, enabled bool) {
 		s.toolGroups.Transitions = enabled
 	case "Automation":
 		s.toolGroups.Automation = enabled
+	case "Canvas":
+		s.toolGroups.Canvas = enabled
 	}
 }
 
@@ -359,5 +369,6 @@ func (s *Server) convertToStorageConfig() storage.ToolGroupConfig {
 		Filters:     s.toolGroups.Filters,
 		Transitions: s.toolGroups.Transitions,
 		Automation:  s.toolGroups.Automation,
+		Canvas:      s.toolGroups.Canvas,
 	}
 }

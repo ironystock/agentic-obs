@@ -215,6 +215,8 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			Design:      getBool(tg, "design", true),
 			Filters:     getBool(tg, "filters", true),
 			Transitions: getBool(tg, "transitions", true),
+			Automation:  getBool(tg, "automation", true),
+			Canvas:      getBool(tg, "canvas", true),
 		}
 		if err := s.storage.SaveToolGroupConfig(r.Context(), config); err != nil {
 			log.Printf("Warning: failed to save tool group config: %v", err)

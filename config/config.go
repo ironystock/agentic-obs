@@ -44,6 +44,7 @@ type ToolGroupConfig struct {
 	Filters     bool // Filter management tools
 	Transitions bool // Transition control tools
 	Automation  bool // Automation rule tools (event-triggered actions)
+	Canvas      bool // Canvas tools (OBS 30+ multi-canvas, obs-websocket 5.7+)
 }
 
 // WebServerConfig controls HTTP server settings
@@ -78,6 +79,7 @@ func DefaultConfig() *Config {
 			Filters:     true,
 			Transitions: true,
 			Automation:  true,
+			Canvas:      true,
 		},
 		WebServer: WebServerConfig{
 			Enabled:           true,
@@ -313,6 +315,7 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 		Filters:     cfg.ToolGroups.Filters,
 		Transitions: cfg.ToolGroups.Transitions,
 		Automation:  cfg.ToolGroups.Automation,
+		Canvas:      cfg.ToolGroups.Canvas,
 	}
 	if err := db.SaveToolGroupConfig(ctx, toolGroups); err != nil {
 		return fmt.Errorf("failed to save tool group config: %w", err)

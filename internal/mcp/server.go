@@ -153,6 +153,7 @@ type ToolGroupConfig struct {
 	Filters     bool // Filter management tools (FB-23)
 	Transitions bool // Transition control tools (FB-24)
 	Automation  bool // Automation rule tools (FB-20)
+	Canvas      bool // Canvas tools (FB-42, OBS 30+ multi-canvas)
 }
 
 // DefaultToolGroupConfig returns config with all tool groups enabled
@@ -167,6 +168,7 @@ func DefaultToolGroupConfig() ToolGroupConfig {
 		Filters:     true,
 		Transitions: true,
 		Automation:  true,
+		Canvas:      true,
 	}
 }
 
