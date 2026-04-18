@@ -13,6 +13,7 @@ This directory documents significant architectural decisions for the agentic-obs
 | [005](005-auth-storage.md) | SQLite Password Storage | Accepted | 2025-12-14 |
 | [006](006-auto-detect-setup.md) | Auto-Detect Setup Flow | Accepted | 2025-12-14 |
 | [007](007-web-ui-interfaces.md) | Web UI Interface Pattern | Accepted | 2025-12-18 |
+| [008](008-mcp-apps-port.md) | MCP Apps Spec Port (FB-32) | Proposed | 2026-04-18 |
 
 ## ADR Template
 
