@@ -52,6 +52,7 @@ const (
 	EventRecordingStopped        = "recording_stopped"
 	EventRecordingPaused         = "recording_paused"
 	EventRecordingResumed        = "recording_resumed"
+	EventRecordingFileChanged    = "recording_file_changed"
 	EventStreamingStarted        = "streaming_started"
 	EventStreamingStopped        = "streaming_stopped"
 	EventVirtualCamStarted       = "virtual_cam_started"
@@ -165,6 +166,7 @@ func SupportedEventTypes() []string {
 		EventRecordingStopped,
 		EventRecordingPaused,
 		EventRecordingResumed,
+		EventRecordingFileChanged,
 		EventStreamingStarted,
 		EventStreamingStopped,
 		EventVirtualCamStarted,
