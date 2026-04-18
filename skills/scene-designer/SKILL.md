@@ -72,6 +72,23 @@ As the **scene-designer**, your role is to:
 ### Utility (1 tool)
 - `list_input_kinds` - List available source types in OBS
 
+### Source Filters (7 tools)
+Filters modify the visual or audio output of a source without changing
+the source itself. Common uses: color correction on a webcam, chroma
+key for green-screen, noise suppression on a mic, sharpen/blur effects.
+
+- `list_source_filters` - Enumerate filters on a source with kind + enabled state
+- `get_source_filter` - Fetch one filter's settings + index
+- `create_source_filter` - Add a filter (e.g. `color_filter_v2`, `chroma_key_filter_v2`)
+- `remove_source_filter` - Delete a filter from a source
+- `toggle_source_filter` - Enable/disable without removing
+- `set_source_filter_settings` - Tune existing filter params
+- `list_filter_kinds` - Discover every filter kind OBS supports on this machine
+
+**Filter ordering matters** — filters apply top-to-bottom in the list.
+Place `chroma_key` BEFORE `color_correction` so the key uses the raw
+input; place `sharpen` LAST so it doesn't amplify keying artifacts.
+
 ## Canvas Understanding
 
 OBS uses a coordinate system with:
@@ -198,6 +215,57 @@ User: "Add my Streamlabs alerts"
 5. Confirm:
    - Report: "Alert box added at top center"
 ```
+
+### Adding a Chroma Key (Green Screen) to a Webcam
+
+```
+1. Pick the source:
+   - Use list_sources to find the webcam source name
+
+2. Survey existing filters:
+   - list_source_filters for that source so you know the current order
+
+3. Create the key filter:
+   - create_source_filter with:
+       kind: "chroma_key_filter_v2"
+       settings: {
+         key_color_type: "green",
+         similarity: 400,    // 1–1000, start at 400
+         smoothness: 80,     // 1–1000, soften edges
+         spill: 100          // remove green fringe
+       }
+   - Place it at the top of the filter chain (index: 0) so later
+     filters work on the keyed output.
+
+4. Verify:
+   - toggle_source_filter off then on to show user the before/after
+   - If hair edges look rough: raise smoothness. If background bleeds
+     through: raise similarity. If green tint remains: raise spill.
+```
+
+### Color-Correcting a Webcam
+
+```
+1. list_source_filters to check for an existing color filter
+2. If none exists:
+   create_source_filter:
+     kind: "color_filter_v2"
+     settings: {gamma: 0.0, contrast: 0.0, brightness: 0.0, saturation: 0.0, hue_shift: 0.0}
+3. Use set_source_filter_settings to tune incrementally
+   (OBS accepts negative values for darkening / desaturation)
+4. Order: chroma_key -> color_filter -> sharpen/blur
+```
+
+### Troubleshooting Filters
+
+- **Filter has no visible effect** - Check it's enabled (`toggle_source_filter`)
+  and that its index is below any filter that resets the pixel data
+  (e.g. `luma_key` after `chroma_key` will undo the key).
+- **Filter kind not found** - Call `list_filter_kinds` to enumerate what
+  the user's OBS build supports. Plugin-provided filters vary by install.
+- **Audio filters silent** - They live on the *input* source, not on a
+  scene item. Use `list_sources` (not `list_scene_items`) to pick the
+  target before calling `create_source_filter`.
 
 ## Layout Design Patterns
 
