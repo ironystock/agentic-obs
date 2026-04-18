@@ -1,8 +1,8 @@
 # agentic-obs Project Status
 
 **Status:** Active Development
-**Version:** 0.12.0
-**Updated:** 2025-12-21
+**Version:** 0.13.0
+**Updated:** 2026-04-18
 
 ---
 
@@ -14,19 +14,25 @@
 | [CLAUDE.md](CLAUDE.md) | AI assistant context, development guidelines |
 | [CHANGELOG.md](CHANGELOG.md) | Version history, phase details |
 | [design/ARCHITECTURE.md](design/ARCHITECTURE.md) | System diagrams, component responsibilities |
-| [design/ROADMAP.md](design/ROADMAP.md) | Future enhancements, research topics |
+| [design/ROADMAP.md](design/ROADMAP.md) | Sprint planning, FB backlog, research topics |
 | [design/decisions/](design/decisions/) | Architecture Decision Records (ADRs) |
 
 ---
 
 ## Current Metrics
 
+Source of truth: `internal/mcp/help_content.go` constants. Counts here are a cached view and may lag a single PR behind; run `./scripts/verify-docs.sh` to confirm.
+
 | Metric | Count |
 |--------|-------|
-| **MCP Tools** | 72 |
+| **MCP Tools** | 81 |
 | **MCP Resources** | 4 |
-| **MCP Prompts** | 13 |
+| **MCP Prompts** | 14 |
 | **Claude Skills** | 4 |
+
+### Active Sprint
+
+**Sprint 0.5 — Upstream Alignment & FB-20 Follow-ups** (in progress). See [design/ROADMAP.md](design/ROADMAP.md#sprint-05--upstream-alignment--fb-20-follow-ups) for scope and ordering.
 
 ---
 

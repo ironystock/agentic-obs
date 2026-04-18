@@ -141,6 +141,44 @@ resources/subscribe { uri: "obs://audio/Microphone" }
 
 ---
 
+## Sprint Planning
+
+Work is organized into sprints using a semver-inspired cadence:
+
+- **N.0 — Feature sprint** — introduces new capability (tools, resources, prompts, skills).
+- **N.5 — Chore / alignment sprint** — dep bumps, deprecations, debt, follow-ups from the preceding feature sprint.
+
+Sprint names follow the format **"Sprint N.N — <Focus>"**, where the focus describes what a user or reviewer would call the work (e.g. "Canvas & Multi-Output"), not the internal category.
+
+FB item numbers and sprint numbers are orthogonal: an **FB item** is a single tracked piece of work; a **sprint** is a timebox grouping of FB items. An FB belongs to exactly one sprint once scheduled — the `Sprint` column in the Active Backlog captures that mapping.
+
+### Active Sprints
+
+| Sprint | Focus | Status | Contains |
+|--------|-------|--------|----------|
+| **0.5** | Upstream Alignment & FB-20 Follow-ups | In progress | FB-4, FB-32..FB-41 (FB-30, FB-31 folded into FB-33) |
+| **1.0** | Canvas & Multi-Output | Candidate (blocked on 0.5) | FB-42 |
+
+### Sprint 0.5 — Upstream Alignment & FB-20 Follow-ups
+
+**Theme:** realign with what upstream has shipped while we were away (MCP Go SDK, obs-websocket 5.5 → 5.7, MCP Apps spec, Skills vs. current tool inventory), and close the safety/test items deferred from FB-20 (PR #26).
+
+**Order of operations (matters — each unblocks discoveries for the next):**
+1. **FB-4** — MCP Go SDK bump. Surfaces what MCP Apps / sampling / annotations look like in the current SDK.
+2. **FB-34** — goobs + obs-websocket protocol bump. Surfaces additional 5.6/5.7 requests and events beyond the ones we already know about.
+3. **FB-32** — MCP Apps port, informed by FB-4's discoveries.
+4. **FB-33** — Skills modernization sweep, informed by FB-20 ✅ + FB-27 ✅ tool inventory.
+5. **FB-35, FB-36** — Deprecated-field audit and `RecordFileChanged` wiring (mechanical, follow FB-34).
+6. **FB-37..FB-41** — FB-20 safety / test / retention follow-ups (can parallelize).
+
+**Tangent discipline:** during each dep bump, feature opportunities that surface go into [`sprints/0.5-tangent-log.md`](sprints/0.5-tangent-log.md) rather than expanding the sprint. A **30-minute gate** applies: if the enhancement is literally 30 minutes AND entirely additive, fold it into the dep bump's commit; anything bigger goes to the log. Candidates are promoted to FB numbers at sprint close.
+
+### Sprint 1.0 — Canvas & Multi-Output *(candidate)*
+
+OBS 30's multi-canvas feature (vertical streaming, multi-output from a single OBS instance) shipped in obs-websocket protocol 5.7.0. Tracked as FB-42. Hard-depends on Sprint 0.5's goobs bump (FB-34) — the generated Go types for `GetCanvasList`, `Canvas*` events, and the optional `canvasUuid` parameter don't exist in goobs v1.5.6.
+
+---
+
 ## Feature Backlog (FB Items)
 
 Tracked features with unique identifiers for reference.
@@ -172,19 +210,32 @@ Tracked features with unique identifiers for reference.
 
 ### Active Backlog
 
-| ID | Name | Priority | Complexity | Dependencies | Description |
-|----|------|----------|------------|--------------|-------------|
-| FB-29 | New Prompts | Medium | Low | FB-25, FB-26 ✅ | Add virtual-cam-control, replay-management prompts |
-| FB-30 | Scene Designer Filters | Medium | Low | FB-23 ✅ | Add filter section to scene-designer skill |
-| FB-31 | Studio Mode Skill | Medium | Medium | FB-26 ✅ | New studio-mode-operator skill for preview/program workflow |
-| FB-19 | Release Automation | Medium | Low | FB-18 ✅ | GitHub Actions workflow for automated releases |
-| FB-4 | SDK Migration | Medium | Medium | - | Process for tracking go-sdk updates |
-| FB-21 | Additional Resources | Medium | Low-Med | - | Sources, filters, audio as MCP resources |
-| FB-22 | Docker Container | Medium | Low | - | Containerized deployment option |
-| FB-5 | Static Website | Low | Medium | FB-14 ✅ | Project documentation site |
-| FB-6 | Network API | Low | High | - | Non-localhost HTTP exposure |
-| FB-7 | Multi-Instance | Medium | Very High | - | Multiple OBS support |
-| FB-8 | Remote Hosted | Low | Very High | FB-6, FB-7 | Cloud-hosted server |
+Ordered by sprint, then priority. Items marked `—` in the Sprint column are unscheduled.
+
+| ID | Name | Priority | Complexity | Sprint | Dependencies | Description |
+|----|------|----------|------------|--------|--------------|-------------|
+| FB-4 | SDK Migration (MCP Go SDK bump) | High | Medium | **0.5** | - | Bump `github.com/modelcontextprotocol/go-sdk` past v1.1.0; absorb API changes; surface MCP Apps / sampling / annotations opportunities |
+| FB-34 | goobs + obs-websocket 5.5 → 5.7 bump | High | Medium | **0.5** | - | Bump goobs v1.5.6 → v1.8.3 (protocol 5.5 → 5.7); absorb API changes; unblocks FB-42 |
+| FB-32 | MCP Apps Port | High | Medium-High | **0.5** | FB-4 | Port the mcpui-go work (FB-15 ✅) to the new MCP Apps spec at `apps.extensions.modelcontextprotocol.io`; shape depends on FB-4 discoveries |
+| FB-33 | Skills Modernization Sweep | Medium | Medium | **0.5** | FB-20 ✅, FB-27 ✅ | Audit all 4 skills against 81 tools + 14 prompts; add automation coverage to `streaming-assistant`; folds FB-30 and FB-31 |
+| FB-35 | Deprecated field audit (`currentProgram*` / `currentPreview*`) | Medium | Low | **0.5** | FB-34 | Migrate off scene-response fields flagged for removal in obs-websocket protocol |
+| FB-36 | `RecordFileChanged` event wiring | Low | Low | **0.5** | FB-34 | Bridge OBS 30+ file-split event into the automation engine's event bridge |
+| FB-37 | Automation cooldown race fix | Medium | Low-Med | **0.5** | FB-20 ✅ | Move `recordCooldown` from execute-end to dispatch-time; fixes intermittent `TestEngineCooldown` at `-count>=3` |
+| FB-38 | Automation queue-overflow metric | Low | Low | **0.5** | FB-20 ✅ | Expose `dropped_events_total` counter for the engine's 100-deep `eventChan` |
+| FB-39 | Automation concurrency tests | Medium | Medium | **0.5** | FB-20 ✅ | Stress tests for cooldown map + rule cache; may need a CGO-enabled test lane for `-race` |
+| FB-40 | Automation `OnError="stop"` test | Low | Low | **0.5** | FB-20 ✅ | Unit test covering action-chain halt when `OnError=stop` |
+| FB-41 | Automation execution retention | Medium | Low-Med | **0.5** | FB-20 ✅ | Scheduled sweep via `ClearOldRuleExecutions` to prevent DB bloat over time |
+| FB-42 | Canvas Support (OBS 30+) | High | Medium-High | **1.0** | FB-34 | New tool group for OBS 30 multi-canvas: `GetCanvasList`, `obs://canvas/*` resource, `Canvas*` event bridge |
+| FB-30 | Scene Designer Filters | Medium | Low | 0.5 (via FB-33) | FB-23 ✅ | Add filter section to `scene-designer` skill |
+| FB-31 | Studio Mode Skill | Medium | Medium | 0.5 (via FB-33) | FB-26 ✅ | New `studio-mode-operator` skill for preview/program workflow |
+| FB-29 | New Prompts (virtual-cam-control, replay-management) | Medium | Low | — | FB-25 ✅, FB-26 ✅ | Add virtual-cam-control, replay-management prompts |
+| FB-19 | Release Automation | Medium | Low | — | FB-18 ✅ | GitHub Actions workflow for automated releases |
+| FB-21 | Additional Resources | Medium | Low-Med | — | - | Sources, filters, audio as MCP resources |
+| FB-22 | Docker Container | Medium | Low | — | - | Containerized deployment option |
+| FB-5 | Static Website | Low | Medium | — | FB-14 ✅ | Project documentation site |
+| FB-6 | Network API | Low | High | — | - | Non-localhost HTTP exposure |
+| FB-7 | Multi-Instance | Medium | Very High | — | - | Multiple OBS support |
+| FB-8 | Remote Hosted | Low | Very High | — | FB-6, FB-7 | Cloud-hosted server |
 
 ### Other Backlog Items
 
