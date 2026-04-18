@@ -32,6 +32,7 @@ const (
 	StateKeyToolsDesign      = "tools_enabled_design"      // Scene design tools (source creation, transforms)
 	StateKeyToolsFilters     = "tools_enabled_filters"     // Filter management tools
 	StateKeyToolsTransitions = "tools_enabled_transitions" // Transition control tools
+	StateKeyToolsAutomation  = "tools_enabled_automation"  // Automation rule tools
 )
 
 // Webserver configuration keys
@@ -320,6 +321,7 @@ type ToolGroupConfig struct {
 	Design      bool // Scene design tools (source creation, transforms)
 	Filters     bool // Filter management tools
 	Transitions bool // Transition control tools
+	Automation  bool // Automation rule tools
 }
 
 // DefaultToolGroupConfig returns tool group config with all groups enabled.
@@ -333,6 +335,7 @@ func DefaultToolGroupConfig() ToolGroupConfig {
 		Design:      true,
 		Filters:     true,
 		Transitions: true,
+		Automation:  true,
 	}
 }
 
@@ -368,6 +371,9 @@ func (db *DB) SaveToolGroupConfig(ctx context.Context, cfg ToolGroupConfig) erro
 	}
 	if err := db.SetState(ctx, StateKeyToolsTransitions, boolToStr(cfg.Transitions)); err != nil {
 		return fmt.Errorf("failed to save transitions tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsAutomation, boolToStr(cfg.Automation)); err != nil {
+		return fmt.Errorf("failed to save automation tools preference: %w", err)
 	}
 
 	return nil
@@ -406,6 +412,9 @@ func (db *DB) LoadToolGroupConfig(ctx context.Context) (ToolGroupConfig, error) 
 	}
 	if val, err := db.GetState(ctx, StateKeyToolsTransitions); err == nil {
 		cfg.Transitions = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsAutomation); err == nil {
+		cfg.Automation = strToBool(val)
 	}
 
 	return cfg, nil

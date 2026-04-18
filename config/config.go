@@ -43,6 +43,7 @@ type ToolGroupConfig struct {
 	Design      bool // Scene design tools (source creation, transforms)
 	Filters     bool // Filter management tools
 	Transitions bool // Transition control tools
+	Automation  bool // Automation rule tools (event-triggered actions)
 }
 
 // WebServerConfig controls HTTP server settings
@@ -76,6 +77,7 @@ func DefaultConfig() *Config {
 			Design:      true,
 			Filters:     true,
 			Transitions: true,
+			Automation:  true,
 		},
 		WebServer: WebServerConfig{
 			Enabled:           true,
@@ -162,6 +164,7 @@ func (c *Config) PromptFirstRunSetup() error {
 	c.ToolGroups.Design = promptBool("Scene design (create sources, transforms)", c.ToolGroups.Design)
 	c.ToolGroups.Filters = promptBool("Filter management (source filters)", c.ToolGroups.Filters)
 	c.ToolGroups.Transitions = promptBool("Transition control (scene transitions)", c.ToolGroups.Transitions)
+	c.ToolGroups.Automation = promptBool("Automation rules (event-triggered actions)", c.ToolGroups.Automation)
 
 	// Webserver prompt
 	fmt.Println("\n--- HTTP Server ---")
@@ -194,6 +197,7 @@ func (c *Config) PromptFirstRunSetup() error {
 	fmt.Printf("Design tools: %v\n", c.ToolGroups.Design)
 	fmt.Printf("Filter tools: %v\n", c.ToolGroups.Filters)
 	fmt.Printf("Transition tools: %v\n", c.ToolGroups.Transitions)
+	fmt.Printf("Automation tools: %v\n", c.ToolGroups.Automation)
 	fmt.Printf("HTTP server: %v", c.WebServer.Enabled)
 	if c.WebServer.Enabled {
 		fmt.Printf(" (port %d)", c.WebServer.Port)
@@ -251,6 +255,7 @@ func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 			Design:      toolGroups.Design,
 			Filters:     toolGroups.Filters,
 			Transitions: toolGroups.Transitions,
+			Automation:  toolGroups.Automation,
 		}
 	}
 
@@ -307,6 +312,7 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 		Design:      cfg.ToolGroups.Design,
 		Filters:     cfg.ToolGroups.Filters,
 		Transitions: cfg.ToolGroups.Transitions,
+		Automation:  cfg.ToolGroups.Automation,
 	}
 	if err := db.SaveToolGroupConfig(ctx, toolGroups); err != nil {
 		return fmt.Errorf("failed to save tool group config: %w", err)

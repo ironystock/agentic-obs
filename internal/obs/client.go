@@ -43,9 +43,39 @@ type ConnectionConfig struct {
 
 // EventCallback is the interface for handling OBS events and triggering MCP notifications.
 type EventCallback interface {
+	// Scene events
 	OnSceneCreated(sceneName string)
 	OnSceneRemoved(sceneName string)
 	OnCurrentProgramSceneChanged(sceneName string)
+
+	// Recording events
+	OnRecordingStarted()
+	OnRecordingStopped(outputPath string)
+	OnRecordingPaused()
+	OnRecordingResumed()
+
+	// Streaming events
+	OnStreamingStarted()
+	OnStreamingStopped()
+
+	// Virtual camera events
+	OnVirtualCamStarted()
+	OnVirtualCamStopped()
+
+	// Replay buffer events
+	OnReplayBufferSaved(savedPath string)
+
+	// Input events
+	OnInputMuteChanged(inputName string, muted bool)
+
+	// Scene item events
+	OnSceneItemVisibilityChanged(sceneName string, sceneItemId int, visible bool)
+
+	// Transition events
+	OnTransitionStarted(transitionName string)
+
+	// Studio mode events
+	OnStudioModeChanged(enabled bool)
 }
 
 // NewClient creates a new OBS client with the specified connection configuration.
@@ -87,9 +117,16 @@ func (c *Client) Connect() error {
 	var client *goobs.Client
 	var err error
 
-	// Build connection options
+	// Build connection options - subscribe to event categories needed for automation
 	opts := []goobs.Option{
-		goobs.WithEventSubscriptions(subscriptions.Scenes),
+		goobs.WithEventSubscriptions(
+			subscriptions.Scenes | // Scene creation, removal, and switching
+				subscriptions.Outputs | // Recording, Streaming, VirtualCam, ReplayBuffer
+				subscriptions.Inputs | // Audio mute/volume changes
+				subscriptions.SceneItems | // Source visibility changes
+				subscriptions.Transitions | // Scene transition events
+				subscriptions.Ui, // Studio mode changes
+		),
 	}
 
 	if c.password != "" {
@@ -275,6 +312,7 @@ func (c *Client) handleEvents() {
 
 		// Dispatch based on event type
 		switch e := event.(type) {
+		// Scene events
 		case *events.SceneCreated:
 			callback.OnSceneCreated(e.SceneName)
 
@@ -284,9 +322,57 @@ func (c *Client) handleEvents() {
 		case *events.CurrentProgramSceneChanged:
 			callback.OnCurrentProgramSceneChanged(e.SceneName)
 
-		// Additional events can be handled here as needed
+		// Recording events
+		case *events.RecordStateChanged:
+			switch {
+			case e.OutputActive && e.OutputState == "OBS_WEBSOCKET_OUTPUT_STARTED":
+				callback.OnRecordingStarted()
+			case !e.OutputActive && e.OutputState == "OBS_WEBSOCKET_OUTPUT_STOPPED":
+				callback.OnRecordingStopped(e.OutputPath)
+			case e.OutputState == "OBS_WEBSOCKET_OUTPUT_PAUSED":
+				callback.OnRecordingPaused()
+			case e.OutputState == "OBS_WEBSOCKET_OUTPUT_RESUMED":
+				callback.OnRecordingResumed()
+			}
+
+		// Streaming events
+		case *events.StreamStateChanged:
+			if e.OutputActive && e.OutputState == "OBS_WEBSOCKET_OUTPUT_STARTED" {
+				callback.OnStreamingStarted()
+			} else if !e.OutputActive && e.OutputState == "OBS_WEBSOCKET_OUTPUT_STOPPED" {
+				callback.OnStreamingStopped()
+			}
+
+		// Virtual camera events
+		case *events.VirtualcamStateChanged:
+			if e.OutputActive && e.OutputState == "OBS_WEBSOCKET_OUTPUT_STARTED" {
+				callback.OnVirtualCamStarted()
+			} else if !e.OutputActive && e.OutputState == "OBS_WEBSOCKET_OUTPUT_STOPPED" {
+				callback.OnVirtualCamStopped()
+			}
+
+		// Replay buffer events
+		case *events.ReplayBufferSaved:
+			callback.OnReplayBufferSaved(e.SavedReplayPath)
+
+		// Input events
+		case *events.InputMuteStateChanged:
+			callback.OnInputMuteChanged(e.InputName, e.InputMuted)
+
+		// Scene item events
+		case *events.SceneItemEnableStateChanged:
+			callback.OnSceneItemVisibilityChanged(e.SceneName, int(e.SceneItemId), e.SceneItemEnabled)
+
+		// Transition events
+		case *events.SceneTransitionStarted:
+			callback.OnTransitionStarted(e.TransitionName)
+
+		// Studio mode events
+		case *events.StudioModeStateChanged:
+			callback.OnStudioModeChanged(e.StudioModeEnabled)
+
 		default:
-			// Ignore other events for now
+			// Ignore other events
 		}
 	}
 }
