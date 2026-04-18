@@ -202,11 +202,17 @@ func (e *AutomationEngine) processEvents() {
 }
 
 // dispatchEvent finds and executes matching rules for an event.
+//
+// Cooldown is recorded at dispatch time (not at execute-end) so that a burst
+// of events arriving faster than executeRule can complete cannot re-trigger
+// the same rule. Because cooldown check + record must be atomic, the match
+// loop runs under a write lock.
 func (e *AutomationEngine) dispatchEvent(payload EventPayload) {
-	e.mu.RLock()
+	e.mu.Lock()
 
-	// Find matching rules sorted by priority
+	// Find matching rules, recording cooldown atomically for each match.
 	var matching []*Rule
+	now := time.Now()
 	for _, rule := range e.rules {
 		if !rule.Enabled {
 			continue
@@ -220,14 +226,17 @@ func (e *AutomationEngine) dispatchEvent(payload EventPayload) {
 		if !e.matchesFilter(rule.GetEventFilter(), payload.Data) {
 			continue
 		}
-		if !e.checkCooldown(rule) {
+		if !e.checkCooldownLocked(rule) {
 			log.Printf("[Automation] Rule '%s' skipped (cooldown)", rule.Name)
 			continue
+		}
+		if rule.CooldownMs > 0 {
+			e.cooldowns[rule.ID] = now
 		}
 		matching = append(matching, rule)
 	}
 
-	e.mu.RUnlock()
+	e.mu.Unlock()
 
 	// Sort by priority (higher first)
 	sort.Slice(matching, func(i, j int) bool {
@@ -261,8 +270,9 @@ func (e *AutomationEngine) matchesFilter(filter map[string]interface{}, data map
 	return true
 }
 
-// checkCooldown returns true if the rule can be executed (not in cooldown).
-func (e *AutomationEngine) checkCooldown(rule *Rule) bool {
+// checkCooldownLocked returns true if the rule can be executed (not in cooldown).
+// Caller must hold e.mu (read or write).
+func (e *AutomationEngine) checkCooldownLocked(rule *Rule) bool {
 	if rule.CooldownMs <= 0 {
 		return true
 	}
@@ -274,13 +284,6 @@ func (e *AutomationEngine) checkCooldown(rule *Rule) bool {
 
 	cooldown := time.Duration(rule.CooldownMs) * time.Millisecond
 	return time.Since(lastRun) >= cooldown
-}
-
-// recordCooldown records that a rule was just executed.
-func (e *AutomationEngine) recordCooldown(rule *Rule) {
-	e.mu.Lock()
-	e.cooldowns[rule.ID] = time.Now()
-	e.mu.Unlock()
 }
 
 // executeScheduledRule is called by the scheduler.
@@ -364,9 +367,6 @@ func (e *AutomationEngine) executeRule(rule *Rule, payload *EventPayload) {
 	if err := e.storage.UpdateRuleRunStats(e.ctx, rule.ID, startTime); err != nil {
 		log.Printf("[Automation] Warning: failed to update rule stats: %v", err)
 	}
-
-	// Record cooldown
-	e.recordCooldown(rule)
 }
 
 // NotifyRuleChange should be called when rules are modified via MCP.
