@@ -506,6 +506,77 @@ func TestEngineDroppedEventsCounter(t *testing.T) {
 		"overflow events should increment counter")
 }
 
+// TestEngineRetentionSweep verifies the background retention sweeper
+// deletes execution history older than the configured retention window.
+func TestEngineRetentionSweep(t *testing.T) {
+	db, cleanup := testAutomationDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	// Seed: one 48h-old execution (will be pruned) and one current
+	// execution (will be kept). Retention = 24h.
+	rule := storage.AutomationRule{
+		Name:          "retention-test",
+		Enabled:       true,
+		TriggerType:   TriggerTypeManual,
+		TriggerConfig: map[string]interface{}{},
+		Actions:       []storage.RuleAction{{Type: ActionTypeStartRecording}},
+	}
+	ruleID, err := db.CreateAutomationRule(ctx, rule)
+	require.NoError(t, err)
+
+	old := storage.RuleExecution{
+		RuleID:      ruleID,
+		RuleName:    rule.Name,
+		TriggerType: TriggerTypeManual,
+		StartedAt:   time.Now().Add(-48 * time.Hour),
+		Status:      storage.ExecutionStatusCompleted,
+	}
+	_, err = db.CreateRuleExecution(ctx, old)
+	require.NoError(t, err)
+
+	recent := storage.RuleExecution{
+		RuleID:      ruleID,
+		RuleName:    rule.Name,
+		TriggerType: TriggerTypeManual,
+		StartedAt:   time.Now(),
+		Status:      storage.ExecutionStatusCompleted,
+	}
+	_, err = db.CreateRuleExecution(ctx, recent)
+	require.NoError(t, err)
+
+	mock := NewMockOBSClient()
+	engine := NewAutomationEngine(db, mock)
+	engine.SetExecutionRetention(24 * time.Hour)
+
+	// Run a one-shot sweep without starting the engine loops.
+	deleted, err := engine.RunRetentionSweep()
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), deleted, "expected the 48h-old execution to be removed")
+
+	remaining, err := db.GetRuleExecutions(ctx, ruleID, 10)
+	require.NoError(t, err)
+	assert.Len(t, remaining, 1, "recent execution should be retained")
+}
+
+// TestEngineRetentionSweeperStartsOnStart verifies the sweeper goroutine
+// is launched by Start and shut down by Stop without deadlocking.
+func TestEngineRetentionSweeperStartsOnStart(t *testing.T) {
+	db, cleanup := testAutomationDB(t)
+	defer cleanup()
+
+	mock := NewMockOBSClient()
+	engine := NewAutomationEngine(db, mock)
+	// Aggressive sweep tempo so the goroutine runs at least once.
+	engine.SetRetentionSweepInterval(20 * time.Millisecond)
+	engine.SetExecutionRetention(1 * time.Millisecond)
+
+	require.NoError(t, engine.Start())
+	time.Sleep(60 * time.Millisecond) // let sweeper tick
+	engine.Stop()                     // must not hang
+	assert.False(t, engine.IsRunning())
+}
+
 func TestEngineMultipleActions(t *testing.T) {
 	db, cleanup := testAutomationDB(t)
 	defer cleanup()
