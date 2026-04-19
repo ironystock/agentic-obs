@@ -130,6 +130,12 @@ type MockOBSClient struct {
 	ErrorOnSetCurrentPreviewScene error
 	ErrorOnTriggerHotkeyByName    error
 	ErrorOnGetHotkeyList          error
+
+	// Canvas mock data (FB-42)
+	canvases []obs.Canvas
+
+	// Error injection for canvases (FB-42)
+	ErrorOnGetCanvasList error
 }
 
 // NewMockOBSClient creates a new mock OBS client with default test data.
@@ -272,6 +278,8 @@ func NewMockOBSClient() *MockOBSClient {
 			"OBSBasic.ReplayBuffer",
 			"OBSBasic.SaveReplay",
 		},
+		// Canvases (FB-42) - default empty; tests add via AddCanvas
+		canvases: []obs.Canvas{},
 	}
 }
 
@@ -2214,4 +2222,40 @@ func (m *MockOBSClient) AddHotkey(hotkeyName string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.hotkeys = append(m.hotkeys, hotkeyName)
+}
+
+// =============================================================================
+// Canvas operations (FB-42)
+// =============================================================================
+
+// GetCanvasList returns the list of canvases configured in mock OBS.
+func (m *MockOBSClient) GetCanvasList() ([]obs.Canvas, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ErrorOnGetCanvasList != nil {
+		return nil, m.ErrorOnGetCanvasList
+	}
+
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+
+	result := make([]obs.Canvas, len(m.canvases))
+	copy(result, m.canvases)
+	return result, nil
+}
+
+// AddCanvas adds a canvas to the mock for testing.
+func (m *MockOBSClient) AddCanvas(name, uuid string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.canvases = append(m.canvases, obs.Canvas{Name: name, UUID: uuid})
+}
+
+// SetCanvases replaces the mock canvas list wholesale for testing.
+func (m *MockOBSClient) SetCanvases(canvases []obs.Canvas) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.canvases = append([]obs.Canvas(nil), canvases...)
 }

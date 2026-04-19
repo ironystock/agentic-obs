@@ -120,6 +120,9 @@ type OBSClient interface {
 	TriggerHotkeyByName(hotkeyName string) error
 	GetHotkeyList() ([]string, error)
 
+	// Canvas operations (FB-42, OBS 30+ multi-canvas)
+	GetCanvasList() ([]obs.Canvas, error)
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }
