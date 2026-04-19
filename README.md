@@ -436,6 +436,10 @@ Skills use progressive disclosure for token-efficient guidance. See `skills/READ
 
 Contributions are welcome! Please open an issue or submit a pull request.
 
+### Security reviews
+
+PRs that touch security-sensitive surfaces (HTTP handlers, storage, MCP input parsing, OBS event sinks, startup config) get a `/security-review` pass before merge. The resulting report is committed to [`design/security-reviews/`](design/security-reviews/) so the audit trail stays in the repo. See [`design/security-reviews/README.md`](design/security-reviews/README.md) for the full policy.
+
 ## License
 
 [Add your license here]

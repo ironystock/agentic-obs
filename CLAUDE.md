@@ -148,6 +148,10 @@ go get -u github.com/andreykaipov/goobs
 go mod tidy
 ```
 
+### Pre-merge: `/security-review`
+
+For PRs touching `internal/http/`, `internal/storage/`, `internal/mcp/`, `internal/obs/`, `config/`, or `main.go`, run `/security-review` on the branch and commit the resulting report to `design/security-reviews/<branch-slug>_security-review.md`. Add a row to the index in `design/security-reviews/README.md`. Skip for doc-only or test-only PRs.
+
 ## MCP Capabilities Summary
 
 ### Tools (82 in 10 groups + meta)
