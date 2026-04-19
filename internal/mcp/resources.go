@@ -18,6 +18,7 @@ const (
 	ScreenshotURIPrefix    = "obs://screenshot/"
 	ScreenshotURLURIPrefix = "obs://screenshot-url/"
 	PresetURIPrefix        = "obs://preset/"
+	CanvasURIPrefix        = "obs://canvas/"
 )
 
 // SceneDetails contains detailed information about a scene
@@ -87,6 +88,23 @@ func (s *Server) registerResourceHandlers() {
 		s.handlePresetResourceRead,
 	)
 	resourceCount++
+
+	// Register canvases as resources (FB-42, OBS 30+ multi-canvas)
+	// Accessible at obs://canvas/{canvasName}. Only registered when the
+	// Canvas tool group is enabled so that deployments on OBS < 30 can
+	// disable both the tool and the resource cleanly.
+	if s.toolGroups.Canvas {
+		s.mcpServer.AddResourceTemplate(
+			&mcpsdk.ResourceTemplate{
+				URITemplate: "obs://canvas/{canvasName}",
+				Name:        "OBS Canvas",
+				Description: "OBS 30+ multi-canvas details (name + UUID) via obs-websocket 5.7+",
+				MIMEType:    "application/json",
+			},
+			s.handleCanvasResourceRead,
+		)
+		resourceCount++
+	}
 
 	// Register MCP-UI resources (only if HTTP server is enabled)
 	if s.httpServer != nil {
@@ -485,4 +503,66 @@ func extractScreenshotURLNameFromURI(uri string) (string, error) {
 		return "", fmt.Errorf("URI must start with %s", ScreenshotURLURIPrefix)
 	}
 	return uri[len(ScreenshotURLURIPrefix):], nil
+}
+
+// handleCanvasResourceRead returns details for a specific OBS canvas (FB-42).
+// goobs v1.8.3 exposes only GetCanvasList, so per-canvas lookup is done by
+// scanning the list; this is fine given canvases are rarely numerous.
+func (s *Server) handleCanvasResourceRead(ctx context.Context, request *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+	uri := request.Params.URI
+	log.Printf("Handling canvas resource read request for URI: %s", uri)
+
+	canvasName, err := extractCanvasNameFromURI(uri)
+	if err != nil {
+		return nil, fmt.Errorf("invalid canvas resource URI: %w", err)
+	}
+
+	canvases, err := s.obsClient.GetCanvasList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get canvas list: %w", err)
+	}
+
+	var match *obs.Canvas
+	for i := range canvases {
+		if canvases[i].Name == canvasName {
+			match = &canvases[i]
+			break
+		}
+	}
+	if match == nil {
+		return nil, fmt.Errorf("canvas %q not found", canvasName)
+	}
+
+	payload := map[string]interface{}{
+		"name":        match.Name,
+		"uuid":        match.UUID,
+		"description": fmt.Sprintf("OBS canvas %q (uuid %s)", match.Name, match.UUID),
+	}
+
+	jsonData, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal canvas details: %w", err)
+	}
+
+	return &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{
+			{
+				URI:      uri,
+				MIMEType: "application/json",
+				Text:     string(jsonData),
+			},
+		},
+	}, nil
+}
+
+// extractCanvasNameFromURI extracts the canvas name from a resource URI.
+// Expected format: obs://canvas/{canvasName}
+func extractCanvasNameFromURI(uri string) (string, error) {
+	if len(uri) <= len(CanvasURIPrefix) {
+		return "", fmt.Errorf("URI too short")
+	}
+	if uri[:len(CanvasURIPrefix)] != CanvasURIPrefix {
+		return "", fmt.Errorf("URI must start with %s", CanvasURIPrefix)
+	}
+	return uri[len(CanvasURIPrefix):], nil
 }

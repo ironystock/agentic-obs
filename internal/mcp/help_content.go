@@ -22,7 +22,7 @@ import "fmt"
 // ============================================================================
 const (
 	HelpToolCount     = 82 // Total MCP tools (including meta-tools)
-	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
+	HelpResourceCount = 5  // Resource types: scenes, screenshots, screenshot-url, presets, canvases
 	HelpPromptCount   = 14 // Workflow prompts
 
 	// Tool counts by category (should sum to HelpToolCount)
@@ -56,7 +56,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 ## Key Features
 
 - **%d Tools** across 10 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, Canvas) + Meta
-- **%d Resource Types** (scenes, screenshots, screenshot URLs, presets)
+- **%d Resource Types** (scenes, screenshots, screenshot URLs, presets, canvases)
 - **%d Workflow Prompts** for common streaming/recording tasks
 - **Real-time Monitoring** via screenshot sources for AI visual inspection
 - **Scene Presets** to save and restore source visibility states
@@ -278,6 +278,13 @@ Resources provide direct access to OBS data through MCP resource URIs.
 - **Type**: application/json
 - **Description**: Saved source visibility configurations
 - **Usage**: Save and restore scene layouts
+
+## 5. Canvases
+- **URI**: obs://canvas/{canvasName}
+- **Type**: application/json
+- **Description**: OBS 30+ multi-canvas (vertical streaming, multi-output)
+- **Notifications**: Updates when canvases are created, renamed, or removed
+- **Requires**: obs-websocket 5.7+
 `, HelpResourceCount)
 
 	if verbose {
