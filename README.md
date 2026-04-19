@@ -308,7 +308,7 @@ Enable AI to create and manipulate OBS sources programmatically.
 }
 ```
 
-**Total: 81 tools in 9 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta (4 always-enabled tools)
+**Total: 82 tools in 10 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, Canvas) + Meta (4 always-enabled tools)
 
 ## MCP Resources
 
@@ -320,6 +320,7 @@ The server exposes OBS data as MCP resources for efficient access and monitoring
 | Screenshots | `obs://screenshot/{name}` | `image/png` or `image/jpeg` | Binary screenshot images from capture sources |
 | Screenshot URLs | `obs://screenshot-url/{name}` | `text/plain` | HTTP URL for screenshot image access |
 | Presets | `obs://preset/{name}` | `obs-preset` (JSON) | Scene preset configurations with source visibility |
+| Canvases | `obs://canvas/{name}` | `application/json` | Canvas details (name + UUID) — OBS 30+ multi-canvas (FB-42) |
 
 **Usage:**
 - `resources/list` - List all available resources
@@ -360,7 +361,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (81 tools)
+│   ├── mcp/               # MCP server implementation (82 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard

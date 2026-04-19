@@ -264,7 +264,7 @@ Enable AI to create and manipulate OBS sources programmatically.
 | `set_transition_duration` | Set transition duration in milliseconds |
 | `trigger_transition` | Trigger studio mode transition (preview to program) |
 
-**Total: 81 tools in 9 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta (4 always-enabled tools)
+**Total: 82 tools in 10 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, Canvas) + Meta (4 always-enabled tools)
 
 ## MCP Resources
 
@@ -316,7 +316,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (81 tools)
+│   ├── mcp/               # MCP server implementation (82 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard
