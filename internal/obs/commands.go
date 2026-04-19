@@ -1,6 +1,7 @@
 package obs
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -1501,4 +1502,41 @@ func (c *Client) StopReplayBuffer() error {
 	}
 
 	return nil
+}
+
+// Canvas represents an OBS canvas (OBS 30+ multi-canvas, obs-websocket 5.7+).
+type Canvas struct {
+	Name string `json:"canvasName"`
+	UUID string `json:"canvasUuid"`
+}
+
+// GetCanvasList retrieves all canvases configured in OBS.
+// Requires OBS 30+ and obs-websocket protocol 5.7+.
+//
+// The upstream GetCanvasList response is loosely typed (map[string]any);
+// we JSON round-trip into Canvas so extra upstream fields surface cleanly
+// when we widen the struct, and so the conversion fails loudly if the
+// upstream shape changes incompatibly.
+func (c *Client) GetCanvasList() ([]Canvas, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Canvases.GetCanvasList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get canvas list from OBS: %w", err)
+	}
+
+	raw, err := json.Marshal(resp.Canvases)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode canvas list: %w", err)
+	}
+
+	canvases := []Canvas{}
+	if err := json.Unmarshal(raw, &canvases); err != nil {
+		return nil, fmt.Errorf("failed to decode canvas list: %w", err)
+	}
+
+	return canvases, nil
 }

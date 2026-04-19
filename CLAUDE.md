@@ -6,7 +6,7 @@ Context for AI assistants working on the agentic-obs project.
 
 **agentic-obs** is an MCP (Model Context Protocol) server providing AI assistants with programmatic control over OBS Studio via the WebSocket API.
 
-**Current Status:** 81 Tools | 4 Resources | 14 Prompts | 4 Skills
+**Current Status:** 82 Tools | 5 Resources | 14 Prompts | 5 Skills
 
 ## Project Structure
 
@@ -17,7 +17,7 @@ agentic-obs/
 ├── internal/
 │   ├── mcp/
 │   │   ├── server.go       # MCP server lifecycle
-│   │   ├── tools.go        # Tool registration (81 tools)
+│   │   ├── tools.go        # Tool registration (82 tools)
 │   │   ├── resources.go    # Resource handlers (4 types)
 │   │   ├── prompts.go      # Prompt definitions (14 prompts)
 │   │   ├── completions.go  # Autocomplete handler
@@ -43,12 +43,12 @@ agentic-obs/
 
 | Component | Package | Version |
 |-----------|---------|---------|
-| MCP SDK | `github.com/modelcontextprotocol/go-sdk` | 1.1.0 |
-| OBS Client | `github.com/andreykaipov/goobs` | 1.5.6 |
-| SQLite | `modernc.org/sqlite` | latest |
-| TUI | `github.com/charmbracelet/bubbletea` | 1.3.3 |
+| MCP SDK | `github.com/modelcontextprotocol/go-sdk` | 1.5.0 |
+| OBS Client | `github.com/andreykaipov/goobs` | 1.8.3 (obs-websocket 5.7.3) |
+| SQLite | `modernc.org/sqlite` | 1.49.x |
+| TUI | `github.com/charmbracelet/bubbletea` | 1.3.x |
 | Markdown (HTML) | `github.com/yuin/goldmark` | 1.7.x |
-| Markdown (Terminal) | `github.com/charmbracelet/glamour` | 0.8.x |
+| Markdown (Terminal) | `github.com/charmbracelet/glamour` | 1.0.x |
 
 ## Communication Flow
 
@@ -148,9 +148,13 @@ go get -u github.com/andreykaipov/goobs
 go mod tidy
 ```
 
+### Pre-merge: `/security-review`
+
+For PRs touching `internal/http/`, `internal/storage/`, `internal/mcp/`, `internal/obs/`, `config/`, or `main.go`, run `/security-review` on the branch and commit the resulting report to `design/security-reviews/<branch-slug>_security-review.md`. Add a row to the index in `design/security-reviews/README.md`. Skip for doc-only or test-only PRs.
+
 ## MCP Capabilities Summary
 
-### Tools (81 in 9 groups + meta)
+### Tools (82 in 10 groups + meta)
 
 | Group | Count | Examples |
 |-------|-------|----------|
@@ -163,9 +167,10 @@ go mod tidy
 | Filters | 7 | `list_source_filters`, `toggle_source_filter` |
 | Transitions | 5 | `list_transitions`, `set_current_transition` |
 | Automation | 9 | `list_automation_rules`, `create_automation_rule`, `trigger_automation_rule` |
+| Canvas | 1 | `list_canvases` (FB-42, requires obs-websocket 5.7+) |
 | Meta | 4 | `help`, `get_tool_config`, `set_tool_config`, `list_tool_groups` (always enabled) |
 
-### Resources (4 types)
+### Resources (5 types)
 
 | Type | URI Pattern | Content |
 |------|-------------|---------|
@@ -173,6 +178,7 @@ go mod tidy
 | Screenshots | `obs://screenshot/{name}` | Binary image data |
 | Screenshot URLs | `obs://screenshot-url/{name}` | HTTP URL string |
 | Presets | `obs://preset/{name}` | Preset configuration JSON |
+| Canvases | `obs://canvas/{name}` | Canvas details (name + UUID) — OBS 30+ |
 
 ### Prompts (13 workflows)
 
@@ -185,7 +191,7 @@ For detailed rationale, see [design/decisions/](design/decisions/).
 1. **Pure Go SQLite** (`modernc.org/sqlite`) - No CGO for easy cross-compilation
 2. **Persistent OBS Connection** - Single 1:1 connection with auto-reconnect
 3. **Scenes as Resources** - Enable MCP notifications for state synchronization
-4. **Tool Groups** - Configurable categories (Core, Visual, Layout, Audio, Sources, Design, Filters, Transitions, Automation)
+4. **Tool Groups** - Configurable categories (Core, Visual, Layout, Audio, Sources, Design, Filters, Transitions, Automation, Canvas)
 5. **Interface Pattern** - StatusProvider/ActionExecutor for web UI decoupling
 
 ## Documentation Links
@@ -221,4 +227,4 @@ For detailed rationale, see [design/decisions/](design/decisions/).
 
 ---
 
-**Last Updated:** 2025-12-19 | **Go:** 1.25.5 | **MCP SDK:** 1.1.0 | **goobs:** 1.5.6
+**Last Updated:** 2026-04-18 | **Go:** 1.25.5 | **MCP SDK:** 1.5.0 | **goobs:** 1.8.3

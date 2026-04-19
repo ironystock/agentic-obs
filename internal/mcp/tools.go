@@ -961,6 +961,20 @@ func (s *Server) registerToolHandlers() {
 		log.Println("Automation tools registered (9 tools)")
 	}
 
+	// Canvas tools (FB-42, OBS 30+ multi-canvas via obs-websocket 5.7+)
+	if s.toolGroups.Canvas {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_canvases",
+				Description: "List all canvases configured in OBS (OBS 30+ multi-canvas). Returns canvas name and UUID for each canvas. Requires obs-websocket 5.7+.",
+			},
+			s.handleListCanvases,
+		)
+
+		toolCount += 1
+		log.Println("Canvas tools registered (1 tool)")
+	}
+
 	// Meta tools - always enabled, cannot be disabled
 	// These provide help and runtime tool configuration
 
@@ -2688,5 +2702,25 @@ func (s *Server) handleListHotkeys(ctx context.Context, request *mcpsdk.CallTool
 		"message": fmt.Sprintf("Found %d available hotkeys", len(hotkeys)),
 	}
 	s.recordAction("list_hotkeys", "List hotkeys", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleListCanvases lists all OBS canvases (OBS 30+ multi-canvas via obs-websocket 5.7+).
+func (s *Server) handleListCanvases(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Listing canvases")
+
+	canvases, err := s.obsClient.GetCanvasList()
+	if err != nil {
+		s.recordAction("list_canvases", "List canvases", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to list canvases: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"canvases": canvases,
+		"count":    len(canvases),
+		"message":  fmt.Sprintf("Found %d canvas(es)", len(canvases)),
+	}
+	s.recordAction("list_canvases", "List canvases", nil, result, true, time.Since(start))
 	return nil, result, nil
 }

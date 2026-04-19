@@ -153,6 +153,7 @@ type ToolGroupConfig struct {
 	Filters     bool // Filter management tools (FB-23)
 	Transitions bool // Transition control tools (FB-24)
 	Automation  bool // Automation rule tools (FB-20)
+	Canvas      bool // Canvas tools (FB-42, OBS 30+ multi-canvas)
 }
 
 // DefaultToolGroupConfig returns config with all tool groups enabled
@@ -167,6 +168,7 @@ func DefaultToolGroupConfig() ToolGroupConfig {
 		Filters:     true,
 		Transitions: true,
 		Automation:  true,
+		Canvas:      true,
 	}
 }
 
@@ -424,20 +426,41 @@ func (s *Server) handleOBSEventNotification(eventType obs.EventType, data map[st
 		}
 	}
 
-	// Check if specific resource updated (scene changed)
+	// Check if specific resource updated (scene changed or canvas renamed)
 	if obs.ShouldTriggerResourceUpdated(eventType) {
-		if sceneName, ok := data["scene_name"].(string); ok {
-			uri := obs.GetResourceURIForScene(sceneName)
-			if err := s.SendResourceUpdated(ctx, uri); err != nil {
-				log.Printf("Error sending resource updated notification: %v", err)
-			} else {
-				log.Printf("Sent resource updated notification for scene: %s", sceneName)
+		switch eventType {
+		case obs.EventTypeSceneChanged:
+			if sceneName, ok := data["scene_name"].(string); ok {
+				uri := obs.GetResourceURIForScene(sceneName)
+				if err := s.SendResourceUpdated(ctx, uri); err != nil {
+					log.Printf("Error sending resource updated notification: %v", err)
+				} else {
+					log.Printf("Sent resource updated notification for scene: %s", sceneName)
+				}
+
+				// Invalidate thumbnail cache for the changed scene
+				if s.thumbnailCache != nil {
+					s.thumbnailCache.invalidate(sceneName)
+					log.Printf("Thumbnail cache invalidated for scene: %s", sceneName)
+				}
 			}
 
-			// Invalidate thumbnail cache for the changed scene
-			if s.thumbnailCache != nil {
-				s.thumbnailCache.invalidate(sceneName)
-				log.Printf("Thumbnail cache invalidated for scene: %s", sceneName)
+		case obs.EventTypeCanvasNameChanged:
+			// Canvas rename: notify on both the old and new URIs so clients that
+			// had the old name cached can invalidate it.
+			if oldName, ok := data["old_canvas_name"].(string); ok && oldName != "" {
+				oldURI := obs.GetResourceURIForCanvas(oldName)
+				if err := s.SendResourceUpdated(ctx, oldURI); err != nil {
+					log.Printf("Error sending canvas-rename (old URI) notification: %v", err)
+				}
+			}
+			if newName, ok := data["canvas_name"].(string); ok && newName != "" {
+				newURI := obs.GetResourceURIForCanvas(newName)
+				if err := s.SendResourceUpdated(ctx, newURI); err != nil {
+					log.Printf("Error sending canvas-rename (new URI) notification: %v", err)
+				} else {
+					log.Printf("Sent resource updated notification for canvas: %s", newName)
+				}
 			}
 		}
 	}

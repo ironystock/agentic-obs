@@ -21,8 +21,8 @@ import "fmt"
 //
 // ============================================================================
 const (
-	HelpToolCount     = 81 // Total MCP tools (including meta-tools)
-	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
+	HelpToolCount     = 82 // Total MCP tools (including meta-tools)
+	HelpResourceCount = 5  // Resource types: scenes, screenshots, screenshot-url, presets, canvases
 	HelpPromptCount   = 14 // Workflow prompts
 
 	// Tool counts by category (should sum to HelpToolCount)
@@ -36,6 +36,7 @@ const (
 	HelpFiltersToolCount     = 7  // Filter management (FB-23)
 	HelpTransitionsToolCount = 5  // Transition control (FB-24)
 	HelpAutomationToolCount  = 9  // Automation rules (FB-20)
+	HelpCanvasToolCount      = 1  // Canvas listing (FB-42, OBS 30+ multi-canvas)
 )
 
 // GetOverviewHelp returns high-level overview of agentic-obs
@@ -54,8 +55,8 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 
 ## Key Features
 
-- **%d Tools** across 9 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta
-- **%d Resource Types** (scenes, screenshots, screenshot URLs, presets)
+- **%d Tools** across 10 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, Canvas) + Meta
+- **%d Resource Types** (scenes, screenshots, screenshot URLs, presets, canvases)
 - **%d Workflow Prompts** for common streaming/recording tasks
 - **Real-time Monitoring** via screenshot sources for AI visual inspection
 - **Scene Presets** to save and restore source visibility states
@@ -75,6 +76,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 **Filters Tools** (%d tools): Filter creation, toggle, settings
 **Transitions Tools** (%d tools): Transition selection, duration, trigger
 **Automation Tools** (%d tools): Event-triggered rules, schedules, macros
+**Canvas Tools** (%d tools): OBS 30+ multi-canvas listing (vertical streaming, multi-output)
 
 ## Common Workflows
 
@@ -92,7 +94,8 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 - topic="troubleshooting" - Common issues and solutions
 `, HelpCoreToolCount, HelpSourcesToolCount, HelpAudioToolCount,
 			HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
-			HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount)
+			HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount,
+			HelpCanvasToolCount)
 	}
 
 	return help
@@ -212,9 +215,14 @@ func GetToolsHelp(verbose bool) string {
 - disable_automation_rule - Deactivate a rule
 - trigger_automation_rule - Manually trigger for testing
 - list_rule_executions - View execution history
+
+## Canvas Tools (%d tools) - OBS 30+ Multi-Canvas
+
+- list_canvases - List all canvases configured in OBS (requires obs-websocket 5.7+)
 `, HelpToolCount, HelpCoreToolCount, HelpMetaToolCount, HelpSourcesToolCount,
 		HelpAudioToolCount, HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
-		HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount)
+		HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount,
+		HelpCanvasToolCount)
 
 	if verbose {
 		help += `
@@ -270,6 +278,13 @@ Resources provide direct access to OBS data through MCP resource URIs.
 - **Type**: application/json
 - **Description**: Saved source visibility configurations
 - **Usage**: Save and restore scene layouts
+
+## 5. Canvases
+- **URI**: obs://canvas/{canvasName}
+- **Type**: application/json
+- **Description**: OBS 30+ multi-canvas (vertical streaming, multi-output)
+- **Notifications**: Updates when canvases are created, renamed, or removed
+- **Requires**: obs-websocket 5.7+
 `, HelpResourceCount)
 
 	if verbose {

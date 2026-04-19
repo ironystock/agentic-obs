@@ -139,9 +139,11 @@ func TestHandleHelp(t *testing.T) {
 		assert.Contains(t, helpText, "OBS Scenes")
 		assert.Contains(t, helpText, "Screenshot Images")
 		assert.Contains(t, helpText, "Scene Presets")
+		assert.Contains(t, helpText, "Canvases")
 		assert.Contains(t, helpText, "obs://scene/")
 		assert.Contains(t, helpText, "obs://screenshot/")
 		assert.Contains(t, helpText, "obs://preset/")
+		assert.Contains(t, helpText, "obs://canvas/")
 	})
 
 	t.Run("returns verbose resources help", func(t *testing.T) {
@@ -443,8 +445,8 @@ func TestGetOverviewHelp(t *testing.T) {
 		assert.Contains(t, help, "What is agentic-obs")
 		assert.Contains(t, help, "Quick Start")
 		assert.Contains(t, help, "Key Features")
-		assert.Contains(t, help, "81 Tools")
-		assert.Contains(t, help, "4 Resource Types")
+		assert.Contains(t, help, "82 Tools")
+		assert.Contains(t, help, "5 Resource Types")
 	})
 
 	t.Run("verbose overview includes additional sections", func(t *testing.T) {
@@ -499,9 +501,11 @@ func TestGetResourcesHelp(t *testing.T) {
 		assert.Contains(t, help, "Screenshot Images")
 		assert.Contains(t, help, "Screenshot URLs")
 		assert.Contains(t, help, "Scene Presets")
+		assert.Contains(t, help, "Canvases")
 		assert.Contains(t, help, "obs://scene/")
 		assert.Contains(t, help, "obs://screenshot/")
 		assert.Contains(t, help, "obs://preset/")
+		assert.Contains(t, help, "obs://canvas/")
 	})
 
 	t.Run("verbose resources help includes operations and examples", func(t *testing.T) {

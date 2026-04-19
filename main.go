@@ -98,6 +98,8 @@ func main() {
 			Design:      cfg.ToolGroups.Design,
 			Filters:     cfg.ToolGroups.Filters,
 			Transitions: cfg.ToolGroups.Transitions,
+			Automation:  cfg.ToolGroups.Automation,
+			Canvas:      cfg.ToolGroups.Canvas,
 		},
 	}
 

@@ -200,3 +200,34 @@ func TestExtractPresetNameFromURI(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestExtractCanvasNameFromURI(t *testing.T) {
+	t.Run("extracts canvas name from valid URI", func(t *testing.T) {
+		name, err := extractCanvasNameFromURI("obs://canvas/Main")
+		assert.NoError(t, err)
+		assert.Equal(t, "Main", name)
+	})
+
+	t.Run("extracts canvas name with spaces", func(t *testing.T) {
+		name, err := extractCanvasNameFromURI("obs://canvas/Vertical Output")
+		assert.NoError(t, err)
+		assert.Equal(t, "Vertical Output", name)
+	})
+
+	t.Run("returns error for URI too short", func(t *testing.T) {
+		_, err := extractCanvasNameFromURI("obs://canvas/")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "too short")
+	})
+
+	t.Run("returns error for invalid prefix", func(t *testing.T) {
+		_, err := extractCanvasNameFromURI("obs://scene/Main")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must start with")
+	})
+
+	t.Run("returns error for empty URI", func(t *testing.T) {
+		_, err := extractCanvasNameFromURI("")
+		assert.Error(t, err)
+	})
+}

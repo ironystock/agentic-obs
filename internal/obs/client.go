@@ -77,6 +77,11 @@ type EventCallback interface {
 
 	// Studio mode events
 	OnStudioModeChanged(enabled bool)
+
+	// Canvas events (FB-42, OBS 30+ multi-canvas via obs-websocket 5.7+)
+	OnCanvasCreated(canvasName, canvasUUID string)
+	OnCanvasNameChanged(oldName, newName, canvasUUID string)
+	OnCanvasRemoved(canvasName, canvasUUID string)
 }
 
 // NewClient creates a new OBS client with the specified connection configuration.
@@ -126,7 +131,8 @@ func (c *Client) Connect() error {
 				subscriptions.Inputs | // Audio mute/volume changes
 				subscriptions.SceneItems | // Source visibility changes
 				subscriptions.Transitions | // Scene transition events
-				subscriptions.Ui, // Studio mode changes
+				subscriptions.Ui | // Studio mode changes
+				subscriptions.Canvases, // Canvas create / rename / remove (FB-42, OBS 30+)
 		),
 	}
 
@@ -374,6 +380,16 @@ func (c *Client) handleEvents() {
 		// Studio mode events
 		case *events.StudioModeStateChanged:
 			callback.OnStudioModeChanged(e.StudioModeEnabled)
+
+		// Canvas events (FB-42, OBS 30+ multi-canvas via obs-websocket 5.7+)
+		case *events.CanvasCreated:
+			callback.OnCanvasCreated(e.CanvasName, e.CanvasUuid)
+
+		case *events.CanvasNameChanged:
+			callback.OnCanvasNameChanged(e.OldCanvasName, e.CanvasName, e.CanvasUuid)
+
+		case *events.CanvasRemoved:
+			callback.OnCanvasRemoved(e.CanvasName, e.CanvasUuid)
 
 		default:
 			// Ignore other events

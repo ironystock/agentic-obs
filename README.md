@@ -308,7 +308,7 @@ Enable AI to create and manipulate OBS sources programmatically.
 }
 ```
 
-**Total: 81 tools in 9 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta (4 always-enabled tools)
+**Total: 82 tools in 10 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, Canvas) + Meta (4 always-enabled tools)
 
 ## MCP Resources
 
@@ -320,6 +320,7 @@ The server exposes OBS data as MCP resources for efficient access and monitoring
 | Screenshots | `obs://screenshot/{name}` | `image/png` or `image/jpeg` | Binary screenshot images from capture sources |
 | Screenshot URLs | `obs://screenshot-url/{name}` | `text/plain` | HTTP URL for screenshot image access |
 | Presets | `obs://preset/{name}` | `obs-preset` (JSON) | Scene preset configurations with source visibility |
+| Canvases | `obs://canvas/{name}` | `application/json` | Canvas details (name + UUID) — OBS 30+ multi-canvas (FB-42) |
 
 **Usage:**
 - `resources/list` - List all available resources
@@ -360,7 +361,7 @@ agentic-obs/
 ├── main.go                 # Entry point (MCP server or TUI)
 ├── config/                 # Configuration management
 ├── internal/
-│   ├── mcp/               # MCP server implementation (81 tools)
+│   ├── mcp/               # MCP server implementation (82 tools)
 │   ├── obs/               # OBS WebSocket client
 │   ├── storage/           # SQLite persistence
 │   ├── http/              # HTTP server for screenshots and dashboard
@@ -434,6 +435,10 @@ Skills use progressive disclosure for token-efficient guidance. See `skills/READ
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
+
+### Security reviews
+
+PRs that touch security-sensitive surfaces (HTTP handlers, storage, MCP input parsing, OBS event sinks, startup config) get a `/security-review` pass before merge. The resulting report is committed to [`design/security-reviews/`](design/security-reviews/) so the audit trail stays in the repo. See [`design/security-reviews/README.md`](design/security-reviews/README.md) for the full policy.
 
 ## License
 

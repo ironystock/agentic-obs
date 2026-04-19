@@ -55,6 +55,11 @@ const (
 
 	// Studio mode events
 	EventTypeStudioModeChanged EventType = "studio_mode_changed"
+
+	// Canvas events (FB-42, OBS 30+ multi-canvas via obs-websocket 5.7+)
+	EventTypeCanvasCreated     EventType = "canvas_created"
+	EventTypeCanvasNameChanged EventType = "canvas_name_changed"
+	EventTypeCanvasRemoved     EventType = "canvas_removed"
 )
 
 // NewEventHandler creates a new event handler with the specified notification function.
@@ -235,6 +240,46 @@ func (h *EventHandler) OnStudioModeChanged(enabled bool) {
 	}
 }
 
+// OnCanvasCreated is called when a new canvas is created in OBS (FB-42).
+// Triggers a "resources/list_changed" notification so clients re-list canvases.
+func (h *EventHandler) OnCanvasCreated(canvasName, canvasUUID string) {
+	log.Printf("[OBS Event] Canvas created: %s (uuid=%s)", canvasName, canvasUUID)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeCanvasCreated, map[string]interface{}{
+			"canvas_name": canvasName,
+			"canvas_uuid": canvasUUID,
+			"action":      "created",
+		})
+	}
+}
+
+// OnCanvasNameChanged is called when a canvas is renamed in OBS (FB-42).
+// Triggers a "resources/updated" notification for the renamed canvas URI.
+func (h *EventHandler) OnCanvasNameChanged(oldName, newName, canvasUUID string) {
+	log.Printf("[OBS Event] Canvas renamed: %s -> %s (uuid=%s)", oldName, newName, canvasUUID)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeCanvasNameChanged, map[string]interface{}{
+			"old_canvas_name": oldName,
+			"canvas_name":     newName,
+			"canvas_uuid":     canvasUUID,
+			"action":          "renamed",
+		})
+	}
+}
+
+// OnCanvasRemoved is called when a canvas is removed from OBS (FB-42).
+// Triggers a "resources/list_changed" notification so clients re-list canvases.
+func (h *EventHandler) OnCanvasRemoved(canvasName, canvasUUID string) {
+	log.Printf("[OBS Event] Canvas removed: %s (uuid=%s)", canvasName, canvasUUID)
+	if h.notificationFunc != nil {
+		h.notificationFunc(EventTypeCanvasRemoved, map[string]interface{}{
+			"canvas_name": canvasName,
+			"canvas_uuid": canvasUUID,
+			"action":      "removed",
+		})
+	}
+}
+
 // EventLogger is a simple event callback implementation that just logs events
 // without triggering MCP notifications. Useful for testing and debugging.
 type EventLogger struct{}
@@ -329,6 +374,21 @@ func (l *EventLogger) OnStudioModeChanged(enabled bool) {
 	log.Printf("[OBS Event Logger] Studio mode changed: %v", enabled)
 }
 
+// OnCanvasCreated logs canvas creation events.
+func (l *EventLogger) OnCanvasCreated(canvasName, canvasUUID string) {
+	log.Printf("[OBS Event Logger] Canvas created: %s (uuid=%s)", canvasName, canvasUUID)
+}
+
+// OnCanvasNameChanged logs canvas rename events.
+func (l *EventLogger) OnCanvasNameChanged(oldName, newName, canvasUUID string) {
+	log.Printf("[OBS Event Logger] Canvas renamed: %s -> %s (uuid=%s)", oldName, newName, canvasUUID)
+}
+
+// OnCanvasRemoved logs canvas removal events.
+func (l *EventLogger) OnCanvasRemoved(canvasName, canvasUUID string) {
+	log.Printf("[OBS Event Logger] Canvas removed: %s (uuid=%s)", canvasName, canvasUUID)
+}
+
 // FormatEventNotification formats an event into a structured notification message
 // suitable for MCP resource notifications.
 func FormatEventNotification(eventType EventType, data map[string]interface{}) (string, error) {
@@ -358,16 +418,27 @@ func GetResourceURIForScene(sceneName string) string {
 	return fmt.Sprintf("obs://scene/%s", sceneName)
 }
 
+// GetResourceURIForCanvas returns the MCP resource URI for a given canvas name.
+// This follows the pattern: obs://canvas/{canvas_name}
+func GetResourceURIForCanvas(canvasName string) string {
+	return fmt.Sprintf("obs://canvas/%s", canvasName)
+}
+
 // ShouldTriggerListChanged returns true if the event type should trigger
-// a "resources/list_changed" notification (scene creation or removal).
+// a "resources/list_changed" notification (scene/canvas creation or removal).
 func ShouldTriggerListChanged(eventType EventType) bool {
-	return eventType == EventTypeSceneCreated || eventType == EventTypeSceneRemoved
+	switch eventType {
+	case EventTypeSceneCreated, EventTypeSceneRemoved,
+		EventTypeCanvasCreated, EventTypeCanvasRemoved:
+		return true
+	}
+	return false
 }
 
 // ShouldTriggerResourceUpdated returns true if the event type should trigger
-// a "resources/updated" notification for a specific resource (scene change).
+// a "resources/updated" notification for a specific resource (scene change or canvas rename).
 func ShouldTriggerResourceUpdated(eventType EventType) bool {
-	return eventType == EventTypeSceneChanged
+	return eventType == EventTypeSceneChanged || eventType == EventTypeCanvasNameChanged
 }
 
 // EventMetrics tracks statistics about OBS events for monitoring and debugging.
@@ -389,6 +460,9 @@ type EventMetrics struct {
 	SourceVisibilityChangedCount int
 	TransitionStartedCount       int
 	StudioModeChangedCount       int
+	CanvasCreatedCount           int
+	CanvasNameChangedCount       int
+	CanvasRemovedCount           int
 }
 
 // EventMetricsTracker is an event callback that tracks event counts.
@@ -489,6 +563,21 @@ func (t *EventMetricsTracker) OnTransitionStarted(transitionName string) {
 // OnStudioModeChanged increments the studio mode changed counter.
 func (t *EventMetricsTracker) OnStudioModeChanged(enabled bool) {
 	t.metrics.StudioModeChangedCount++
+}
+
+// OnCanvasCreated increments the canvas created counter.
+func (t *EventMetricsTracker) OnCanvasCreated(canvasName, canvasUUID string) {
+	t.metrics.CanvasCreatedCount++
+}
+
+// OnCanvasNameChanged increments the canvas renamed counter.
+func (t *EventMetricsTracker) OnCanvasNameChanged(oldName, newName, canvasUUID string) {
+	t.metrics.CanvasNameChangedCount++
+}
+
+// OnCanvasRemoved increments the canvas removed counter.
+func (t *EventMetricsTracker) OnCanvasRemoved(canvasName, canvasUUID string) {
+	t.metrics.CanvasRemovedCount++
 }
 
 // GetMetrics returns the current event metrics.
@@ -635,5 +724,26 @@ func (c *CompositeEventCallback) OnTransitionStarted(transitionName string) {
 func (c *CompositeEventCallback) OnStudioModeChanged(enabled bool) {
 	for _, callback := range c.callbacks {
 		callback.OnStudioModeChanged(enabled)
+	}
+}
+
+// OnCanvasCreated dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnCanvasCreated(canvasName, canvasUUID string) {
+	for _, callback := range c.callbacks {
+		callback.OnCanvasCreated(canvasName, canvasUUID)
+	}
+}
+
+// OnCanvasNameChanged dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnCanvasNameChanged(oldName, newName, canvasUUID string) {
+	for _, callback := range c.callbacks {
+		callback.OnCanvasNameChanged(oldName, newName, canvasUUID)
+	}
+}
+
+// OnCanvasRemoved dispatches to all registered callbacks.
+func (c *CompositeEventCallback) OnCanvasRemoved(canvasName, canvasUUID string) {
+	for _, callback := range c.callbacks {
+		callback.OnCanvasRemoved(canvasName, canvasUUID)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ironystock/agentic-obs/internal/mcp/testutil"
+	"github.com/ironystock/agentic-obs/internal/obs"
 	"github.com/ironystock/agentic-obs/internal/storage"
 )
 
@@ -2392,5 +2393,65 @@ func TestHotkeyWorkflow(t *testing.T) {
 			triggerResult := result.(map[string]interface{})
 			assert.Contains(t, triggerResult["message"], hotkeyName)
 		}
+	})
+}
+
+// ============================================================================
+// Canvas Tool Tests (FB-42, OBS 30+ multi-canvas)
+// ============================================================================
+
+func TestHandleListCanvases(t *testing.T) {
+	t.Run("returns empty list when no canvases", func(t *testing.T) {
+		server, _ := testServer(t)
+
+		_, result, err := server.handleListCanvases(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		require.NotNil(t, result)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, 0, len(resultMap["canvases"].([]obs.Canvas)))
+		assert.Equal(t, 0, resultMap["count"])
+	})
+
+	t.Run("returns populated canvases", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.AddCanvas("Main Canvas", "uuid-main-0001")
+		mock.AddCanvas("Vertical Canvas", "uuid-vertical-0002")
+
+		_, result, err := server.handleListCanvases(context.Background(), nil, struct{}{})
+
+		assert.NoError(t, err)
+		require.NotNil(t, result)
+
+		resultMap := result.(map[string]interface{})
+		canvases := resultMap["canvases"].([]obs.Canvas)
+		assert.Len(t, canvases, 2)
+		assert.Equal(t, 2, resultMap["count"])
+		assert.Equal(t, "Main Canvas", canvases[0].Name)
+		assert.Equal(t, "uuid-main-0001", canvases[0].UUID)
+		assert.Equal(t, "Vertical Canvas", canvases[1].Name)
+		assert.Contains(t, resultMap["message"], "2")
+	})
+
+	t.Run("returns error when not connected", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.Disconnect()
+
+		_, _, err := server.handleListCanvases(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+
+	t.Run("propagates injected error", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.ErrorOnGetCanvasList = assert.AnError
+
+		_, _, err := server.handleListCanvases(context.Background(), nil, struct{}{})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to list canvases")
 	})
 }

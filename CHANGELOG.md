@@ -11,8 +11,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Architecture Decision Records (ADRs)
 - docs-maintainer agent for documentation consistency
 - **`automation-setup` prompt (FB-20 follow-up)** — 14th MCP workflow prompt; guides users through creating, testing, and monitoring automation rules. Accepts optional `rule_type` ('event'|'schedule') and `trigger_event` arguments for targeted guidance.
+- **Canvas tool group (FB-42, Sprint 1.0)** — OBS 30+ multi-canvas support via obs-websocket 5.7+:
+  - `list_canvases` tool — lists canvas name + UUID for each canvas configured in OBS.
+  - `obs://canvas/{name}` resource — per-canvas detail lookup, gated on the Canvas tool group.
+  - Canvas event bridge — subscribes to `subscriptions.Canvases`; dispatches `CanvasCreated` / `CanvasNameChanged` / `CanvasRemoved` through the EventCallback interface and out as `resources/list_changed` (create/remove) or `resources/updated` (rename, on both old + new URIs).
+  - Canvas event type constants (`canvas_created`, `canvas_name_changed`, `canvas_removed`) and metrics counters.
+  - Scaffolding: Canvas field on all `ToolGroupConfig` variants (config/storage/mcp), `HelpCanvasToolCount`, help_content text, verify-docs.sh expectations, CLAUDE.md + README metrics.
 
 ### Fixed
+- **Tool-groups zero-value bug (incidental to FB-42)** — `main.go` and `internal/http/handlers.go` constructed `ToolGroupConfig` struct literals without the `Automation` field, silently zero-valuing Automation on server startup and HTTP config updates. Now maps all fields explicitly.
 - **Automation engine graceful shutdown** — `AutomationEngine.Stop()` now waits for in-flight event dispatch and rule execution goroutines via a `sync.WaitGroup`, preventing execution records from being stranded in the `running` status on restart.
 - **`delete_automation_rule` elicitation safety** — when the elicitation RPC itself errors, the handler now returns that error instead of silently falling through and deleting without user confirmation.
 
