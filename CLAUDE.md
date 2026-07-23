@@ -221,4 +221,16 @@ For detailed rationale, see [design/decisions/](design/decisions/).
 
 ---
 
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues on `ironystock/agentic-obs` (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context. Domain glossary in `CONTEXT.md` (created lazily); ADRs live in `design/decisions/`, not `docs/adr/`. See `docs/agents/domain.md`.
+
+---
+
 **Last Updated:** 2025-12-19 | **Go:** 1.25.5 | **MCP SDK:** 1.1.0 | **goobs:** 1.5.6
