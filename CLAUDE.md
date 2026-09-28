@@ -6,7 +6,7 @@ Context for AI assistants working on the agentic-obs project.
 
 **agentic-obs** is an MCP (Model Context Protocol) server providing AI assistants with programmatic control over OBS Studio via the WebSocket API.
 
-**Current Status:** 81 Tools | 4 Resources | 14 Prompts | 4 Skills
+**Current Status:** 83 Tools | 4 Resources | 14 Prompts | 4 Skills
 
 ## Project Structure
 

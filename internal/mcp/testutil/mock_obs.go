@@ -130,6 +130,12 @@ type MockOBSClient struct {
 	ErrorOnSetCurrentPreviewScene error
 	ErrorOnTriggerHotkeyByName    error
 	ErrorOnGetHotkeyList          error
+
+	// Audio device mock data
+	audioDevices        []obs.AudioDevice
+	ErrorOnGetSpecialInputs       error
+	ErrorOnGetInputPropertiesItems error
+	ErrorOnCreateAudioInput       error
 }
 
 // NewMockOBSClient creates a new mock OBS client with default test data.
@@ -271,6 +277,13 @@ func NewMockOBSClient() *MockOBSClient {
 			"OBSBasic.Screenshot",
 			"OBSBasic.ReplayBuffer",
 			"OBSBasic.SaveReplay",
+		},
+		// Audio devices — simulates a Voicemeeter + default speaker setup
+		audioDevices: []obs.AudioDevice{
+			{Name: "Default", Value: "default"},
+			{Name: "VoiceMeeter Output (VB-Audio VoiceMeeter VAIO)", Value: "{0.0.0.00000000}.{voicemeeter-output}"},
+			{Name: "VoiceMeeter Aux Output (VB-Audio VoiceMeeter AUX VAIO)", Value: "{0.0.0.00000000}.{voicemeeter-aux-output}"},
+			{Name: "Speakers (Realtek High Definition Audio)", Value: "{0.0.0.00000000}.{realtek-speakers}"},
 		},
 	}
 }
@@ -2214,4 +2227,56 @@ func (m *MockOBSClient) AddHotkey(hotkeyName string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.hotkeys = append(m.hotkeys, hotkeyName)
+}
+
+// =============================================================================
+// Audio device methods
+// =============================================================================
+
+// GetSpecialInputs returns the names of OBS's built-in global audio inputs.
+func (m *MockOBSClient) GetSpecialInputs() (*obs.SpecialInputs, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.ErrorOnGetSpecialInputs != nil {
+		return nil, m.ErrorOnGetSpecialInputs
+	}
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+	return &obs.SpecialInputs{
+		Desktop1: "Desktop Audio",
+		Mic1:     "Mic/Aux",
+	}, nil
+}
+
+// GetInputPropertiesItems returns the mock audio device list for any input/property combination.
+func (m *MockOBSClient) GetInputPropertiesItems(inputName, propertyName string) ([]obs.AudioDevice, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.ErrorOnGetInputPropertiesItems != nil {
+		return nil, m.ErrorOnGetInputPropertiesItems
+	}
+	if !m.connected {
+		return nil, fmt.Errorf("not connected to OBS")
+	}
+	result := make([]obs.AudioDevice, len(m.audioDevices))
+	copy(result, m.audioDevices)
+	return result, nil
+}
+
+// CreateAudioInput creates an audio capture source using the existing CreateInput mock.
+func (m *MockOBSClient) CreateAudioInput(sceneName, sourceName, inputKind, deviceID string) (int, error) {
+	if m.ErrorOnCreateAudioInput != nil {
+		return 0, m.ErrorOnCreateAudioInput
+	}
+	return m.CreateInput(sceneName, sourceName, inputKind, map[string]interface{}{
+		"device_id": deviceID,
+	})
+}
+
+// SetAudioDevices replaces the mock audio device list for testing.
+func (m *MockOBSClient) SetAudioDevices(devices []obs.AudioDevice) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.audioDevices = devices
 }

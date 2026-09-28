@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ironystock/agentic-obs/internal/mcp/testutil"
+	"github.com/ironystock/agentic-obs/internal/obs"
 	"github.com/ironystock/agentic-obs/internal/storage"
 )
 
@@ -2392,5 +2394,108 @@ func TestHotkeyWorkflow(t *testing.T) {
 			triggerResult := result.(map[string]interface{})
 			assert.Contains(t, triggerResult["message"], hotkeyName)
 		}
+	})
+}
+
+func TestHandleListAudioDevices(t *testing.T) {
+	t.Run("returns output and input device lists", func(t *testing.T) {
+		server, _ := testServer(t)
+		_, result, err := server.handleListAudioDevices(context.Background(), nil, struct{}{})
+		require.NoError(t, err)
+
+		m := result.(map[string]interface{})
+		outputDevices := m["output_devices"].([]obs.AudioDevice)
+		inputDevices := m["input_devices"].([]obs.AudioDevice)
+
+		// Mock returns 4 output devices and 4 input devices (same list for both)
+		assert.Greater(t, len(outputDevices), 0)
+		assert.Greater(t, len(inputDevices), 0)
+
+		// Default device is always present in mock
+		assert.Equal(t, "Default", outputDevices[0].Name)
+		assert.Equal(t, "default", outputDevices[0].Value)
+	})
+
+	t.Run("propagates special inputs error", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.ErrorOnGetSpecialInputs = errors.New("OBS error")
+		_, _, err := server.handleListAudioDevices(context.Background(), nil, struct{}{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "OBS error")
+	})
+}
+
+func TestHandleCreateAudioInput(t *testing.T) {
+	t.Run("creates output capture source (Voicemeeter TTS routing)", func(t *testing.T) {
+		server, _ := testServer(t)
+		input := CreateAudioInputInput{
+			SceneName:  "Scene 1",
+			SourceName: "VoiceMeeter TTS",
+			DeviceKind: "output",
+			DeviceID:   "{0.0.0.00000000}.{voicemeeter-output}",
+		}
+		_, result, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.NoError(t, err)
+
+		m := result.(map[string]interface{})
+		assert.Equal(t, "wasapi_output_capture", m["input_kind"])
+		assert.Equal(t, input.DeviceID, m["device_id"])
+		assert.Greater(t, m["scene_item_id"], 0)
+	})
+
+	t.Run("creates input capture source (microphone)", func(t *testing.T) {
+		server, _ := testServer(t)
+		input := CreateAudioInputInput{
+			SceneName:  "Scene 1",
+			SourceName: "Headset Mic",
+			DeviceKind: "input",
+			DeviceID:   "default",
+		}
+		_, result, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.NoError(t, err)
+
+		m := result.(map[string]interface{})
+		assert.Equal(t, "wasapi_input_capture", m["input_kind"])
+	})
+
+	t.Run("rejects empty source_name", func(t *testing.T) {
+		server, _ := testServer(t)
+		input := CreateAudioInputInput{SceneName: "Scene 1", DeviceKind: "output", DeviceID: "default"}
+		_, _, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "source_name")
+	})
+
+	t.Run("rejects empty scene_name", func(t *testing.T) {
+		server, _ := testServer(t)
+		input := CreateAudioInputInput{SourceName: "TTS Audio", DeviceKind: "output", DeviceID: "default"}
+		_, _, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "scene_name")
+	})
+
+	t.Run("rejects empty device_id", func(t *testing.T) {
+		server, _ := testServer(t)
+		input := CreateAudioInputInput{SceneName: "Scene 1", SourceName: "TTS Audio", DeviceKind: "output"}
+		_, _, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "device_id")
+	})
+
+	t.Run("rejects invalid device_kind", func(t *testing.T) {
+		server, _ := testServer(t)
+		input := CreateAudioInputInput{SceneName: "Scene 1", SourceName: "TTS Audio", DeviceKind: "virtual", DeviceID: "default"}
+		_, _, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "device_kind")
+	})
+
+	t.Run("propagates OBS error", func(t *testing.T) {
+		server, mock := testServer(t)
+		mock.ErrorOnCreateAudioInput = errors.New("OBS unavailable")
+		input := CreateAudioInputInput{SceneName: "Scene 1", SourceName: "TTS Audio", DeviceKind: "output", DeviceID: "default"}
+		_, _, err := server.handleCreateAudioInput(context.Background(), nil, input)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "OBS unavailable")
 	})
 }

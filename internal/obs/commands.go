@@ -922,6 +922,79 @@ func (c *Client) GetInputKindList() ([]string, error) {
 	return resp.InputKinds, nil
 }
 
+// AudioDevice represents a selectable audio device returned from OBS input property queries.
+type AudioDevice struct {
+	Name  string `json:"name"`  // Human-readable display name shown in OBS UI
+	Value string `json:"value"` // Device ID used as device_id in CreateInput settings
+}
+
+// SpecialInputs holds the names of OBS's built-in global audio inputs (configured in Settings → Audio).
+type SpecialInputs struct {
+	Desktop1 string // Desktop Audio
+	Desktop2 string // Desktop Audio 2
+	Mic1     string // Mic/Auxiliary Audio
+	Mic2     string // Mic/Auxiliary Audio 2
+	Mic3     string // Mic/Auxiliary Audio 3
+	Mic4     string // Mic/Auxiliary Audio 4
+}
+
+// GetSpecialInputs returns the names of OBS's built-in global audio sources.
+func (c *Client) GetSpecialInputs() (*SpecialInputs, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Inputs.GetSpecialInputs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get special inputs: %w", err)
+	}
+	return &SpecialInputs{
+		Desktop1: resp.Desktop1,
+		Desktop2: resp.Desktop2,
+		Mic1:     resp.Mic1,
+		Mic2:     resp.Mic2,
+		Mic3:     resp.Mic3,
+		Mic4:     resp.Mic4,
+	}, nil
+}
+
+// GetInputPropertiesItems returns the selectable items for a list property on an input.
+// For WASAPI inputs, use propertyName="device_id" to enumerate available audio devices.
+func (c *Client) GetInputPropertiesItems(inputName, propertyName string) ([]AudioDevice, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Inputs.GetInputPropertiesListPropertyItems(
+		&inputs.GetInputPropertiesListPropertyItemsParams{
+			InputName:    &inputName,
+			PropertyName: &propertyName,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get property items for '%s'.%s: %w", inputName, propertyName, err)
+	}
+	devices := make([]AudioDevice, 0, len(resp.PropertyItems))
+	for _, item := range resp.PropertyItems {
+		val := ""
+		if item.ItemValue != nil {
+			val = fmt.Sprintf("%v", item.ItemValue)
+		}
+		devices = append(devices, AudioDevice{Name: item.ItemName, Value: val})
+	}
+	return devices, nil
+}
+
+// CreateAudioInput creates a WASAPI audio capture source in a scene.
+// inputKind must be "wasapi_output_capture" (playback devices, e.g. Voicemeeter virtual output)
+// or "wasapi_input_capture" (recording devices, e.g. microphones).
+// deviceID is the Value from GetInputPropertiesItems; pass "default" to use the system default device.
+func (c *Client) CreateAudioInput(sceneName, sourceName, inputKind, deviceID string) (int, error) {
+	return c.CreateInput(sceneName, sourceName, inputKind, map[string]interface{}{
+		"device_id": deviceID,
+	})
+}
+
 // =============================================================================
 // Filter Types and Methods (FB-23)
 // =============================================================================

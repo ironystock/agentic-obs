@@ -74,6 +74,11 @@ type OBSClient interface {
 	// Scene design - input kinds
 	GetInputKindList() ([]string, error)
 
+	// Audio device enumeration and creation
+	GetSpecialInputs() (*obs.SpecialInputs, error)
+	GetInputPropertiesItems(inputName, propertyName string) ([]obs.AudioDevice, error)
+	CreateAudioInput(sceneName, sourceName, inputKind, deviceID string) (int, error)
+
 	// Filter operations
 	GetSourceFilterList(sourceName string) ([]obs.FilterInfo, error)
 	GetSourceFilter(sourceName, filterName string) (*obs.FilterDetails, error)

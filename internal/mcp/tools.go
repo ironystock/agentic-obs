@@ -39,6 +39,17 @@ type InputNameInput struct {
 	InputName string `json:"input_name"`
 }
 
+// CreateAudioInputInput is the input for creating a WASAPI audio capture source
+type CreateAudioInputInput struct {
+	SceneName  string `json:"scene_name" jsonschema:"Name of the scene to add the audio source to"`
+	SourceName string `json:"source_name" jsonschema:"Name for the new audio source"`
+	// DeviceKind selects the WASAPI capture direction: "input" for microphones/recording
+	// devices, "output" for playback devices (e.g., Voicemeeter virtual output for TTS routing).
+	DeviceKind string `json:"device_kind" jsonschema:"'input' for microphones, 'output' for playback devices like Voicemeeter virtual output"`
+	// DeviceID is the Value field from list_audio_devices. Use "default" for the system default.
+	DeviceID string `json:"device_id" jsonschema:"Device ID from list_audio_devices; use 'default' for the system default device"`
+}
+
 // SetVolumeInput is the input for setting audio input volume
 type SetVolumeInput struct {
 	InputName string   `json:"input_name"`
@@ -558,8 +569,24 @@ func (s *Server) registerToolHandlers() {
 			s.handleGetInputVolume,
 		)
 
-		toolCount += 4
-		log.Println("Audio tools registered (4 tools)")
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "list_audio_devices",
+				Description: "List available Windows audio devices (WASAPI) for capture. Returns output devices (playback/Voicemeeter virtual) and input devices (microphones). Use device_id values with create_audio_input.",
+			},
+			s.handleListAudioDevices,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "create_audio_input",
+				Description: "Add a WASAPI audio capture source to a scene. Use device_kind='output' for Voicemeeter virtual output (TTS routing) or 'input' for microphones. Get device_id from list_audio_devices.",
+			},
+			s.handleCreateAudioInput,
+		)
+
+		toolCount += 6
+		log.Println("Audio tools registered (6 tools)")
 	}
 
 	// Layout tools: Scene presets
@@ -1442,6 +1469,86 @@ func (s *Server) handleGetInputVolume(ctx context.Context, request *mcpsdk.CallT
 		"volume_mul": volumeMul,
 	}
 	s.recordAction("get_input_volume", "Get input volume", input, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleListAudioDevices queries OBS for available WASAPI audio devices by
+// interrogating the built-in Desktop Audio and Mic/Aux inputs' device_id property lists.
+func (s *Server) handleListAudioDevices(ctx context.Context, request *mcpsdk.CallToolRequest, input struct{}) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Println("Listing audio devices")
+
+	special, err := s.obsClient.GetSpecialInputs()
+	if err != nil {
+		s.recordAction("list_audio_devices", "List audio devices", nil, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to get OBS special inputs: %w", err)
+	}
+
+	// Query output devices (playback — Desktop Audio, Voicemeeter virtual, etc.)
+	var outputDevices []obs.AudioDevice
+	if special.Desktop1 != "" {
+		outputDevices, _ = s.obsClient.GetInputPropertiesItems(special.Desktop1, "device_id")
+	}
+
+	// Query input devices (recording — microphones)
+	var inputDevices []obs.AudioDevice
+	if special.Mic1 != "" {
+		inputDevices, _ = s.obsClient.GetInputPropertiesItems(special.Mic1, "device_id")
+	}
+
+	result := map[string]interface{}{
+		"output_devices": outputDevices,
+		"input_devices":  inputDevices,
+		"message":        fmt.Sprintf("Found %d output device(s) and %d input device(s)", len(outputDevices), len(inputDevices)),
+		"note":           "Use the 'value' field as device_id in create_audio_input. For VBAN/Voicemeeter TTS routing, look for 'VoiceMeeter' in output_devices.",
+	}
+	s.recordAction("list_audio_devices", "List audio devices", nil, result, true, time.Since(start))
+	return nil, result, nil
+}
+
+// handleCreateAudioInput creates a WASAPI audio capture source in a scene.
+// device_kind "output" maps to wasapi_output_capture (playback devices like Voicemeeter virtual output);
+// "input" maps to wasapi_input_capture (microphones).
+func (s *Server) handleCreateAudioInput(ctx context.Context, request *mcpsdk.CallToolRequest, input CreateAudioInputInput) (*mcpsdk.CallToolResult, any, error) {
+	start := time.Now()
+	log.Printf("Creating audio input '%s' in scene '%s' (kind=%s, device=%s)", input.SourceName, input.SceneName, input.DeviceKind, input.DeviceID)
+
+	if input.SourceName == "" {
+		return nil, nil, fmt.Errorf("source_name must not be empty")
+	}
+	if input.SceneName == "" {
+		return nil, nil, fmt.Errorf("scene_name must not be empty")
+	}
+	if input.DeviceID == "" {
+		return nil, nil, fmt.Errorf("device_id must not be empty; use 'default' for the system default device")
+	}
+
+	var inputKind string
+	switch input.DeviceKind {
+	case "input":
+		inputKind = "wasapi_input_capture"
+	case "output":
+		inputKind = "wasapi_output_capture"
+	default:
+		return nil, nil, fmt.Errorf("device_kind must be 'input' or 'output', got %q", input.DeviceKind)
+	}
+
+	sceneItemID, err := s.obsClient.CreateAudioInput(input.SceneName, input.SourceName, inputKind, input.DeviceID)
+	if err != nil {
+		s.recordAction("create_audio_input", "Create audio input", input, nil, false, time.Since(start))
+		return nil, nil, fmt.Errorf("failed to create audio input: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"scene_name":    input.SceneName,
+		"source_name":   input.SourceName,
+		"scene_item_id": sceneItemID,
+		"device_kind":   input.DeviceKind,
+		"input_kind":    inputKind,
+		"device_id":     input.DeviceID,
+		"message":       fmt.Sprintf("Successfully created audio input '%s' in scene '%s'", input.SourceName, input.SceneName),
+	}
+	s.recordAction("create_audio_input", "Create audio input", input, result, true, time.Since(start))
 	return nil, result, nil
 }
 
