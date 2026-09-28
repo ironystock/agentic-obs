@@ -21,7 +21,7 @@ import "fmt"
 //
 // ============================================================================
 const (
-	HelpToolCount     = 81 // Total MCP tools (including meta-tools)
+	HelpToolCount     = 85 // Total MCP tools (including meta-tools)
 	HelpResourceCount = 4  // Resource types: scenes, screenshots, screenshot-url, presets
 	HelpPromptCount   = 14 // Workflow prompts
 
@@ -36,6 +36,7 @@ const (
 	HelpFiltersToolCount     = 7  // Filter management (FB-23)
 	HelpTransitionsToolCount = 5  // Transition control (FB-24)
 	HelpAutomationToolCount  = 9  // Automation rules (FB-20)
+	HelpASSToolCount         = 4  // Advanced Scene Switcher plugin control (FB-51)
 )
 
 // GetOverviewHelp returns high-level overview of agentic-obs
@@ -54,7 +55,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 
 ## Key Features
 
-- **%d Tools** across 9 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta
+- **%d Tools** across 10 categories (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, AdvancedSceneSwitcher) + Meta
 - **%d Resource Types** (scenes, screenshots, screenshot URLs, presets)
 - **%d Workflow Prompts** for common streaming/recording tasks
 - **Real-time Monitoring** via screenshot sources for AI visual inspection
@@ -75,6 +76,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 **Filters Tools** (%d tools): Filter creation, toggle, settings
 **Transitions Tools** (%d tools): Transition selection, duration, trigger
 **Automation Tools** (%d tools): Event-triggered rules, schedules, macros
+**AdvancedSceneSwitcher Tools** (%d tools): ASS macro triggering, websocket messages, variable control
 
 ## Common Workflows
 
@@ -92,7 +94,7 @@ A Model Context Protocol (MCP) server that gives AI assistants programmatic cont
 - topic="troubleshooting" - Common issues and solutions
 `, HelpCoreToolCount, HelpSourcesToolCount, HelpAudioToolCount,
 			HelpLayoutToolCount, HelpVisualToolCount, HelpDesignToolCount,
-			HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount)
+			HelpFiltersToolCount, HelpTransitionsToolCount, HelpAutomationToolCount, HelpASSToolCount)
 	}
 
 	return help

@@ -35,15 +35,16 @@ type Config struct {
 
 // ToolGroupConfig controls which tool categories are enabled
 type ToolGroupConfig struct {
-	Core        bool // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
-	Visual      bool // Visual monitoring tools (screenshots)
-	Layout      bool // Layout management tools (scene presets)
-	Audio       bool // Audio control tools
-	Sources     bool // Source management tools
-	Design      bool // Scene design tools (source creation, transforms)
-	Filters     bool // Filter management tools
-	Transitions bool // Transition control tools
-	Automation  bool // Automation rule tools (event-triggered actions)
+	Core                  bool // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
+	Visual                bool // Visual monitoring tools (screenshots)
+	Layout                bool // Layout management tools (scene presets)
+	Audio                 bool // Audio control tools
+	Sources               bool // Source management tools
+	Design                bool // Scene design tools (source creation, transforms)
+	Filters               bool // Filter management tools
+	Transitions           bool // Transition control tools
+	Automation            bool // Automation rule tools (event-triggered actions)
+	AdvancedSceneSwitcher bool // Advanced Scene Switcher plugin tools (vendor: AdvancedSceneSwitcher)
 }
 
 // WebServerConfig controls HTTP server settings
@@ -69,15 +70,16 @@ func DefaultConfig() *Config {
 		OBSPassword:   "",
 		DBPath:        filepath.Join(homeDir, ".agentic-obs", "db.sqlite"),
 		ToolGroups: ToolGroupConfig{
-			Core:        true,
-			Visual:      true,
-			Layout:      true,
-			Audio:       true,
-			Sources:     true,
-			Design:      true,
-			Filters:     true,
-			Transitions: true,
-			Automation:  true,
+			Core:                  true,
+			Visual:                true,
+			Layout:                true,
+			Audio:                 true,
+			Sources:               true,
+			Design:                true,
+			Filters:               true,
+			Transitions:           true,
+			Automation:            true,
+			AdvancedSceneSwitcher: true,
 		},
 		WebServer: WebServerConfig{
 			Enabled:           true,
@@ -165,6 +167,7 @@ func (c *Config) PromptFirstRunSetup() error {
 	c.ToolGroups.Filters = promptBool("Filter management (source filters)", c.ToolGroups.Filters)
 	c.ToolGroups.Transitions = promptBool("Transition control (scene transitions)", c.ToolGroups.Transitions)
 	c.ToolGroups.Automation = promptBool("Automation rules (event-triggered actions)", c.ToolGroups.Automation)
+	c.ToolGroups.AdvancedSceneSwitcher = promptBool("Advanced Scene Switcher plugin (macros, messages, variables)", c.ToolGroups.AdvancedSceneSwitcher)
 
 	// Webserver prompt
 	fmt.Println("\n--- HTTP Server ---")
@@ -198,6 +201,7 @@ func (c *Config) PromptFirstRunSetup() error {
 	fmt.Printf("Filter tools: %v\n", c.ToolGroups.Filters)
 	fmt.Printf("Transition tools: %v\n", c.ToolGroups.Transitions)
 	fmt.Printf("Automation tools: %v\n", c.ToolGroups.Automation)
+	fmt.Printf("Advanced Scene Switcher tools: %v\n", c.ToolGroups.AdvancedSceneSwitcher)
 	fmt.Printf("HTTP server: %v", c.WebServer.Enabled)
 	if c.WebServer.Enabled {
 		fmt.Printf(" (port %d)", c.WebServer.Port)
@@ -247,15 +251,16 @@ func LoadFromStorage(ctx context.Context, dbPath string) (*Config, error) {
 		log.Printf("Warning: failed to load tool group config: %v", err)
 	} else {
 		cfg.ToolGroups = ToolGroupConfig{
-			Core:        toolGroups.Core,
-			Visual:      toolGroups.Visual,
-			Layout:      toolGroups.Layout,
-			Audio:       toolGroups.Audio,
-			Sources:     toolGroups.Sources,
-			Design:      toolGroups.Design,
-			Filters:     toolGroups.Filters,
-			Transitions: toolGroups.Transitions,
-			Automation:  toolGroups.Automation,
+			Core:                  toolGroups.Core,
+			Visual:                toolGroups.Visual,
+			Layout:                toolGroups.Layout,
+			Audio:                 toolGroups.Audio,
+			Sources:               toolGroups.Sources,
+			Design:                toolGroups.Design,
+			Filters:               toolGroups.Filters,
+			Transitions:           toolGroups.Transitions,
+			Automation:            toolGroups.Automation,
+			AdvancedSceneSwitcher: toolGroups.AdvancedSceneSwitcher,
 		}
 	}
 
@@ -304,15 +309,16 @@ func SaveToStorage(ctx context.Context, cfg *Config) error {
 
 	// Save tool group preferences
 	toolGroups := storage.ToolGroupConfig{
-		Core:        cfg.ToolGroups.Core,
-		Visual:      cfg.ToolGroups.Visual,
-		Layout:      cfg.ToolGroups.Layout,
-		Audio:       cfg.ToolGroups.Audio,
-		Sources:     cfg.ToolGroups.Sources,
-		Design:      cfg.ToolGroups.Design,
-		Filters:     cfg.ToolGroups.Filters,
-		Transitions: cfg.ToolGroups.Transitions,
-		Automation:  cfg.ToolGroups.Automation,
+		Core:                  cfg.ToolGroups.Core,
+		Visual:                cfg.ToolGroups.Visual,
+		Layout:                cfg.ToolGroups.Layout,
+		Audio:                 cfg.ToolGroups.Audio,
+		Sources:               cfg.ToolGroups.Sources,
+		Design:                cfg.ToolGroups.Design,
+		Filters:               cfg.ToolGroups.Filters,
+		Transitions:           cfg.ToolGroups.Transitions,
+		Automation:            cfg.ToolGroups.Automation,
+		AdvancedSceneSwitcher: cfg.ToolGroups.AdvancedSceneSwitcher,
 	}
 	if err := db.SaveToolGroupConfig(ctx, toolGroups); err != nil {
 		return fmt.Errorf("failed to save tool group config: %w", err)

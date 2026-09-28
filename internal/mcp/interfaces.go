@@ -120,6 +120,13 @@ type OBSClient interface {
 	TriggerHotkeyByName(hotkeyName string) error
 	GetHotkeyList() ([]string, error)
 
+	// Advanced Scene Switcher (vendor: "AdvancedSceneSwitcher") operations.
+	// All three are fire-and-forget — ASS returns no useful data, so the
+	// wrappers only surface errors.
+	ASSSendMessage(message string) error
+	ASSRunMacro(name string, variables []obs.ASSVariable) error
+	ASSSetVariables(variables []obs.ASSVariable) error
+
 	// Event handling
 	SetEventCallback(callback obs.EventCallback)
 }

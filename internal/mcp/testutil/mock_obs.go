@@ -2215,3 +2215,95 @@ func (m *MockOBSClient) AddHotkey(hotkeyName string) {
 	defer m.mu.Unlock()
 	m.hotkeys = append(m.hotkeys, hotkeyName)
 }
+
+// =============================================================================
+// Advanced Scene Switcher mock implementations
+// =============================================================================
+//
+// ASS state is appended here rather than added to the main struct so the file
+// stays diff-friendly. Tests that need to assert which macros ran can read
+// LastASSMacro / ASSMessagesSent / ASSVariablesSet after exercising handlers.
+// Errors can be injected via the dedicated fields below.
+
+// ASS recording / error-injection state. Initialised lazily on first use.
+type assMockState struct {
+	ASSMessagesSent      []string
+	LastASSMacro         string
+	LastASSMacroVarCount int
+	ASSVariablesSet      []obs.ASSVariable
+
+	ErrorOnASSSendMessage  error
+	ErrorOnASSRunMacro     error
+	ErrorOnASSSetVariables error
+}
+
+// assState is a package-level map keyed by mock instance pointer. This avoids
+// edits to MockOBSClient's struct definition while still letting each mock
+// instance hold isolated ASS state.
+var (
+	assStateMu sync.Mutex
+	assState   = map[*MockOBSClient]*assMockState{}
+)
+
+func (m *MockOBSClient) assMockState() *assMockState {
+	assStateMu.Lock()
+	defer assStateMu.Unlock()
+	s, ok := assState[m]
+	if !ok {
+		s = &assMockState{}
+		assState[m] = s
+	}
+	return s
+}
+
+// SetASSError configures an error to return on the next call to the named
+// ASS method ("send_message", "run_macro", or "set_variables"). Unknown
+// method names are ignored.
+func (m *MockOBSClient) SetASSError(method string, err error) {
+	s := m.assMockState()
+	switch method {
+	case "send_message":
+		s.ErrorOnASSSendMessage = err
+	case "run_macro":
+		s.ErrorOnASSRunMacro = err
+	case "set_variables":
+		s.ErrorOnASSSetVariables = err
+	}
+}
+
+// GetASSCalls returns a snapshot of recorded ASS calls for assertion.
+func (m *MockOBSClient) GetASSCalls() (messages []string, lastMacro string, lastVarCount int, varsSet []obs.ASSVariable) {
+	s := m.assMockState()
+	return append([]string(nil), s.ASSMessagesSent...), s.LastASSMacro, s.LastASSMacroVarCount, append([]obs.ASSVariable(nil), s.ASSVariablesSet...)
+}
+
+// ASSSendMessage records the message (or returns the injected error).
+func (m *MockOBSClient) ASSSendMessage(message string) error {
+	s := m.assMockState()
+	if s.ErrorOnASSSendMessage != nil {
+		return s.ErrorOnASSSendMessage
+	}
+	s.ASSMessagesSent = append(s.ASSMessagesSent, message)
+	return nil
+}
+
+// ASSRunMacro records the macro name and any variables passed.
+func (m *MockOBSClient) ASSRunMacro(name string, variables []obs.ASSVariable) error {
+	s := m.assMockState()
+	if s.ErrorOnASSRunMacro != nil {
+		return s.ErrorOnASSRunMacro
+	}
+	s.LastASSMacro = name
+	s.LastASSMacroVarCount = len(variables)
+	return nil
+}
+
+// ASSSetVariables records each variable update.
+func (m *MockOBSClient) ASSSetVariables(variables []obs.ASSVariable) error {
+	s := m.assMockState()
+	if s.ErrorOnASSSetVariables != nil {
+		return s.ErrorOnASSSetVariables
+	}
+	s.ASSVariablesSet = append(s.ASSVariablesSet, variables...)
+	return nil
+}

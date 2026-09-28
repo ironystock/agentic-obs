@@ -8,7 +8,7 @@ This MCP server provides AI agents (like Claude) with programmatic control over 
 
 ## Features
 
-- **81 MCP Tools**: Comprehensive control over OBS Studio operations in 9 tool groups
+- **85 MCP Tools**: Comprehensive control over OBS Studio operations in 10 tool groups
 - **Scene Management**: List, switch, create, and remove OBS scenes
 - **Scene Presets**: Save and restore source visibility configurations
 - **Recording Control**: Start, stop, pause, resume, and monitor recording
@@ -308,7 +308,50 @@ Enable AI to create and manipulate OBS sources programmatically.
 }
 ```
 
-**Total: 81 tools in 9 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation) + Meta (4 always-enabled tools)
+### Advanced Scene Switcher (4 tools)
+
+Control the [Advanced Scene Switcher](https://github.com/WarmUpTill/SceneSwitcher) plugin's macro engine and variable system via `obs-websocket`'s vendor request API.
+
+> **Note:** ASS has no introspection API — there is no way to list macro or variable names over the wire. You must know the exact names configured in your ASS setup (they are case-sensitive).
+
+| Tool | Description |
+|------|-------------|
+| `ass_run_macro` | Execute a named ASS macro directly, optionally pre-setting variables in the same atomic call |
+| `ass_send_message` | Fire an ASS "Websocket message received" event; macros with a matching condition will react |
+| `ass_set_variables` | Bulk-set plugin variables without firing any macro |
+| `ass_set_variable` | Set a single variable by name (ergonomic shortcut for `ass_set_variables` with one entry) |
+
+#### Example: trigger a BRB macro and set a variable atomically
+
+```json
+{
+  "tool": "ass_run_macro",
+  "arguments": {
+    "name": "BRB",
+    "variables": [{"name": "brb_reason", "value": "bathroom"}]
+  }
+}
+```
+
+#### Example: update a variable and let ASS conditions react
+
+```json
+{
+  "tool": "ass_set_variable",
+  "arguments": {"name": "current_game", "value": "Valorant"}
+}
+```
+
+If ASS is not installed, disable this group to hide the tools:
+
+```json
+{
+  "tool": "set_tool_config",
+  "arguments": {"group": "AdvancedSceneSwitcher", "enabled": false, "persist": true}
+}
+```
+
+**Total: 85 tools in 10 groups** (Core, Sources, Audio, Layout, Visual, Design, Filters, Transitions, Automation, AdvancedSceneSwitcher) + Meta (4 always-enabled tools)
 
 ## MCP Resources
 

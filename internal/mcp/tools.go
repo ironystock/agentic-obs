@@ -961,6 +961,46 @@ func (s *Server) registerToolHandlers() {
 		log.Println("Automation tools registered (9 tools)")
 	}
 
+	// Advanced Scene Switcher (ASS) tools — vendor-request wrappers for the
+	// third-party plugin's macros + variables surface. Low-risk: each call is
+	// fire-and-forget on the OBS side and ASS rejects unknown macros gracefully.
+	if s.toolGroups.AdvancedSceneSwitcher {
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "ass_run_macro",
+				Description: "Trigger a named Advanced Scene Switcher macro directly, optionally pre-setting variables atomically. Macro names are case-sensitive and must match those defined in the ASS UI.",
+			},
+			s.handleASSRunMacro,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "ass_send_message",
+				Description: "Broadcast a websocket message that Advanced Scene Switcher macros can react to via the 'Websocket message received' condition.",
+			},
+			s.handleASSSendMessage,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "ass_set_variables",
+				Description: "Bulk-update Advanced Scene Switcher variables without firing a macro. Values are coerced to strings (ASS stores variables as strings).",
+			},
+			s.handleASSSetVariables,
+		)
+
+		mcpsdk.AddTool(s.mcpServer,
+			&mcpsdk.Tool{
+				Name:        "ass_set_variable",
+				Description: "Set a single Advanced Scene Switcher variable by name (ergonomic shortcut for ass_set_variables with one entry).",
+			},
+			s.handleASSSetVariable,
+		)
+
+		toolCount += 4
+		log.Println("Advanced Scene Switcher tools registered (4 tools)")
+	}
+
 	// Meta tools - always enabled, cannot be disabled
 	// These provide help and runtime tool configuration
 

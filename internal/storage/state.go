@@ -33,6 +33,7 @@ const (
 	StateKeyToolsFilters     = "tools_enabled_filters"     // Filter management tools
 	StateKeyToolsTransitions = "tools_enabled_transitions" // Transition control tools
 	StateKeyToolsAutomation  = "tools_enabled_automation"  // Automation rule tools
+	StateKeyToolsAdvancedSceneSwitcher = "tools_enabled_advanced_scene_switcher" // Advanced Scene Switcher plugin tools
 )
 
 // Webserver configuration keys
@@ -313,29 +314,31 @@ func (db *DB) GetAppVersion(ctx context.Context) (string, error) {
 
 // ToolGroupConfig represents the enabled/disabled state of each tool group.
 type ToolGroupConfig struct {
-	Core        bool // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
-	Visual      bool // Visual monitoring tools (screenshots)
-	Layout      bool // Layout management tools (scene presets)
-	Audio       bool // Audio control tools
-	Sources     bool // Source management tools
-	Design      bool // Scene design tools (source creation, transforms)
-	Filters     bool // Filter management tools
-	Transitions bool // Transition control tools
-	Automation  bool // Automation rule tools
+	Core                  bool // Core OBS tools (scenes, recording, streaming, status, virtual cam, replay, studio mode, hotkeys)
+	Visual                bool // Visual monitoring tools (screenshots)
+	Layout                bool // Layout management tools (scene presets)
+	Audio                 bool // Audio control tools
+	Sources               bool // Source management tools
+	Design                bool // Scene design tools (source creation, transforms)
+	Filters               bool // Filter management tools
+	Transitions           bool // Transition control tools
+	Automation            bool // Automation rule tools
+	AdvancedSceneSwitcher bool // Advanced Scene Switcher plugin tools (vendor: AdvancedSceneSwitcher)
 }
 
 // DefaultToolGroupConfig returns tool group config with all groups enabled.
 func DefaultToolGroupConfig() ToolGroupConfig {
 	return ToolGroupConfig{
-		Core:        true,
-		Visual:      true,
-		Layout:      true,
-		Audio:       true,
-		Sources:     true,
-		Design:      true,
-		Filters:     true,
-		Transitions: true,
-		Automation:  true,
+		Core:                  true,
+		Visual:                true,
+		Layout:                true,
+		Audio:                 true,
+		Sources:               true,
+		Design:                true,
+		Filters:               true,
+		Transitions:           true,
+		Automation:            true,
+		AdvancedSceneSwitcher: true,
 	}
 }
 
@@ -374,6 +377,9 @@ func (db *DB) SaveToolGroupConfig(ctx context.Context, cfg ToolGroupConfig) erro
 	}
 	if err := db.SetState(ctx, StateKeyToolsAutomation, boolToStr(cfg.Automation)); err != nil {
 		return fmt.Errorf("failed to save automation tools preference: %w", err)
+	}
+	if err := db.SetState(ctx, StateKeyToolsAdvancedSceneSwitcher, boolToStr(cfg.AdvancedSceneSwitcher)); err != nil {
+		return fmt.Errorf("failed to save advanced scene switcher tools preference: %w", err)
 	}
 
 	return nil
@@ -415,6 +421,9 @@ func (db *DB) LoadToolGroupConfig(ctx context.Context) (ToolGroupConfig, error) 
 	}
 	if val, err := db.GetState(ctx, StateKeyToolsAutomation); err == nil {
 		cfg.Automation = strToBool(val)
+	}
+	if val, err := db.GetState(ctx, StateKeyToolsAdvancedSceneSwitcher); err == nil {
+		cfg.AdvancedSceneSwitcher = strToBool(val)
 	}
 
 	return cfg, nil

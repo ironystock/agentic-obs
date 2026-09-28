@@ -21,7 +21,7 @@ type ToolGroupMetadata struct {
 
 // ToolGroupOrder defines the canonical ordering of tool groups.
 // Used for consistent iteration and validation across the codebase.
-var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions", "Automation"}
+var ToolGroupOrder = []string{"Core", "Sources", "Audio", "Layout", "Visual", "Design", "Filters", "Transitions", "Automation", "AdvancedSceneSwitcher"}
 
 // toolGroupMetadata defines metadata for all tool groups.
 var toolGroupMetadata = map[string]*ToolGroupMetadata{
@@ -91,6 +91,12 @@ var toolGroupMetadata = map[string]*ToolGroupMetadata{
 		Description: "Automation rule management: event-triggered and scheduled actions",
 		ToolCount:   9,
 		ToolNames:   []string{"list_automation_rules", "get_automation_rule", "create_automation_rule", "update_automation_rule", "delete_automation_rule", "enable_automation_rule", "disable_automation_rule", "trigger_automation_rule", "list_rule_executions"},
+	},
+	"AdvancedSceneSwitcher": {
+		Name:        "AdvancedSceneSwitcher",
+		Description: "Advanced Scene Switcher plugin: trigger macros, send websocket messages, set variables (vendor: AdvancedSceneSwitcher)",
+		ToolCount:   4,
+		ToolNames:   []string{"ass_run_macro", "ass_send_message", "ass_set_variables", "ass_set_variable"},
 	},
 }
 
@@ -317,6 +323,8 @@ func (s *Server) getGroupEnabled(group string) bool {
 		return s.toolGroups.Transitions
 	case "Automation":
 		return s.toolGroups.Automation
+	case "AdvancedSceneSwitcher":
+		return s.toolGroups.AdvancedSceneSwitcher
 	default:
 		return false
 	}
@@ -344,20 +352,23 @@ func (s *Server) setGroupEnabled(group string, enabled bool) {
 		s.toolGroups.Transitions = enabled
 	case "Automation":
 		s.toolGroups.Automation = enabled
+	case "AdvancedSceneSwitcher":
+		s.toolGroups.AdvancedSceneSwitcher = enabled
 	}
 }
 
 // convertToStorageConfig converts the server's tool group config to storage format.
 func (s *Server) convertToStorageConfig() storage.ToolGroupConfig {
 	return storage.ToolGroupConfig{
-		Core:        s.toolGroups.Core,
-		Visual:      s.toolGroups.Visual,
-		Layout:      s.toolGroups.Layout,
-		Audio:       s.toolGroups.Audio,
-		Sources:     s.toolGroups.Sources,
-		Design:      s.toolGroups.Design,
-		Filters:     s.toolGroups.Filters,
-		Transitions: s.toolGroups.Transitions,
-		Automation:  s.toolGroups.Automation,
+		Core:                  s.toolGroups.Core,
+		Visual:                s.toolGroups.Visual,
+		Layout:                s.toolGroups.Layout,
+		Audio:                 s.toolGroups.Audio,
+		Sources:               s.toolGroups.Sources,
+		Design:                s.toolGroups.Design,
+		Filters:               s.toolGroups.Filters,
+		Transitions:           s.toolGroups.Transitions,
+		Automation:            s.toolGroups.Automation,
+		AdvancedSceneSwitcher: s.toolGroups.AdvancedSceneSwitcher,
 	}
 }

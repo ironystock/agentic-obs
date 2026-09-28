@@ -9,6 +9,7 @@ import (
 	"github.com/andreykaipov/goobs"
 	"github.com/andreykaipov/goobs/api/events"
 	"github.com/andreykaipov/goobs/api/events/subscriptions"
+	"github.com/andreykaipov/goobs/api/requests/general"
 )
 
 // Client wraps the OBS WebSocket client with connection management and state tracking.
@@ -379,6 +380,31 @@ func (c *Client) handleEvents() {
 			// Ignore other events
 		}
 	}
+}
+
+// CallVendorRequest issues a generic obs-websocket CallVendorRequest. Vendor
+// requests are how third-party OBS plugins (e.g. Advanced Scene Switcher) expose
+// their own request types over the obs-websocket protocol. `data` may be nil for
+// requests with no parameters; the returned map mirrors the vendor's response
+// payload (which may be empty for fire-and-forget vendors).
+func (c *Client) CallVendorRequest(vendorName, requestType string, data map[string]any) (map[string]any, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := general.NewCallVendorRequestParams().
+		WithVendorName(vendorName).
+		WithRequestType(requestType)
+	if data != nil {
+		params = params.WithRequestData(data)
+	}
+
+	resp, err := client.General.CallVendorRequest(params)
+	if err != nil {
+		return nil, fmt.Errorf("CallVendorRequest(%s/%s) failed: %w", vendorName, requestType, err)
+	}
+	return resp.ResponseData, nil
 }
 
 // getClient is a helper that returns the client if connected, or an error if not.

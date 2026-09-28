@@ -144,29 +144,31 @@ type ServerConfig struct {
 
 // ToolGroupConfig controls which tool categories are enabled
 type ToolGroupConfig struct {
-	Core        bool // Core OBS tools (scenes, recording, streaming, status)
-	Visual      bool // Visual monitoring tools (screenshots)
-	Layout      bool // Layout management tools (scene presets)
-	Audio       bool // Audio control tools
-	Sources     bool // Source management tools
-	Design      bool // Scene design tools (source creation, transforms)
-	Filters     bool // Filter management tools (FB-23)
-	Transitions bool // Transition control tools (FB-24)
-	Automation  bool // Automation rule tools (FB-20)
+	Core                  bool // Core OBS tools (scenes, recording, streaming, status)
+	Visual                bool // Visual monitoring tools (screenshots)
+	Layout                bool // Layout management tools (scene presets)
+	Audio                 bool // Audio control tools
+	Sources               bool // Source management tools
+	Design                bool // Scene design tools (source creation, transforms)
+	Filters               bool // Filter management tools (FB-23)
+	Transitions           bool // Transition control tools (FB-24)
+	Automation            bool // Automation rule tools (FB-20)
+	AdvancedSceneSwitcher bool // Advanced Scene Switcher plugin tools (vendor: AdvancedSceneSwitcher)
 }
 
 // DefaultToolGroupConfig returns config with all tool groups enabled
 func DefaultToolGroupConfig() ToolGroupConfig {
 	return ToolGroupConfig{
-		Core:        true,
-		Visual:      true,
-		Layout:      true,
-		Audio:       true,
-		Sources:     true,
-		Design:      true,
-		Filters:     true,
-		Transitions: true,
-		Automation:  true,
+		Core:                  true,
+		Visual:                true,
+		Layout:                true,
+		Audio:                 true,
+		Sources:               true,
+		Design:                true,
+		Filters:               true,
+		Transitions:           true,
+		Automation:            true,
+		AdvancedSceneSwitcher: true,
 	}
 }
 
